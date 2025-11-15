@@ -5,29 +5,27 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-
-	"github.com/jaypaulb/CanvusPowerToys/internal/atoms/config"
 )
 
 // ScreenXML represents the screen.xml structure.
 type ScreenXML struct {
-	XMLName   xml.Name        `xml:"screen"`
+	XMLName xml.Name `xml:"screen"`
 	MultiHead MultiHeadConfig `xml:"MultiHead"`
 }
 
 // MultiHeadConfig represents MultiHead configuration.
 type MultiHeadConfig struct {
-	Vsync     string `xml:"vsync,attr,omitempty"`
+	Vsync    string `xml:"vsync,attr,omitempty"`
 	LayerSize string `xml:"layer-size,attr,omitempty"`
-	Areas     []Area `xml:"area"`
+	Areas    []Area `xml:"area"`
 }
 
 // Area represents a display area in screen.xml.
 type Area struct {
-	XMLName  xml.Name `xml:"area"`
-	Type     string   `xml:"type,attr"`
+	XMLName xml.Name `xml:"area"`
+	Type    string   `xml:"type,attr"`
 	Graphics Graphics `xml:"graphics"`
-	Window   Window   `xml:"window,omitempty"`
+	Window   Window  `xml:"window,omitempty"`
 }
 
 // Graphics represents graphics coordinates for an area.
@@ -45,11 +43,11 @@ type Window struct {
 
 // XMLGenerator generates screen.xml from grid configuration.
 type XMLGenerator struct {
-	grid           *GridWidget
-	gpuAssignments *GPUAssignment
-	touchAreas     *TouchAreaHandler
-	resolution     Resolution
-	defaultRes     Resolution
+	grid            *GridWidget
+	gpuAssignments  *GPUAssignment
+	touchAreas      *TouchAreaHandler
+	resolution      Resolution
+	defaultRes      Resolution
 }
 
 // NewXMLGenerator creates a new XML generator.
@@ -67,7 +65,7 @@ func NewXMLGenerator(grid *GridWidget, gpuAssignments *GPUAssignment, touchAreas
 func (xg *XMLGenerator) Generate() ([]byte, error) {
 	screenXML := ScreenXML{
 		MultiHead: MultiHeadConfig{
-			Vsync:     "0",   // Default for Windows
+			Vsync:     "0", // Default for Windows
 			LayerSize: "0 0", // Auto-calculate
 			Areas:     []Area{},
 		},
@@ -201,3 +199,4 @@ func (xg *XMLGenerator) Validate(xmlData []byte) error {
 
 	return nil
 }
+

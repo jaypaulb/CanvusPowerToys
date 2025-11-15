@@ -2,7 +2,6 @@ package screenxml
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -15,13 +14,13 @@ import (
 
 // Creator is the main Screen.xml Creator component.
 type Creator struct {
-	grid              *GridWidget
-	gpuAssignment     *GPUAssignment
-	touchAreaHandler  *TouchAreaHandler
+	grid            *GridWidget
+	gpuAssignment   *GPUAssignment
+	touchAreaHandler *TouchAreaHandler
 	resolutionHandler *ResolutionHandler
-	xmlGenerator      *XMLGenerator
-	iniIntegration    *INIIntegration
-	fileService       *services.FileService
+	xmlGenerator    *XMLGenerator
+	iniIntegration  *INIIntegration
+	fileService     *services.FileService
 }
 
 // NewCreator creates a new Screen.xml Creator.
@@ -34,10 +33,10 @@ func NewCreator(fileService *services.FileService) (*Creator, error) {
 	creator := &Creator{
 		grid:              grid,
 		gpuAssignment:     gpuAssignment,
-		touchAreaHandler:  touchAreaHandler,
-		resolutionHandler: resolutionHandler,
-		iniIntegration:    NewINIIntegration(),
-		fileService:       fileService,
+		touchAreaHandler:   touchAreaHandler,
+		resolutionHandler:  resolutionHandler,
+		iniIntegration:     NewINIIntegration(),
+		fileService:        fileService,
 	}
 
 	// Initialize XML generator
@@ -204,3 +203,4 @@ func (c *Creator) autoDetectConfig(window fyne.Window) {
 		dialog.ShowInformation("Found", fmt.Sprintf("Found mt-canvus.ini at:\n%s", iniPath), window)
 	}
 }
+
