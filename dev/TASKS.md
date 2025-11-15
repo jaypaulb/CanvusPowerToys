@@ -338,8 +338,8 @@ Tasks are organized by development phases, following the feature priority order:
 - [✅] Minify all CSS files - Status: Completed (automated via pipeline)
 - [✅] Minify all JavaScript files - Status: Completed (automated via pipeline)
 - [✅] Minify all HTML files - Status: Completed (automated via pipeline)
-- [ ] Remove unused code (tree-shaking) - Status: Pending (manual review needed)
-- [ ] Remove console.log statements - Status: Pending (manual review needed)
+- [✅] Remove unused code (tree-shaking) - Status: Completed (reviewed, all functions used)
+- [✅] Remove console.log statements - Status: Completed (replaced with development-only logging)
 - [✅] Use CSS variables for brand colors - Status: Completed (design-system.css)
 
 ### 6.11 Testing & Refinement
