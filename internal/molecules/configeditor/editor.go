@@ -2,6 +2,7 @@ package configeditor
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -20,6 +21,7 @@ import (
 type Editor struct {
 	iniParser      *config.INIParser
 	fileService    *services.FileService
+	backupManager  *backup.Manager
 	iniFile        *ini.File
 	searchEntry    *widget.Entry
 	optionsList    *widget.List
@@ -38,10 +40,12 @@ type OptionItem struct {
 
 // NewEditor creates a new Config Editor instance.
 func NewEditor(fileService *services.FileService) (*Editor, error) {
+	// Create backup manager with temporary directory (will use file's directory when backing up)
+	backupMgr := backup.NewManager("")
 	return &Editor{
 		iniParser:     config.NewINIParser(),
 		fileService:   fileService,
-		backupManager: backup.NewManager(),
+		backupManager: backupMgr,
 		optionsData:   []OptionItem{},
 	}, nil
 }
@@ -374,10 +378,12 @@ func (e *Editor) saveConfig(window fyne.Window, userConfig bool) {
 		return
 	}
 
-	// Create backup before saving
-	if err := e.backupManager.CreateBackup(savePath); err != nil {
-		// Log warning but continue with save
-		fmt.Printf("Warning: Failed to create backup: %v\n", err)
+	// Create backup before saving (if file exists)
+	if _, err := os.Stat(savePath); err == nil {
+		if err := e.backupManager.CreateBackup(savePath); err != nil {
+			// Log warning but continue with save
+			fmt.Printf("Warning: Failed to create backup: %v\n", err)
+		}
 	}
 
 	// Save the file
