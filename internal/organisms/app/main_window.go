@@ -5,6 +5,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 
+	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/configeditor"
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/screenxml"
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/tray"
 	"github.com/jaypaulb/CanvusPowerToys/internal/organisms/services"
@@ -38,6 +39,19 @@ func NewMainWindow(app fyne.App) *MainWindow {
 		screenXMLCreator = widget.NewLabel("Screen.xml Creator - Error initializing file service")
 	}
 
+	// Initialize Config Editor
+	var configEditor fyne.CanvasObject
+	if fileService != nil {
+		editor, err := configeditor.NewEditor(fileService)
+		if err == nil {
+			configEditor = editor.CreateUI(window)
+		} else {
+			configEditor = widget.NewLabel("Config Editor - Error initializing")
+		}
+	} else {
+		configEditor = widget.NewLabel("Config Editor - Error initializing file service")
+	}
+
 	tabs := container.NewAppTabs(
 		&container.TabItem{
 			Text:    "Screen.xml Creator",
@@ -45,7 +59,7 @@ func NewMainWindow(app fyne.App) *MainWindow {
 		},
 		&container.TabItem{
 			Text:    "Config Editor",
-			Content: widget.NewLabel("Canvus Config Editor - Coming soon"),
+			Content: configEditor,
 		},
 		&container.TabItem{
 			Text:    "CSS Options",
