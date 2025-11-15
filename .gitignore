@@ -33,6 +33,8 @@ Thumbs.db
 # Build artifacts
 dist/
 build/
+# Exception: webui/build contains build scripts that should be committed
+!webui/build/
 
 # Logs
 *.log
