@@ -27,6 +27,7 @@ type GridWidget struct {
 	onCellClick func(row, col int)
 	onCellDrag  func(startRow, startCol, endRow, endCol int)
 	dragStart   *fyne.Position
+	isDragging  bool
 }
 
 // NewGridWidget creates a new grid widget.
@@ -83,6 +84,59 @@ func (g *GridWidget) ClearCellGPUOutput(row, col int) {
 	}
 	g.cells[row][col].GPUOutput = ""
 	g.Refresh()
+}
+
+// Tapped handles tap/click events on the grid.
+func (g *GridWidget) Tapped(e *fyne.PointEvent) {
+	row, col := g.getCellFromPosition(e.Position)
+	if row >= 0 && col >= 0 && g.onCellClick != nil {
+		g.onCellClick(row, col)
+	}
+}
+
+// MouseDown handles mouse down events for drag start.
+func (g *GridWidget) MouseDown(e *fyne.PointEvent) {
+	row, col := g.getCellFromPosition(e.Position)
+	if row >= 0 && col >= 0 {
+		g.dragStart = &e.Position
+		g.isDragging = false
+	}
+}
+
+// MouseUp handles mouse up events for drag end.
+func (g *GridWidget) MouseUp(e *fyne.PointEvent) {
+	if g.dragStart != nil && g.isDragging && g.onCellDrag != nil {
+		startRow, startCol := g.getCellFromPosition(*g.dragStart)
+		endRow, endCol := g.getCellFromPosition(e.Position)
+		if startRow >= 0 && startCol >= 0 && endRow >= 0 && endCol >= 0 {
+			g.onCellDrag(startRow, startCol, endRow, endCol)
+		}
+	}
+	g.dragStart = nil
+	g.isDragging = false
+}
+
+// MouseDragged handles mouse drag events.
+func (g *GridWidget) MouseDragged(e *fyne.DragEvent) {
+	if g.dragStart != nil {
+		g.isDragging = true
+		g.Refresh()
+	}
+}
+
+// getCellFromPosition converts a screen position to grid cell coordinates.
+func (g *GridWidget) getCellFromPosition(pos fyne.Position) (row, col int) {
+	size := g.Size()
+	cellWidth := size.Width / GridCols
+	cellHeight := size.Height / GridRows
+
+	col = int(pos.X / cellWidth)
+	row = int(pos.Y / cellHeight)
+
+	if row < 0 || row >= GridRows || col < 0 || col >= GridCols {
+		return -1, -1
+	}
+	return row, col
 }
 
 // CreateRenderer creates the renderer for the grid widget.
