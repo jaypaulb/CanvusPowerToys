@@ -98,23 +98,41 @@ func NewMainWindow(app fyne.App) *MainWindow {
 			Text:    "Custom Menu",
 			Content: customMenu,
 		},
-		// Initialize WebUI Manager
-		var webUI fyne.CanvasObject
-		if fileService != nil {
-			webUIMgr, err := webui.NewManager(fileService)
-			if err == nil {
-				webUI = webUIMgr.CreateUI(window)
-			} else {
-				webUI = widget.NewLabel("WebUI - Error initializing")
-			}
+	// Initialize WebUI Manager
+	var webUI fyne.CanvasObject
+	if fileService != nil {
+		webUIMgr, err := webui.NewManager(fileService)
+		if err == nil {
+			webUI = webUIMgr.CreateUI(window)
 		} else {
-			webUI = widget.NewLabel("WebUI - Error initializing file service")
+			webUI = widget.NewLabel("WebUI - Error initializing")
 		}
+	} else {
+		webUI = widget.NewLabel("WebUI - Error initializing file service")
+	}
 
+	tabs := container.NewAppTabs(
+		&container.TabItem{
+			Text:    "Screen.xml Creator",
+			Content: screenXMLCreator,
+		},
+		&container.TabItem{
+			Text:    "Config Editor",
+			Content: configEditor,
+		},
+		&container.TabItem{
+			Text:    "CSS Options",
+			Content: cssOptions,
+		},
+		&container.TabItem{
+			Text:    "Custom Menu",
+			Content: customMenu,
+		},
 		&container.TabItem{
 			Text:    "WebUI",
 			Content: webUI,
 		},
+	)
 	)
 
 	window.SetContent(tabs)
