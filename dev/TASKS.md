@@ -294,13 +294,13 @@ Tasks are organized by development phases, following the feature priority order:
 - [✅] Create responsive.css - Status: Completed (mobile-first breakpoints)
 
 ### 6.6 Frontend - Main Page Redesign
-- [ ] Remove UUID generation logic - Status: Pending
-- [ ] Remove canvas search/feedback loop - Status: Pending
-- [ ] Implement navigation hub design - Status: Pending (page descriptions + links)
-- [ ] Integrate canvas header - Status: Pending ("Currently tracking {installation_name} showing {canvas_name}")
-- [ ] Add connection status indicator - Status: Pending
-- [ ] Implement SSE client connection - Status: Pending
-- [ ] Mobile optimization - Status: Pending (touch-friendly, responsive)
+- [✅] Remove UUID generation logic - Status: Completed (not present in new design)
+- [✅] Remove canvas search/feedback loop - Status: Completed (not present in new design)
+- [✅] Implement navigation hub design - Status: Completed (page descriptions + links)
+- [✅] Integrate canvas header - Status: Completed ("Currently tracking {installation_name} showing {canvas_name}")
+- [✅] Add connection status indicator - Status: Completed
+- [✅] Implement SSE client connection - Status: Completed
+- [✅] Mobile optimization - Status: Completed (touch-friendly, responsive)
 
 ### 6.7 Frontend - Macros Page Refactor
 - [ ] Remove delete button from Manage tab - Status: Pending
