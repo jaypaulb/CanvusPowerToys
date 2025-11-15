@@ -5,7 +5,9 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 
+	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/screenxml"
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/tray"
+	"github.com/jaypaulb/CanvusPowerToys/internal/organisms/services"
 )
 
 // MainWindow represents the main application window with tabs.
@@ -22,10 +24,29 @@ func NewMainWindow(app fyne.App) *MainWindow {
 	window.CenterOnScreen()
 
 	// Create tabs
+	// Initialize Screen.xml Creator
+	fileService, err := services.NewFileService()
+	if err != nil {
+		// Fallback if file service fails
+		fileService = nil
+	}
+
+	var screenXMLCreator fyne.CanvasObject
+	if fileService != nil {
+		creator, err := screenxml.NewCreator(fileService)
+		if err == nil {
+			screenXMLCreator = creator.CreateUI(window)
+		} else {
+			screenXMLCreator = widget.NewLabel("Screen.xml Creator - Error initializing")
+		}
+	} else {
+		screenXMLCreator = widget.NewLabel("Screen.xml Creator - Error initializing file service")
+	}
+
 	tabs := container.NewAppTabs(
 		&container.TabItem{
 			Text:    "Screen.xml Creator",
-			Content: widget.NewLabel("Screen.xml Creator - Coming soon"),
+			Content: screenXMLCreator,
 		},
 		&container.TabItem{
 			Text:    "Config Editor",
