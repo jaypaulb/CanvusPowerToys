@@ -177,10 +177,14 @@ func (m *Manager) loadServerURL() {
 // saveConfiguration saves the WebUI configuration.
 func (m *Manager) saveConfiguration(window fyne.Window) {
 	serverURL := m.serverURL.Text
-	authToken := m.authToken.Text
-
 	if serverURL == "" {
 		dialog.ShowError(fmt.Errorf("Server URL cannot be empty"), window)
+		return
+	}
+
+	authToken := m.authToken.Text
+	if authToken == "" {
+		dialog.ShowError(fmt.Errorf("Auth token cannot be empty"), window)
 		return
 	}
 
