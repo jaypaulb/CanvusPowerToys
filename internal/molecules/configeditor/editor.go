@@ -380,7 +380,7 @@ func (e *Editor) saveConfig(window fyne.Window, userConfig bool) {
 
 	// Create backup before saving (if file exists)
 	if _, err := os.Stat(savePath); err == nil {
-		if err := e.backupManager.CreateBackup(savePath); err != nil {
+		if _, err := e.backupManager.CreateBackup(savePath); err != nil {
 			// Log warning but continue with save
 			fmt.Printf("Warning: Failed to create backup: %v\n", err)
 		}
