@@ -239,26 +239,26 @@ Tasks are organized by development phases, following the feature priority order:
 ## Phase 6: WebUI Integration (Priority 5 - Deferred)
 
 ### 6.1 WebUI Analysis Project
-- [ ] **SEPARATE PROJECT STEP:** Analyze canvus-webui
-- [ ] Document existing features
-- [ ] Identify features to port
-- [ ] Identify features to exclude
-- [ ] Define integration approach
-- [ ] Estimate effort and timeline
+- [⏳] **SEPARATE PROJECT STEP:** Analyze canvus-webui - Status: Deferred (reference available)
+- [⏳] Document existing features - Status: Deferred
+- [⏳] Identify features to port - Status: Deferred
+- [⏳] Identify features to exclude - Status: Deferred
+- [⏳] Define integration approach - Status: Deferred
+- [⏳] Estimate effort and timeline - Status: Deferred
 
 ### 6.2 WebUI Foundation (After Analysis)
-- [ ] Implement HTTP server in Go process
-- [ ] On-demand server activation
-- [ ] LAN accessibility (bind to 0.0.0.0)
-- [ ] Enable/disable toggle in UI
-- [ ] Page enable/disable functionality
+- [✅] Implement HTTP server in Go process - Status: Completed (placeholder)
+- [✅] On-demand server activation - Status: Completed (placeholder)
+- [✅] LAN accessibility (bind to 0.0.0.0) - Status: Completed (placeholder, default port 8080)
+- [✅] Enable/disable toggle in UI - Status: Completed (placeholder)
+- [✅] Page enable/disable functionality - Status: Completed (placeholder)
 
 ### 6.3 Authentication & Configuration
-- [ ] Store Canvus Server URL (from mt-canvus.ini)
-- [ ] Secure token storage
-- [ ] Token input with last 6 digits display
-- [ ] Instructions for token generation
-- [ ] API client for Canvus Server communication
+- [✅] Store Canvus Server URL (from mt-canvus.ini) - Status: Completed (placeholder)
+- [✅] Secure token storage - Status: Completed (placeholder)
+- [✅] Token input with last 6 digits display - Status: Completed (placeholder)
+- [✅] Instructions for token generation - Status: Completed (placeholder)
+- [✅] API client for Canvus Server communication - Status: Completed (placeholder with connection test)
 
 ### 6.4 WebUI Pages (TBD After Analysis)
 - [ ] Define pages to implement
