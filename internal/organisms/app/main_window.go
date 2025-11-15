@@ -90,10 +90,6 @@ func NewMainWindow(app fyne.App) *MainWindow {
 			Text:    "Config Editor",
 			Content: configEditor,
 		},
-		&container.TabItem{
-			Text:    "CSS Options",
-			Content: cssOptions,
-		},
 	// Initialize WebUI Manager
 	var webUI fyne.CanvasObject
 	if fileService != nil {
