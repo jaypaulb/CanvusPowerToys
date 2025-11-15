@@ -1,0 +1,38 @@
+---
+description: Universal quality gate requirements. Execute quality gates before completion, auto-fix when possible, handle edge cases. Apply to all code changes.
+alwaysApply: true
+---
+
+# Quality Gates
+
+## Universal Requirements
+- Execute quality gates before completion
+- Auto-fix issues when possible
+- Escalate when blocked
+- Handle edge cases in test assertions (zero values, empty states)
+- **Enforce atomic design structure**: Verify files follow size guidelines (see `code-structure.mdc` for specific limits)
+- **Check composition hierarchy**: Ensure atoms → molecules → organisms → pages structure is maintained (see `code-structure.mdc`)
+- **Enforce TDD methodology**: Tests must be written before implementation (see `tdd-methodology.mdc`)
+- **Verify test coverage**: All code must have >80% test coverage
+
+## Quality Gate Checklist
+- [ ] **TDD followed**: Tests written before implementation (Red-Green-Refactor)
+- [ ] **Tests pass**: All tests must pass before completion
+- [ ] **Test coverage**: >80% coverage (100% for critical paths and public APIs)
+- [ ] **Test structure**: Tests follow atomic design hierarchy (atoms/molecules/organisms)
+- [ ] Linting passes
+- [ ] Type checking passes
+- [ ] Security scans pass
+- [ ] No secrets in code
+- [ ] Documentation updated
+
+## Status Indicators
+- ✅ All quality gates passed
+- ⚠️ Issues found and fixed
+- 🚧 Blocked, requires intervention
+
+## Pre-Commit Validation
+All changes must pass quality gates before:
+- Marking tasks complete
+- Creating merge requests
+- Closing issues

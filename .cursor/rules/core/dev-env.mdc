@@ -1,0 +1,51 @@
+---
+description: Development environment detection and OS-specific best practices. Detect OS before executing commands, use OS-appropriate commands and paths. Apply when executing system commands.
+alwaysApply: false
+---
+
+# Development Environment Standards
+
+> **Note**: Assumes core rules (command execution, file operations) are already loaded.
+
+## OS Detection Protocol
+Always determine the operating system before executing commands:
+```bash
+uname -s  # Linux/Darwin/MINGW64_NT (Git Bash on Windows)
+echo $OS  # Windows_NT on Windows
+```
+
+## Windows PowerShell
+- Use `Get-ChildItem` instead of `ls`
+- Use `Remove-Item` instead of `rm`
+- Use `Copy-Item` instead of `cp`
+- Use backslashes `\` for paths
+- Use `Test-Path` to check file existence
+- Use `choco install` or `winget install` for packages
+
+## Ubuntu/Linux
+- Use standard Unix commands: `ls`, `rm`, `cp`, `mv`
+- Use `apt` for packages: `sudo apt install package`
+- Use forward slashes `/` for paths
+- Use `which command` to find executables
+- Use `export VAR=value` for environment variables
+
+## Common Development Tools (Cross-Platform)
+- Git: `git status`, `git add .`, `git commit -m "message"`
+- Node.js: `npm install`, `npm run build`, `npm test`
+- Python: `python -m venv venv`, `pip install -r requirements.txt`
+- Docker: `docker build -t image-name .`, `docker run -p 8080:8080 image-name`
+
+## Anti-Patterns to Avoid
+- ❌ Using `ls` on Windows PowerShell
+- ❌ Using `Get-ChildItem` on Linux
+- ❌ Mixing path separators (`/` vs `\`)
+- ❌ Running commands without OS detection
+
+## Environment Validation
+Check required tools before use:
+```bash
+git --version
+node --version
+python --version
+docker --version
+```

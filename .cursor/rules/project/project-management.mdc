@@ -1,0 +1,77 @@
+---
+description: High-level project management standards and workflows. Defines documentation requirements, workflow principles, issue management, branch management, and release management. Apply when working with PRD.md, README.md, or CHANGELOG.md.
+globs: PRD.md,README.md,CHANGELOG.md
+alwaysApply: false
+---
+
+# Project Management Standards
+
+> **Note**: Assumes core rules (file operations, quality gates) and workflow rules are already loaded.
+
+## Documentation Requirements
+
+### Essential Files
+- **PRD.md**: Product Requirements Document with goals and success criteria
+- **TASKS.md**: Single source of truth for all project tasks
+- **README.md**: Project setup, usage, and contribution guidelines
+- **CHANGELOG.md**: Version history and notable changes
+
+### Documentation Standards
+- Keep documentation in sync with implementation
+- Update relevant docs when making architectural changes
+- Use clear, actionable language
+- Include examples and code snippets where helpful
+
+## Workflow Principles
+
+### Development Lifecycle
+1. **Planning**: Define requirements in PRD.md
+2. **Task Breakdown**: Create detailed tasks in TASKS.md
+3. **Implementation**: Work through tasks systematically
+4. **Testing**: Validate implementation against requirements
+5. **Documentation**: Update docs to reflect changes
+6. **Review**: Ensure quality standards are met
+
+## Issue Management
+
+### Issue Lifecycle
+1. **Creation**: Every task must have corresponding issue
+2. **Assignment**: Link issues to tasks in TASKS.md
+3. **Progress**: Update issue status as work progresses
+4. **Resolution**: Close issues when tasks are completed
+
+### Issue Standards
+- Use descriptive titles that clearly state the problem/feature
+- Include acceptance criteria in issue description
+- Reference related tasks and documentation
+- Use labels for categorization (bug, feature, enhancement)
+
+## Branch Management
+
+### Naming Conventions
+- `feature/{issue-number}-{brief-description}`
+- `bugfix/{issue-number}-{brief-description}`
+- `hotfix/{issue-number}-{brief-description}`
+- Always include issue number for traceability
+
+### Merge Strategy
+- Use squash merges to keep history clean
+- Include issue reference in merge commit message
+- Delete feature branches after successful merge
+
+## Release Management
+
+### Version Control
+- Use semantic versioning (MAJOR.MINOR.PATCH)
+- Tag releases in git with version numbers
+- Update CHANGELOG.md with each release
+- Include migration notes for breaking changes
+
+### Release Checklist
+- [ ] All planned tasks completed
+- [ ] **TDD followed**: All code has tests written before implementation
+- [ ] Quality gates passed
+- [ ] Test coverage >80% (100% for critical paths)
+- [ ] All tests passing
+- [ ] Documentation updated
+- [ ] Security review completed (if applicable)

@@ -1,0 +1,95 @@
+---
+description: Standardized project folder structure and organization standards. Keep root minimal, organize docs in docs/, structure source code logically. Apply when creating or organizing project structure.
+globs: README.md,docs/**,src/**
+alwaysApply: false
+---
+
+# Project Structure Standards
+
+> **Note**: Assumes core rules (file operations) are already loaded.
+
+## Root Directory Principles
+
+- Keep root directory minimal and focused
+- Only essential top-level files and primary folders
+- All documentation moves to `docs/` folder
+- README.md is the only documentation file in root
+
+## Standard Root Structure
+
+```text
+project-name/
+├── README.md                 # Project overview and quick start
+├── docs/                     # All documentation
+├── src/                      # Source code
+├── tests/                    # Test files
+├── scripts/                  # Build/deployment scripts
+├── .cursor/                  # Cursor rules and config
+└── [language-specific files] # package.json, requirements.txt, etc.
+```
+
+## Documentation Organization
+
+```text
+docs/
+├── PRD.md                    # Product Requirements Document
+├── TASKS.md                  # Task management and tracking
+├── TECH_STACK.md            # Technology decisions and architecture
+├── CHANGELOG.md             # Version history
+└── assets/                   # Images, diagrams, mockups
+```
+
+## Source Code Organization (Atomic Design Hierarchy)
+
+Structure code following atomic design principles - small, focused files that compose into larger logical groups (see `code-structure.mdc` for detailed rules, size limits, and composition guidelines):
+
+```text
+src/
+├── atoms/                  # Basic building blocks (small, focused, single responsibility)
+│   ├── user.py            # Basic user data structure
+│   ├── validator.py       # Single-purpose validation function
+│   └── logger.py          # Basic logging utility
+├── molecules/              # Composed components (small groups of atoms)
+│   ├── user_validator.py  # User validation (uses atoms/user, atoms/validator)
+│   ├── auth_form.py       # Authentication form (uses atoms/user, atoms/validator)
+│   └── api_client.py      # API client (uses atoms/logger, atoms/validator)
+├── organisms/              # Complex modules (composed from molecules/atoms)
+│   ├── auth_system.py     # Complete auth system (uses molecules/auth_form, molecules/user_validator)
+│   ├── user_service.py     # User management service (uses molecules/user_validator, atoms/user)
+│   └── api_handler.py     # API request handler (uses molecules/api_client, organisms/auth_system)
+├── templates/              # Reusable patterns (structural templates)
+│   ├── endpoint_template.py  # API endpoint pattern
+│   └── service_template.py   # Service layer pattern
+└── pages/                  # Complete features (composed from organisms/molecules/atoms)
+    ├── login_page.py       # Complete login feature
+    └── dashboard_page.py  # Complete dashboard feature
+```
+
+**Note**: See `code-structure.mdc` for file size limits, composition rules, and detailed guidelines.
+
+## Testing Structure
+
+```text
+tests/
+├── unit/                    # Unit tests
+├── integration/             # Integration tests
+├── e2e/                     # End-to-end tests
+└── fixtures/                # Test data and fixtures
+```
+
+## Configuration Management
+
+- Never commit secrets or credentials
+- Use `.env.example` to document required variables
+- Separate config by environment (development.env, staging.env, production.env)
+- Use consistent variable naming conventions
+
+## Project Initialization Checklist
+
+- [ ] Create standard folder structure
+- [ ] Initialize README.md with project overview
+- [ ] Create docs/PRD.md with requirements
+- [ ] Create docs/TASKS.md for task tracking
+- [ ] Set up .gitignore for language/framework
+- [ ] Configure .cursor/rules/ with appropriate rule set
+- [ ] Create .env.example with required variables

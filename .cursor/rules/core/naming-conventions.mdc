@@ -1,0 +1,50 @@
+---
+description: Universal naming conventions. Use context-agnostic names, be consistent and descriptive, follow language-specific conventions. Apply to all naming decisions.
+alwaysApply: true
+---
+
+# Naming Conventions
+
+## Core Principles
+
+- **Context-agnostic**: Name by structure/function, not context
+- **Consistent**: Use same patterns across codebase
+- **Descriptive**: Names should clearly indicate purpose
+- **Conventional**: Follow language-specific conventions
+
+## Variable/Function Naming
+
+- Use language-appropriate conventions
+- Be descriptive: `userCount` not `uc`
+- Avoid abbreviations unless widely understood
+- Use constants for magic numbers/strings
+
+## Class Naming
+
+- Use PascalCase: `UserService`, `PaymentProcessor`
+- Use nouns: `User`, `Order`, `Payment`
+- Avoid context-specific names: `Card` not `ProductCard`
+
+## File Naming (Atomic Design Hierarchy)
+
+File naming follows language conventions and atomic design hierarchy:
+
+- **Atoms**: Simple, context-agnostic names using language conventions
+  - Python: `user.py`, `validator.py`, `logger.py` (snake_case)
+  - JavaScript/TypeScript: `user.js`, `validator.js`, `logger.js` (kebab-case or camelCase)
+  - Go: `user.go`, `validator.go`, `logger.go` (snake_case)
+- **Molecules**: Descriptive composition using language conventions
+  - Python: `user_validator.py`, `auth_form.py`, `api_client.py` (snake_case)
+  - JavaScript/TypeScript: `user-validator.js`, `auth-form.js`, `api-client.js` (kebab-case)
+- **Organisms**: Domain-focused using language conventions
+  - Python: `auth_system.py`, `user_service.py`, `payment_processor.py` (snake_case)
+  - JavaScript/TypeScript: `auth-system.js`, `user-service.js`, `payment-processor.js` (kebab-case)
+- **Templates**: Pattern names: `endpoint_template.py`, `service_template.py`
+- **Pages**: Feature names: `login_page.py`, `dashboard_page.py`
+
+### Naming Principles
+
+- **Atoms**: Context-agnostic, reusable names
+- **Molecules**: Describe the composition/relationship
+- **Organisms**: Describe the domain/functionality
+- **Avoid**: Context-specific names that limit reusability

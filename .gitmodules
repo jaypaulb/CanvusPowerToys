@@ -1,0 +1,6 @@
+[submodule "canvus-custom-menu"]
+	path = canvus-custom-menu
+	url = https://github.com/jaypaulb/canvus-custom-menu.git
+[submodule "canvus-webui"]
+	path = canvus-webui
+	url = https://github.com/jaypaulb/CanvusWebUI.git

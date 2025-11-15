@@ -10,16 +10,16 @@ import (
 
 // TouchAreaHandler manages touch area assignment.
 type TouchAreaHandler struct {
-	grid             *GridWidget
-	areaIndexInput   *widget.Entry
-	statusLabel      *widget.Label
+	grid         *GridWidget
+	areaIndexInput *widget.Entry
+	statusLabel   *widget.Label
 	currentAreaIndex int
 }
 
 // NewTouchAreaHandler creates a new touch area handler.
 func NewTouchAreaHandler(grid *GridWidget) *TouchAreaHandler {
 	return &TouchAreaHandler{
-		grid:             grid,
+		grid:            grid,
 		currentAreaIndex: 1,
 	}
 }
@@ -138,3 +138,4 @@ func (tah *TouchAreaHandler) GetTouchAreas() map[int][]string {
 	}
 	return areas
 }
+

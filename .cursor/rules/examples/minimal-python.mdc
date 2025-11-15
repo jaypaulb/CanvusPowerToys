@@ -1,0 +1,62 @@
+---
+description: Python development standards. Includes quality gates, code style, atomic design structure, documentation, security, testing, and error handling. Apply when working with Python files.
+globs: *.py,*.pyi,requirements*.txt,pyproject.toml,setup.py
+alwaysApply: false
+---
+
+# Python Development Standards
+
+## Quality Gates
+- All code must pass: `ruff check .`, `black --check .`, `mypy .`, `pytest --cov`
+- Test coverage >80%
+- Execute quality gates before completion
+- Auto-fix issues when possible
+
+## Code Structure (Atomic Design)
+Structure code following atomic principles:
+- **Atoms**: Basic functions, classes, utilities (`atoms/` directory)
+- **Molecules**: Composed components (`molecules/` directory)
+- **Organisms**: Complex modules (`organisms/` directory)
+- **Templates**: Reusable patterns (`templates/` directory)
+
+## Code Style
+- Follow PEP 8 (enforced by black and ruff)
+- Type hints for all function parameters and return values
+- Use async/await for I/O operations
+- snake_case for variables/functions, PascalCase for classes
+- UPPER_SNAKE_CASE for constants
+
+## Documentation
+- All public functions/classes must have docstrings (Google style)
+- Include parameter types, return types, and raised exceptions
+- Use type hints as primary documentation
+
+## Error Handling
+- Implement comprehensive error handling with try/except
+- Use custom exception classes for domain-specific errors
+- Log errors appropriately (exclude sensitive data)
+- Never expose sensitive data in errors
+
+## Security
+- Never commit secrets, API keys, or credentials
+- Use environment variables for configuration
+- Validate all inputs and sanitize outputs
+- No sensitive data in logs or error messages
+
+## Testing
+- Use pytest for all tests
+- Write unit tests for all new functions
+- Include integration tests for API endpoints
+- Use pytest fixtures for test data and setup
+- Mock external dependencies
+
+## Dependencies
+- Pin dependency versions in requirements.txt
+- Use virtual environments for isolation
+- Keep dependencies minimal and well-justified
+- Regular security updates with `pip audit`
+
+## Performance
+- Use appropriate data structures (sets for membership, deques for queues)
+- Use generators for memory efficiency with large datasets
+- Consider async/await for I/O bound operations

@@ -1,0 +1,57 @@
+---
+description: Guidelines for large-scale code refactoring and system changes. Defines reconnaissance, planning, context gathering, strategy, execution, validation, and reporting phases. Apply when performing refactoring work.
+alwaysApply: false
+---
+
+# Refactoring Guidelines
+
+> **Note**: Assumes core rules (command execution, file operations, quality gates) are already loaded.
+
+## 0 · Familiarisation & Mapping
+- **Reconnaissance first.** Perform a non-destructive scan of the repository, dependencies, configuration, and runtime substrate to build an evidence-based mental model.
+- Produce a brief, ≤ 200-line digest anchoring subsequent decisions.
+- **No mutations during this phase.**
+
+## 1 · Planning & Clarification
+- Restate objectives, success criteria, and constraints.
+- Identify potential side-effects, external dependencies, and test coverage gaps.
+- Invoke the clarification threshold only if epistemic conflict, missing resources, irreversible jeopardy, or research saturation arises.
+
+## 2 · Context Gathering
+- Enumerate all artefacts—source, configs, infra manifests, tests, logs—impacted by the request.
+- Use the token-aware filtering protocol (head, wc -l, head -c) to responsibly sample large outputs.
+- Document scope: modules, services, data flows, and security surfaces.
+
+## 3 · Strategy & Core-First Design
+- Brainstorm alternatives; justify the chosen path on reliability, maintainability, and alignment with existing patterns.
+- Leverage reusable abstractions and adhere to DRY principles.
+- Sequence work so that foundational behaviour lands before peripheral optimisation or polish.
+- **Apply atomic design hierarchy**: Break large files into atoms (<100 lines), compose into molecules (<200 lines), build organisms (<500 lines)
+- **Enforce file size limits**: Split files that exceed atomic design size guidelines
+- **Maintain composition**: Ensure atoms → molecules → organisms → pages hierarchy is preserved
+- **Follow TDD for refactoring**: Write tests for new structure before refactoring, ensure tests pass after refactoring
+
+## 4 · Execution & Implementation
+- **Read before write; reread after write.**
+- Use command execution patterns (see `core/command-execution.mdc`):
+  - Self-terminating commands: `<command> 2>&1 | cat`
+  - Non-terminating commands: `timeout <duration> <command> 2>&1 | cat`
+- Use non-interactive flags (`-y`, `--yes`, `--force`) when safe.
+- **Never create unsolicited `.md` files**—summaries and scratch notes stay in chat unless the user explicitly requests the artefact.
+
+## 5 · Validation & Autonomous Correction
+- **TDD validation**: Ensure all refactored code has tests written first
+- Run unit, integration, linter, and static-analysis suites; auto-rectify failures until green or blocked by the clarification threshold.
+- Verify test coverage >80% for refactored code
+- Capture fused stdout + stderr and exit codes for every CLI/API invocation.
+- After fixes, reread modified artefacts to confirm semantic and syntactic integrity.
+- Run all tests to ensure no regressions introduced by refactoring
+
+## 6 · Reporting & Live TODO
+- Summarise: Changes Applied, Testing Performed, Key Decisions, Risks & Recommendations
+- Maintain an inline TODO ledger using ✅ / ⚠️ / 🚧 markers for multi-phase work.
+- All transient narratives remain in chat; no unsolicited Markdown reports.
+
+## 7 · Continuous Improvement & Prospection
+- Suggest high-value, non-critical enhancements (performance, security, observability).
+- Provide impact estimates and outline next steps.

@@ -2,9 +2,7 @@ package webui
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
-	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"

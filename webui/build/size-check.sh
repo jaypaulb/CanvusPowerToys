@@ -16,7 +16,7 @@ while IFS= read -r file; do
     size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null)
     total_size=$((total_size + size))
     file_count=$((file_count + 1))
-    
+
     size_kb=$((size / 1024))
     if [ $size -gt $MAX_SIZE_BYTES ]; then
         echo "⚠️  WARNING: $file is ${size_kb}KB (exceeds ${MAX_SIZE_KB}KB limit)"

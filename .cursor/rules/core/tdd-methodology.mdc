@@ -1,0 +1,153 @@
+---
+description: Test-Driven Development (TDD) methodology. Enforces Red-Green-Refactor cycle, test-first development, and atomic test structure. Apply to all code development.
+alwaysApply: true
+---
+
+# Test-Driven Development (TDD) Methodology
+
+> **Note**: This rule enforces TDD principles in all code development. See language-specific rules for TDD patterns.
+
+## Core TDD Principle
+
+**Write tests before implementation** - Tests drive design and ensure code correctness.
+
+## Red-Green-Refactor Cycle
+
+Follow this cycle for every feature or change:
+
+### 1. Red - Write Failing Test First
+- Write a test that describes the desired behavior
+- Test must fail (proves it tests something)
+- Test should be minimal and focused
+- Run test to confirm it fails for the right reason
+
+### 2. Green - Make Test Pass
+- Write minimal code to make the test pass
+- No premature optimization
+- Focus only on making the test green
+- Run test to confirm it passes
+
+### 3. Refactor - Improve Code
+- Improve code quality while keeping tests green
+- Remove duplication
+- Improve readability
+- Maintain test coverage
+- Run tests frequently during refactoring
+
+## TDD Workflow
+
+### Before Writing Code
+1. **Understand requirement** - What behavior is needed?
+2. **Write failing test** - Describe the behavior in test form
+3. **Run test** - Confirm it fails (Red)
+4. **Write minimal code** - Just enough to pass (Green)
+5. **Run test** - Confirm it passes
+6. **Refactor** - Improve code quality
+7. **Run tests** - Ensure everything still passes
+
+### Test Requirements
+- **Write tests first** - Before implementation code
+- **Tests must fail first** - Proves they test something
+- **One test per behavior** - Focused, single responsibility
+- **Descriptive test names** - Clear what is being tested
+- **Fast execution** - Tests should run quickly
+- **Isolated** - Tests should not depend on each other
+- **Repeatable** - Same results every time
+
+## Atomic Test Structure
+
+Tests mirror source code structure following atomic design:
+
+### Atoms - Unit Tests
+- Test individual functions/classes in isolation
+- Mock external dependencies
+- Fast execution (<1ms per test)
+- Location: `tests/atoms/` or `tests/unit/atoms/`
+
+### Molecules - Integration Tests
+- Test composed components (2-5 atoms working together)
+- May use real dependencies between atoms
+- Mock external services
+- Location: `tests/molecules/` or `tests/integration/molecules/`
+
+### Organisms - System Tests
+- Test complex modules (multiple molecules)
+- May use real dependencies
+- Test business logic flows
+- Location: `tests/organisms/` or `tests/integration/organisms/`
+
+### Pages - End-to-End Tests
+- Test complete features
+- Use real dependencies where appropriate
+- Test user workflows
+- Location: `tests/pages/` or `tests/e2e/`
+
+## Test Organization
+
+### Directory Structure
+```
+tests/
+├── atoms/          # Unit tests for atoms
+├── molecules/      # Integration tests for molecules
+├── organisms/      # System tests for organisms
+└── pages/          # E2E tests for pages
+```
+
+### File Naming
+- Mirror source structure: `test_user.py` for `user.py`
+- Use language conventions: `user_test.go`, `user.test.ts`
+- Group related tests in same file
+
+### Test Naming
+- Describe what is being tested
+- Include expected behavior
+- Use language-appropriate conventions
+- Example: `test_validate_email_returns_true_for_valid_email`
+
+## Test Coverage Requirements
+
+- **Minimum coverage**: >80% for all code
+- **Critical paths**: 100% coverage
+- **Public APIs**: 100% coverage
+- **Edge cases**: Must be tested (zero values, empty states, nulls)
+- **Error conditions**: All error paths tested
+
+## TDD Best Practices
+
+### Do's
+- ✅ Write tests before implementation
+- ✅ Make tests fail first
+- ✅ Write minimal code to pass
+- ✅ Refactor frequently
+- ✅ Keep tests fast and isolated
+- ✅ Test edge cases and errors
+- ✅ Use descriptive test names
+- ✅ Keep tests simple and focused
+
+### Don'ts
+- ❌ Write implementation before tests
+- ❌ Skip the Red phase
+- ❌ Write tests that always pass
+- ❌ Test implementation details
+- ❌ Create slow or flaky tests
+- ❌ Skip edge case testing
+- ❌ Write tests that depend on each other
+- ❌ Test private/internal methods directly
+
+## TDD Benefits
+
+✅ **Better design** - Tests force clear interfaces
+✅ **Documentation** - Tests document expected behavior
+✅ **Confidence** - Refactor with confidence
+✅ **Regression prevention** - Catch bugs early
+✅ **Faster development** - Fewer bugs, less debugging
+✅ **Maintainability** - Tests ensure code works as expected
+
+## Integration with Atomic Design
+
+- **Atoms**: Unit test each atom independently
+- **Molecules**: Integration test molecule composition
+- **Organisms**: System test organism behavior
+- **Pages**: E2E test complete user flows
+- Each level tested at appropriate granularity
+- Tests follow same atomic hierarchy as code

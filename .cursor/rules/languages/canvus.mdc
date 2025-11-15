@@ -1,0 +1,459 @@
+---
+description: Canvus API documentation and development standards. Consolidated API reference for building Canvus API clients. Covers authentication, endpoints, resources, streaming, and API patterns. Apply when working with Canvus API in any language.
+globs: *canvus*.py,*canvus*.ts,*canvus*.js,*canvus*.go,canvus_api/**/*,canvus-client/**/*
+alwaysApply: false
+---
+
+# Canvus API Development Standards
+
+> **Note**: This rule documents the Canvus API itself. For language-specific patterns (Python, Go, TypeScript, etc.), see the respective language rules. For TDD methodology, see `tdd-methodology.mdc`. For atomic design structure, see `code-structure.mdc`.
+
+## API Overview
+
+### Base URL and Versioning
+
+- **Base Path**: `/api/v1/` (all endpoints prefixed with this)
+- **Current Version**: v1.2 (introduced in Canvus 3.1)
+- **Versioning**: Semantic versioning with single major version number
+- **Data Format**: JSON for all requests and responses
+- **Example**: `https://canvus.example.com/api/v1/canvases`
+
+### Compatibility
+
+- Backward-incompatible changes trigger version increment
+- Minor updates (new features) don't require version update
+- Server version info available via `/server-info` endpoint
+
+## Authentication
+
+### Access Tokens
+
+- **Header**: `Private-Token: <access_token>`
+- **Required**: For most endpoints (except `/server-info` and shared links)
+- **Unauthenticated**: Returns `401 Unauthorized`
+
+### Token Types
+
+1. **Temporary Tokens**: Issued via `/users/login` endpoint, valid for 24 hours
+2. **Permanent Tokens**: Created via Canvus UI or `/users/:id/access-tokens` endpoint, never expire unless revoked
+
+### Token Management
+
+- Create: `POST /users/:id/access-tokens` (returns plain text token - only shown once)
+- List: `GET /users/:id/access-tokens` (does not return actual tokens)
+- Update: `PATCH /users/:id/access-tokens/:token-id` (change description)
+- Delete: `DELETE /users/:id/access-tokens/:token-id` (revoke token)
+
+### Shared Links (Canvus 3.1+)
+
+- **Format**: `{serverAddress}/open/{canvasId}`
+- **Permission**: Canvas must have `link_permission` set to `edit` or `view`
+- **Access**: Unauthenticated access possible (Guest user with specified permission)
+- **Override**: Valid `Private-Token` can be provided for authenticated access
+
+## HTTP Methods and Status Codes
+
+### Standard Operations
+
+- **GET**: Returns `200 OK` with requested resource
+- **POST**: Returns `200 OK` with created resource
+- **PATCH**: Returns `200 OK` with updated resource
+- **DELETE**: Returns `200 OK` indicating successful deletion
+
+### Error Responses
+
+- **4xx**: Client errors (missing token, invalid attributes, insufficient permissions)
+- **5xx**: Server errors
+- **Error Format**: JSON with `msg` field describing the issue
+
+```json
+{
+  "msg": "Permission denied"
+}
+```
+
+## Resources and Endpoints
+
+### Canvas Management
+
+**Canvases** (`/canvases`):
+
+- `GET /canvases` - List all canvases
+- `GET /canvases/:id` - Get single canvas
+- `POST /canvases` - Create canvas (body: `name`, `folder_id`)
+- `PATCH /canvases/:id` - Update canvas (body: `name`, `mode`)
+- `DELETE /canvases/:id` - Delete canvas
+- `GET /canvases/:id/preview` - Get canvas preview
+- `POST /canvases/:id/restore` - Restore demo canvas
+- `POST /canvases/:id/save` - Save demo state
+- `POST /canvases/:id/move` - Move/trash canvas (body: `folder_id`)
+- `POST /canvases/:id/copy` - Copy canvas (body: `folder_id`)
+- `GET /canvases/:id/permissions` - Get permissions
+- `POST /canvases/:id/permissions` - Set permissions (body: `link_permission`)
+
+**Canvas Folders** (`/canvas-folders`):
+
+- `GET /canvas-folders` - List all folders
+- `GET /canvas-folders/:id` - Get single folder
+- `POST /canvas-folders` - Create folder (body: `name`, `folder_id`)
+- `PATCH /canvas-folders/:id` - Rename folder (body: `name`)
+- `POST /canvas-folders/:id/move` - Move folder (body: `folder_id`)
+- `POST /canvas-folders/:id/copy` - Copy folder (body: `folder_id`)
+- `DELETE /canvas-folders/:id` - Delete folder
+- `DELETE /canvas-folders/:id/children` - Delete all children
+- `GET /canvas-folders/:id/permissions` - Get folder permissions
+- `POST /canvas-folders/:id/permissions` - Set folder permissions
+
+### Canvas Content Resources
+
+**Notes** (`/canvases/:id/notes`):
+
+- `GET /canvases/:id/notes` - List notes
+- `GET /canvases/:id/notes/:note_id` - Get single note
+- `POST /canvases/:id/notes` - Create note (body: `text`, `title`, `location`, `size`, etc.)
+- `PATCH /canvases/:id/notes/:note_id` - Update note
+- `DELETE /canvases/:id/notes/:note_id` - Delete note
+
+**Images** (`/canvases/:id/images`):
+
+- `GET /canvases/:id/images` - List images
+- `GET /canvases/:id/images/:image_id` - Get single image
+- `POST /canvases/:id/images` - Create image (multipart POST with `data` part)
+- `PATCH /canvases/:id/images/:image_id` - Update image
+- `DELETE /canvases/:id/images/:image_id` - Delete image
+
+**PDFs** (`/canvases/:id/pdfs`):
+
+- `GET /canvases/:id/pdfs` - List PDFs
+- `GET /canvases/:id/pdfs/:pdf_id` - Get single PDF
+- `GET /canvases/:id/pdfs/:pdf_id/download` - Download PDF binary
+- `POST /canvases/:id/pdfs` - Create PDF (multipart POST with `data` part)
+- `PATCH /canvases/:id/pdfs/:pdf_id` - Update PDF
+- `DELETE /canvases/:id/pdfs/:pdf_id` - Delete PDF
+
+**Videos** (`/canvases/:id/videos`):
+
+- `GET /canvases/:id/videos` - List videos
+- `GET /canvases/:id/videos/:video_id` - Get single video
+- `GET /canvases/:id/videos/:video_id/download` - Download video binary
+- `POST /canvases/:id/videos` - Create video (multipart POST with `data` part)
+- `PATCH /canvases/:id/videos/:video_id` - Update video
+- `DELETE /canvases/:id/videos/:video_id` - Delete video
+
+**Widgets** (`/canvases/:id/widgets`):
+
+- `GET /canvases/:id/widgets` - List widgets
+- `GET /canvases/:id/widgets/:widget_id` - Get single widget
+- `POST /canvases/:id/widgets` - Create widget (body: widget-specific attributes)
+- `PATCH /canvases/:id/widgets/:widget_id` - Update widget
+- `DELETE /canvases/:id/widgets/:widget_id` - Delete widget
+
+**Anchors** (`/canvases/:id/anchors`):
+
+- `GET /canvases/:id/anchors` - List anchors
+- `GET /canvases/:id/anchors/:anchor_id` - Get single anchor
+
+**Browsers** (`/canvases/:id/browsers`):
+
+- `GET /canvases/:id/browsers` - List browsers
+- `GET /canvases/:id/browsers/:browser_id` - Get single browser
+
+**Connectors** (`/canvases/:id/connectors`):
+
+- `GET /canvases/:id/connectors` - List connectors
+- `GET /canvases/:id/connectors/:connector_id` - Get single connector
+- `POST /canvases/:id/connectors` - Create connector
+- `PATCH /canvases/:id/connectors/:connector_id` - Update connector
+- `DELETE /canvases/:id/connectors/:connector_id` - Delete connector
+
+**Annotations**:
+
+- `GET /canvases/:canvasId/widgets?annotations=1` - List widget annotations
+- `GET /canvases/:canvasId/widgets?annotations=1&subscribe=1` - Subscribe to annotation changes (streaming)
+- Note: No dedicated POST/PATCH/DELETE for annotations; operations performed via widget endpoints
+
+### Canvas Configuration
+
+**Backgrounds** (`/canvases/:id/background`):
+
+- `GET /canvases/:id/background` - Get canvas background
+- `PATCH /canvases/:id/background` - Set background (solid color or haze, body: `color` or `haze`)
+- `POST /canvases/:id/background` - Set background image (multipart POST with `data` part)
+
+**Color Presets** (`/canvases/:canvasId/color-presets`):
+
+- `GET /canvases/:canvasId/color-presets` - Get color presets
+- `PATCH /canvases/:canvasId/color-presets` - Update color presets (body: `presets` array)
+
+**Uploads Folder** (`/canvases/:id/uploads-folder`):
+
+- `POST /canvases/:id/uploads-folder` - Upload note (multipart POST with `json` part)
+- `POST /canvases/:id/uploads-folder` - Upload file asset (multipart POST with `json` and `data` parts)
+
+### User Management
+
+**Users** (`/users`):
+
+- `GET /users` - List all users
+- `GET /users/:id` - Get single user
+- `POST /users` - Create user (admin only, body: `email`, `name`, `password`)
+- `PATCH /users/:id` - Update user profile (body: `name`, etc.)
+- `DELETE /users/:id` - Delete user (admin only)
+- `POST /users/register` - Register new user (body: `email`, `name`, `password`)
+- `POST /users/:id/approve` - Approve user (admin only)
+- `POST /users/confirm-email` - Confirm email (body: `token`)
+- `POST /users/:id/password` - Change password (body: `current_password`, `new_password`)
+- `POST /users/password/create-reset-token` - Request password reset (body: `email`)
+- `GET /users/password/validate-reset-token` - Validate reset token (query: `token`)
+- `POST /users/password/reset` - Reset password (body: `token`, `password`)
+- `POST /users/login` - Login (body: `email`/`password` or `token`)
+- `POST /users/logout` - Logout (body: `token`)
+- `POST /users/:id/block` - Block user
+- `POST /users/:id/unblock` - Unblock user (admin only)
+- `POST /users/login/saml` - SAML login
+
+**Groups** (`/groups`):
+
+- `GET /groups` - List all groups
+- `GET /groups/:id` - Get single group
+- `POST /groups` - Create group (body: `name`, `description`)
+- `DELETE /groups/:id` - Delete group
+- `POST /groups/:group_id/members` - Add user to group (body: `id`)
+- `GET /groups/:id/members` - List group members
+- `DELETE /groups/:group_id/members/:user_id` - Remove user from group
+
+### Client and Workspace Management
+
+**Clients** (`/clients`):
+
+- `GET /clients` - List all connected clients
+- `GET /clients/:id` - Get single client
+
+**Workspaces** (`/clients/:client_id/workspaces`):
+
+- `GET /clients/:client_id/workspaces` - List client workspaces
+- `GET /clients/:client_id/workspaces/:workspace_index` - Get single workspace
+- `PATCH /clients/:client_id/workspaces/:workspace_index` - Update workspace (body: workspace params)
+
+### Video Inputs and Outputs
+
+**Video Inputs**:
+
+- `GET /canvases/:id/video-inputs` - List video input widgets on canvas
+- `POST /canvases/:id/video-inputs` - Create video input widget (body: widget attributes)
+- `DELETE /canvases/:id/video-inputs/:input_id` - Delete video input widget
+- `GET /clients/:client_id/video-inputs` - List video input sources (capture devices) on client
+
+**Video Outputs**:
+
+- `GET /clients/:client_id/video-outputs` - List video outputs for client
+- `PATCH /clients/:client_id/video-outputs/:index` - Set video output source or suspend (body: `source`, `suspended`)
+- `PATCH /canvases/:id/video-outputs/:output_id` - Update video output (body: `name`, `resolution`)
+
+### Server Management
+
+**Server Info** (`/server-info`):
+
+- `GET /server-info` - Get server information (no authentication required)
+
+**Server Config** (`/server-config`):
+
+- `GET /server-config` - Get server configuration
+- `PATCH /server-config` - Update server settings (body: settings object)
+- `POST /server-config/send-test-email` - Send test email
+
+**License** (`/license`):
+
+- `GET /license` - Get license info
+- `POST /license/activate` - Activate license online (body: `key`)
+- `GET /license/request` - Generate offline activation request (query: `key`)
+- `POST /license` - Install license from offline activation (body: `license`)
+
+**Audit Log** (`/audit-log`):
+
+- `GET /audit-log` - Get audit events (paginated, query: filters)
+- `GET /audit-log/export-csv` - Export audit log as CSV (query: filters)
+
+### Assets and Mipmaps
+
+**Mipmaps** (`/mipmaps`):
+
+- `GET /mipmaps/{publicHashHex}` - Get mipmap info (requires `canvas-id` header)
+- `GET /mipmaps/{publicHashHex}/{level}` - Get mipmap level image WebP (requires `canvas-id` header)
+
+**Assets** (`/assets`):
+
+- `GET /assets/{publicHashHex}` - Get asset file by hash (requires `canvas-id` header)
+
+## Streaming
+
+### Real-Time Updates
+
+- **Parameter**: `subscribe=true` (query parameter)
+- **Supported**: Most `GET` requests
+- **Behavior**: Server keeps connection open indefinitely
+- **Format**: Newline-separated JSON objects
+- **State Parameter**: Each update includes `state` field (`normal` or `deleted`)
+
+### Example
+
+```bash
+GET /canvases?subscribe=true
+```
+
+Server sends updates as newline-separated JSON:
+
+```json
+{"id": "...", "name": "Canvas 1", "state": "normal"}
+{"id": "...", "name": "Canvas 2", "state": "normal"}
+{"id": "...", "state": "deleted"}
+```
+
+## File Uploads
+
+### Multipart POST Requirements
+
+- **Format**: `multipart/form-data`
+- **Required Parts**:
+  - `data`: File binary data (required for images, PDFs, videos)
+  - `json`: Optional JSON metadata (for uploads-folder, images, PDFs, videos)
+
+### Upload Examples
+
+**Upload Image**:
+
+```bash
+POST /canvases/:id/images
+Content-Type: multipart/form-data
+- json: {"title": "My Image"}
+- data: <binary image data>
+```
+
+**Upload Note via Uploads Folder**:
+
+```bash
+POST /canvases/:id/uploads-folder
+Content-Type: multipart/form-data
+- json: {"upload_type": "note", "text": "Hello", "title": "Note"}
+```
+
+**Upload File Asset**:
+
+```bash
+POST /canvases/:id/uploads-folder
+Content-Type: multipart/form-data
+- json: {"upload_type": "asset", "title": "My Video"}
+- data: <binary file data>
+```
+
+## Code Structure (Atomic Design)
+
+Structure Canvus API client code following atomic design hierarchy (see `code-structure.mdc` for general principles):
+
+### Atoms (Basic Building Blocks)
+
+- **Models**: Data models for API resources (Canvas, Widget, Note, User, etc.)
+- **Auth**: Authentication utilities (token management, header creation)
+- **Exceptions**: Custom API error types
+- **Size**: <100 lines each
+
+### Molecules (Composed Components)
+
+- **Resource Clients**: Each resource API client (CanvasClient, WidgetClient, NoteClient, etc.)
+- **Compose atoms**: Import and use models, auth, exceptions
+- **Size**: <200 lines each
+
+### Organisms (Complex Modules)
+
+- **Main Client**: Complete CanvusClient composing all resource clients
+- **Compose molecules**: Import all resource clients
+- **Size**: <500 lines
+
+### Structure Examples
+
+- **Atoms**: `atoms/models.py` (Canvas, Widget, Note models)
+- **Molecules**: `molecules/canvas_client.py` (CanvasClient using models and auth)
+- **Organisms**: `organisms/canvus_client.py` (CanvusClient composing all resource clients)
+
+## Testing (TDD)
+
+Follow TDD methodology (see `tdd-methodology.mdc` for core principles):
+
+### TDD Workflow (Canvus API)
+
+1. **Red**: Write failing test first (test API client method)
+2. **Green**: Write minimal code to pass
+3. **Refactor**: Improve code while keeping tests green
+
+### Test Structure (Atomic Design)
+
+- **Atoms**: Unit tests for models/auth/utilities - test in isolation
+- **Molecules**: Integration tests for resource clients - test with mocked HTTP
+- **Organisms**: System tests for main client - test with mocked molecules
+
+### Test Requirements
+
+- Write tests before implementation (TDD)
+- Test coverage >80% (100% for public APIs)
+- Mock HTTP requests appropriately for the language (see language-specific rules)
+- Test atoms in isolation
+- Test molecules with mocked atoms
+- Test organisms with mocked molecules
+- Test error handling and edge cases
+- Test streaming functionality
+- Test authentication and token handling
+- Test multipart file uploads
+
+## Error Handling
+
+### API Error Patterns
+
+- **401 Unauthorized**: Missing or invalid access token
+- **400 Bad Request**: Missing required attributes, invalid values
+- **403 Forbidden**: Insufficient permissions
+- **404 Not Found**: Resource doesn't exist
+- **500 Internal Server Error**: Server error
+
+### Error Response Format
+
+```json
+{
+  "msg": "Error message describing the issue"
+}
+```
+
+### Best Practices
+
+- Handle HTTP errors appropriately for the language
+- Return meaningful error messages
+- Log errors without exposing sensitive data
+- Use language-appropriate error handling patterns (exceptions, errors, Result types)
+- Create custom error types for API errors (atoms level)
+
+## Security
+
+- Never commit API tokens or credentials
+- Use environment variables for configuration
+- Validate all inputs before sending to API
+- Sanitize outputs from API responses
+- Handle sensitive data appropriately
+- Use HTTPS for all API communications
+- Store tokens securely (not in code)
+
+## Performance
+
+- Use async/await or appropriate concurrency patterns for the language
+- Implement connection pooling (language-appropriate)
+- Cache frequently accessed resources when appropriate
+- Use streaming for large datasets
+- Optimize request batching
+- Use language-appropriate performance optimizations
+
+## Documentation
+
+- Document all public API methods
+- Include parameter types and return types
+- Provide usage examples
+- Document authentication requirements
+- Document error conditions
+- Use language-appropriate documentation formats (see language-specific rules)

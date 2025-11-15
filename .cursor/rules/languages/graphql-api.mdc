@@ -1,0 +1,199 @@
+---
+description: GraphQL API development standards. Covers queries, mutations, subscriptions, schema design, and atomic design structure for GraphQL clients and servers. Apply when working with GraphQL APIs.
+globs: *.graphql,*.gql,schema.graphql,*graphql*.ts,*graphql*.js,*graphql*.py,*graphql*.go
+alwaysApply: false
+---
+
+# GraphQL API Development Standards
+
+> **Note**: This rule provides GraphQL-specific patterns. For language-specific patterns, see language rules. For TDD methodology, see `tdd-methodology.mdc`. For atomic design structure, see `code-structure.mdc`.
+
+## GraphQL Overview
+
+### Core Concepts
+
+- **Queries**: Read data (equivalent to GET)
+- **Mutations**: Modify data (equivalent to POST/PUT/PATCH/DELETE)
+- **Subscriptions**: Real-time updates (WebSocket-based)
+- **Schema**: Type system defining API structure
+- **Resolvers**: Functions that resolve fields
+
+### Schema Design
+
+- Use clear, descriptive type names
+- Group related fields into types
+- Use interfaces for shared fields
+- Use enums for fixed sets of values
+- Use input types for mutations
+- Document schema with descriptions
+
+## Code Structure (Atomic Design)
+
+Structure GraphQL code following atomic design hierarchy (see `code-structure.mdc` for general principles):
+
+### Atoms (Basic Building Blocks)
+
+- **Types/Scalars**: GraphQL type definitions
+- **Schema Fragments**: Reusable schema pieces
+- **Size**: <100 lines each
+
+### Molecules (Composed Components)
+
+- **Resolvers**: Field resolvers for types
+- **Queries/Mutations**: Individual query/mutation handlers
+- **Compose atoms**: Import and use types
+- **Size**: <200 lines each
+
+### Organisms (Complex Modules)
+
+- **Schema**: Complete GraphQL schema
+- **Server/Client**: Complete GraphQL server or client
+- **Compose molecules**: Import all resolvers
+- **Size**: <500 lines
+
+## Query Patterns
+
+### Query Structure
+
+```graphql
+query GetUser($id: ID!) {
+  user(id: $id) {
+    id
+    email
+    name
+    posts {
+      id
+      title
+    }
+  }
+}
+```
+
+### Best Practices
+
+- Request only needed fields (avoid over-fetching)
+- Use fragments for reusable field sets
+- Use variables for dynamic values
+- Handle null values appropriately
+- Use aliases when querying same field multiple times
+
+## Mutation Patterns
+
+### Mutation Structure
+
+```graphql
+mutation CreateUser($input: CreateUserInput!) {
+  createUser(input: $input) {
+    id
+    email
+    name
+  }
+}
+```
+
+### Best Practices
+
+- Use input types for mutation arguments
+- Return created/updated object from mutation
+- Handle validation errors appropriately
+- Use descriptive mutation names (verb + noun)
+
+## Subscription Patterns
+
+### Subscription Structure
+
+```graphql
+subscription OnUserUpdate($userId: ID!) {
+  userUpdated(userId: $userId) {
+    id
+    email
+    name
+  }
+}
+```
+
+### Best Practices
+
+- Use subscriptions for real-time updates
+- Handle connection lifecycle properly
+- Implement reconnection logic
+- Handle subscription errors gracefully
+
+## Error Handling
+
+### GraphQL Error Format
+
+```json
+{
+  "errors": [
+    {
+      "message": "Error message",
+      "extensions": {
+        "code": "ERROR_CODE",
+        "field": "fieldName"
+      }
+    }
+  ],
+  "data": null
+}
+```
+
+### Error Types
+
+- **Validation errors**: Invalid query/mutation structure
+- **Authentication errors**: Missing or invalid auth
+- **Authorization errors**: Insufficient permissions
+- **Not found errors**: Resource doesn't exist
+- **Server errors**: Internal server errors
+
+## Testing (TDD)
+
+Follow TDD methodology (see `tdd-methodology.mdc` for core principles):
+
+### TDD Workflow (GraphQL)
+
+1. **Red**: Write failing test first (test query/mutation/resolver)
+2. **Green**: Write minimal code to pass
+3. **Refactor**: Improve code while keeping tests green
+
+### Test Structure (Atomic Design)
+
+- **Atoms**: Unit tests for types/scalars - test in isolation
+- **Molecules**: Integration tests for resolvers - test with mocked data
+- **Organisms**: System tests for schema - test with real GraphQL server
+
+### Test Requirements
+
+- Write tests before implementation (TDD)
+- Test coverage >80% (100% for public APIs)
+- Test queries, mutations, and subscriptions
+- Test error handling
+- Test authentication and authorization
+- Use GraphQL testing tools (language-appropriate)
+
+## Security
+
+- Validate all inputs
+- Implement rate limiting
+- Use authentication/authorization appropriately
+- Prevent query depth attacks
+- Prevent query complexity attacks
+- Sanitize outputs
+- Never expose sensitive data in errors
+
+## Performance
+
+- Implement query complexity analysis
+- Use DataLoader for N+1 query prevention
+- Cache frequently accessed data
+- Use connection pooling for databases
+- Optimize resolver functions
+- Use subscriptions efficiently
+
+## Documentation
+
+- Document all types, queries, and mutations
+- Include examples in schema descriptions
+- Document authentication requirements
+- Document error conditions
+- Use GraphQL introspection for schema discovery

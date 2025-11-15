@@ -1,0 +1,182 @@
+---
+description: Security-focused development standards. Covers OWASP Top 10 prevention, secret management, secure coding practices, and security testing. Apply to all code development.
+alwaysApply: true
+---
+
+# Security Development Standards
+
+> **Note**: This rule enforces security best practices in all code development. See language-specific rules for language-specific security patterns.
+
+## Core Security Principle
+
+**Security by design** - Security considerations integrated from the start, not added later.
+
+## Secret Management
+
+### Never Commit Secrets
+
+- ❌ **Never** commit API keys, passwords, tokens, or credentials
+- ❌ **Never** hardcode secrets in source code
+- ❌ **Never** include secrets in configuration files committed to version control
+- ✅ **Always** use environment variables for secrets
+- ✅ **Always** use secure storage solutions (secret managers, vaults)
+- ✅ **Always** validate that secrets are not in code before committing
+
+### Secret Storage
+
+- Use environment variables: `process.env`, `os.getenv()`, `std::env::var()`
+- Use secret management services: AWS Secrets Manager, HashiCorp Vault, etc.
+- Use `.env` files (never commit) with `.gitignore`
+- Use secure configuration files (encrypted, not in repo)
+
+## OWASP Top 10 Prevention
+
+### 1. Broken Access Control
+
+- Implement proper authentication and authorization
+- Validate user permissions for all operations
+- Use principle of least privilege
+- Test access control thoroughly
+
+### 2. Cryptographic Failures
+
+- Use strong, up-to-date cryptographic algorithms
+- Never store passwords in plain text (use hashing)
+- Use HTTPS/TLS for all network communications
+- Protect sensitive data at rest and in transit
+
+### 3. Injection
+
+- Use parameterized queries (prevent SQL injection)
+- Validate and sanitize all inputs
+- Use prepared statements
+- Escape special characters appropriately
+
+### 4. Insecure Design
+
+- Design with security in mind from the start
+- Follow secure coding principles
+- Use security patterns and frameworks
+- Conduct security reviews
+
+### 5. Security Misconfiguration
+
+- Use secure default configurations
+- Remove unnecessary features and services
+- Keep dependencies updated
+- Use security headers appropriately
+
+### 6. Vulnerable Components
+
+- Keep all dependencies updated
+- Scan dependencies for vulnerabilities
+- Remove unused dependencies
+- Use dependency pinning
+
+### 7. Authentication Failures
+
+- Implement strong password policies
+- Use multi-factor authentication when possible
+- Implement account lockout after failed attempts
+- Use secure session management
+
+### 8. Software and Data Integrity Failures
+
+- Verify integrity of dependencies
+- Use signed packages when available
+- Validate data integrity
+- Implement checksums/verification
+
+### 9. Security Logging Failures
+
+- Log security-relevant events
+- Protect log files from unauthorized access
+- Don't log sensitive data
+- Monitor logs for security issues
+
+### 10. Server-Side Request Forgery (SSRF)
+
+- Validate and sanitize URLs
+- Use allowlists for external requests
+- Don't trust user-provided URLs
+- Use network segmentation
+
+## Secure Coding Practices
+
+### Input Validation
+
+- Validate all inputs (type, format, range, length)
+- Sanitize inputs before processing
+- Reject invalid inputs early
+- Use whitelist validation when possible
+
+### Output Encoding
+
+- Encode outputs to prevent XSS
+- Use appropriate encoding for context (HTML, URL, JavaScript)
+- Never trust user input in output
+- Use framework-provided encoding functions
+
+### Error Handling
+
+- Don't expose sensitive information in errors
+- Log errors securely (no secrets in logs)
+- Return generic error messages to users
+- Handle errors gracefully
+
+### Authentication and Authorization
+
+- Use strong authentication mechanisms
+- Implement proper session management
+- Validate permissions for all operations
+- Use secure password storage (hashing, salting)
+
+## Security Testing
+
+### Testing Requirements
+
+- Test authentication and authorization
+- Test input validation
+- Test error handling
+- Test for common vulnerabilities (OWASP Top 10)
+- Use security testing tools (language-appropriate)
+
+### Security Tools
+
+- **Dependency Scanning**: Check for vulnerable dependencies
+- **Static Analysis**: SAST tools for code analysis
+- **Dynamic Analysis**: DAST tools for runtime testing
+- **Secret Scanning**: Detect secrets in code
+- **Container Scanning**: Scan container images (if using)
+
+## Security in CI/CD
+
+- Run security scans in CI/CD pipeline
+- Block deployments with critical vulnerabilities
+- Scan dependencies automatically
+- Use security gates in deployment process
+
+## Best Practices
+
+- ✅ Use HTTPS/TLS for all external communications
+- ✅ Validate all inputs
+- ✅ Sanitize all outputs
+- ✅ Use secure authentication mechanisms
+- ✅ Keep dependencies updated
+- ✅ Use environment variables for secrets
+- ✅ Implement proper error handling
+- ✅ Log security events
+- ✅ Conduct security reviews
+- ✅ Follow principle of least privilege
+
+## Security Checklist
+
+Before committing code:
+- [ ] No secrets in code
+- [ ] All inputs validated
+- [ ] All outputs encoded
+- [ ] Dependencies scanned for vulnerabilities
+- [ ] Authentication/authorization implemented
+- [ ] Error handling doesn't expose sensitive data
+- [ ] Security tests pass
+- [ ] HTTPS used for external communications

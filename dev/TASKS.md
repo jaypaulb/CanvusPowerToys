@@ -179,6 +179,14 @@ Tasks are organized by development phases, following the feature priority order:
 - [⏳] Test with Canvus to verify CSS works - Status: Deferred (requires Canvus testing)
 - [⏳] Windows testing and feedback iteration - Status: Deferred (requires Windows build and testing)
 
+### 4.7 Future Enhancements (Requires Plugin Development)
+- [ ] **PLUGIN NEEDED:** Video looping toggle button - Requires C++ plugin code to add button widget that toggles playmode property dynamically
+- [ ] **PLUGIN NEEDED:** Hidden long-press button to toggle kiosk mode - Requires C++ plugin code with TapAndHoldGestureOperator to detect long-press and toggle kiosk state
+- [ ] **PLUGIN NEEDED:** Dynamic CSS class toggling - Requires plugin code to add/remove CSS classes at runtime for advanced kiosk mode control
+
+### 4.8 WebUI Integration
+- [ ] **INVESTIGATE:** CSS Options Manager WebUI page - Investigate creating a WebUI page version of the CSS Options Manager for remote configuration. Should mirror desktop functionality with widget options (Moving, Scaling, Rotation), video looping, UI visibility options (hide title bars, hide resize handles), and kiosk modes.
+
 ---
 
 ## Phase 5: Custom Menu Designer (Priority 4)

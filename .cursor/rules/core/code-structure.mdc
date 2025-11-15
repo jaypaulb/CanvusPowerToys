@@ -1,0 +1,121 @@
+---
+description: Hierarchical atomic design code structure. Enforces small, focused files that compose into larger logical groups following atoms → molecules → organisms → templates → pages hierarchy. Apply when creating or organizing code structure.
+alwaysApply: true
+---
+
+# Code Structure Standards (Atomic Design)
+
+> **Note**: This rule enforces atomic design principles in the code you create.
+
+## Atomic Design Hierarchy
+
+Structure all code following this hierarchy:
+
+### Atoms (Basic Building Blocks)
+- **Purpose**: Single-purpose, indivisible components
+- **Size**: <100 lines (ideally <50 lines)
+- **Responsibility**: One class, one function, or one small utility
+- **Dependencies**: Only standard library or external packages
+- **Naming**: Context-agnostic, reusable names
+- **Example**: `atoms/user.py` - Basic User class with minimal methods
+
+### Molecules (Composed Components)
+- **Purpose**: Small groups of atoms working together
+- **Size**: <200 lines (ideally <150 lines)
+- **Responsibility**: One specific feature or component
+- **Dependencies**: Import and compose 2-5 atoms
+- **Naming**: Describe the composition/relationship
+- **Example**: `molecules/user_validator.py` - Validates user using atoms/user and atoms/validator
+
+### Organisms (Complex Modules)
+- **Purpose**: Complex components composed from molecules/atoms
+- **Size**: <500 lines (ideally <300 lines)
+- **Responsibility**: Complete business logic for a domain area
+- **Dependencies**: Import and compose multiple molecules
+- **Naming**: Describe the domain/functionality
+- **Example**: `organisms/auth_system.py` - Complete authentication system
+
+### Templates (Reusable Patterns)
+- **Purpose**: Structural patterns that can be reused
+- **Size**: <200 lines
+- **Responsibility**: Define reusable code patterns
+- **Dependencies**: May use atoms, molecules, or organisms
+- **Naming**: Pattern-focused names
+- **Example**: `templates/endpoint_template.py` - API endpoint pattern
+
+### Pages (Complete Features)
+- **Purpose**: Complete features composed from organisms/molecules/atoms
+- **Size**: <500 lines (compose from smaller pieces)
+- **Responsibility**: Complete user-facing feature
+- **Dependencies**: Import organisms, molecules, and atoms as needed
+- **Naming**: Feature-focused names
+- **Example**: `pages/login_page.py` - Complete login feature
+
+## File Size Enforcement
+
+### Before Creating a File
+- [ ] Is this file small and focused? (Check size limits above)
+- [ ] Does it have a single, clear responsibility?
+- [ ] Can it be broken down into smaller atoms/molecules?
+- [ ] Is it at the appropriate hierarchy level?
+
+### If File Exceeds Size Limit
+- **Split into atoms**: Extract basic building blocks
+- **Create molecules**: Compose atoms into focused components
+- **Build organisms**: Compose molecules into complex modules
+- **Never create large monolithic files**
+
+## Composition Rules
+
+### Import Hierarchy
+- **Atoms**: Import only standard library or external dependencies
+- **Molecules**: Import atoms and compose them
+- **Organisms**: Import molecules and/or atoms
+- **Pages**: Import organisms, molecules, and atoms as needed
+
+### Composition Guidelines
+- Prefer composition over inheritance
+- Keep import depth shallow (atoms → molecules → organisms, not deeper)
+- Avoid circular dependencies
+- Each level should be independently testable
+
+## Directory Structure
+
+```
+src/
+├── atoms/          # Basic building blocks (<100 lines each)
+├── molecules/      # Composed components (<200 lines each)
+├── organisms/      # Complex modules (<500 lines each)
+├── templates/     # Reusable patterns (<200 lines each)
+└── pages/         # Complete features (<500 lines each)
+
+tests/
+├── atoms/          # Unit tests for atoms (mirror src/atoms/)
+├── molecules/      # Integration tests for molecules (mirror src/molecules/)
+├── organisms/      # System tests for organisms (mirror src/organisms/)
+└── pages/          # E2E tests for pages (mirror src/pages/)
+```
+
+## Test Structure (TDD)
+
+Tests follow atomic design hierarchy and mirror source structure (see `tdd-methodology.mdc` for TDD principles):
+
+- **Atoms**: Unit tests - test individual functions/classes in isolation
+- **Molecules**: Integration tests - test composed components (2-5 atoms)
+- **Organisms**: System tests - test complex modules (multiple molecules)
+- **Pages**: E2E tests - test complete features
+
+### Test Organization Rules
+- One test file per source file
+- Tests mirror source directory structure
+- Test names describe behavior being tested
+- Tests written before implementation (TDD)
+
+## Benefits
+
+✅ **Small, focused files** - Easy to understand and maintain
+✅ **Clear hierarchy** - Atoms → Molecules → Organisms → Pages
+✅ **Reusability** - Atoms and molecules can be reused across contexts
+✅ **Testability** - Each level can be tested independently
+✅ **Maintainability** - Changes are localized to small files
+✅ **Scalability** - System grows by composition, not by file size

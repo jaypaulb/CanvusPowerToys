@@ -16,12 +16,12 @@ class ErrorHandler {
    */
   logError(message, error, context = '') {
     const errorMessage = context ? `${context}: ${message}` : message;
-    
+
     // In development, log to console for debugging
     if (this.isDevelopment) {
       console.error(errorMessage, error);
     }
-    
+
     // In production, could send to error tracking service
     // For now, silently handle (or show user-friendly message)
     this.showUserError(message);

@@ -1,0 +1,40 @@
+---
+description: File read/write standards. Always read before write, use token-aware filtering for large files, validate paths. Apply to all file operations.
+alwaysApply: true
+---
+
+# File Operations Standards
+
+## Read Before Write
+- Always read files before modifying them
+- Re-read after changes to verify integrity
+- Use token-aware filtering for large files (≤200 lines output)
+- Check file existence and permissions before operations
+
+## Token-Aware Filtering
+For large files, use filtering:
+- `head -n 200` - First 200 lines
+- `wc -l` - Line count
+- `head -c 10K` - First 10KB
+- Start broad, narrow down based on relevance
+
+## Path Validation
+- Use workspace-relative paths (not location-relative)
+- Always confirm working directory with `pwd`
+- Validate target directory exists before writing
+
+## Documentation Standards
+- Keep durable documentation in repository
+- Ephemeral TODOs stay in conversation only
+- Never create unsolicited `.md` files without explicit request
+
+## Atomic Design File Creation
+
+When creating new files, follow atomic design hierarchy (see `code-structure.mdc` for complete guidelines):
+
+### File Creation Checklist
+- [ ] Is this file small and focused? (Check size limits in `code-structure.mdc`)
+- [ ] Does it have a single, clear responsibility?
+- [ ] Can it be composed from smaller pieces instead?
+- [ ] Is it at the appropriate hierarchy level (atoms → molecules → organisms)?
+- [ ] Does it follow the composition rules (atoms import only stdlib/external, molecules import atoms, etc.)?

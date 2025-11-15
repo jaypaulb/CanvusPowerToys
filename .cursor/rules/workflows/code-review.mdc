@@ -1,0 +1,211 @@
+---
+description: Code review standards and workflows. Covers review checklists, PR/MR templates, review automation, and best practices for code reviews. Apply when working with pull requests, merge requests, or code reviews.
+globs: .github/pull_request_template.md,.gitlab/merge_request_templates/*.md
+alwaysApply: false
+---
+
+# Code Review Standards
+
+> **Note**: Assumes core rules (command execution, file operations, quality gates, TDD methodology, code structure) are already loaded.
+
+## Code Review Principles
+
+### Core Requirements
+
+- **Constructive Feedback**: Focus on improvement, not criticism
+- **Timely Reviews**: Review within agreed timeframe (e.g., 24 hours)
+- **Thorough Review**: Check code quality, tests, documentation
+- **Respectful Communication**: Maintain professional tone
+- **Learning Opportunity**: Use reviews for knowledge sharing
+
+## Review Checklist
+
+### Code Quality
+
+- [ ] Code follows project style guide
+- [ ] Code is readable and maintainable
+- [ ] No code duplication (DRY principle)
+- [ ] Appropriate error handling
+- [ ] No hardcoded values (use configuration)
+- [ ] Code follows atomic design principles (atoms → molecules → organisms)
+
+### Testing
+
+- [ ] **TDD followed**: Tests written before implementation (see `tdd-methodology.mdc`)
+- [ ] All tests pass
+- [ ] Test coverage meets requirements (see `quality-gates.mdc`)
+- [ ] Tests follow atomic design structure (see `code-structure.mdc`)
+- [ ] Edge cases tested (zero values, empty states, nulls)
+- [ ] Integration tests included where appropriate
+
+### Security
+
+- [ ] Security requirements met (see `security.mdc` for checklist)
+- [ ] No secrets in code
+- [ ] Dependencies scanned for vulnerabilities
+
+### Documentation
+
+- [ ] Public APIs documented
+- [ ] Complex logic explained
+- [ ] README updated if needed
+- [ ] Code comments where helpful
+- [ ] Breaking changes documented
+
+### Performance
+
+- [ ] No obvious performance issues
+- [ ] Appropriate data structures used
+- [ ] Caching implemented where beneficial
+- [ ] Database queries optimized (if applicable)
+
+## PR/MR Template
+
+### Required Sections
+
+```markdown
+## Description
+Brief description of changes
+
+## Type of Change
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Breaking change
+- [ ] Documentation update
+
+## Testing
+- [ ] Tests written before implementation (TDD)
+- [ ] All tests pass
+- [ ] Test coverage >80%
+- [ ] Manual testing completed
+
+## Checklist
+- [ ] Code follows style guide
+- [ ] No secrets in code
+- [ ] Documentation updated
+- [ ] Security considerations addressed
+- [ ] Performance tested (if applicable)
+
+## Related Issues
+Closes #X
+```
+
+## Review Workflow
+
+### For Reviewers
+
+1. **Read the PR/MR description** - Understand the change
+2. **Review code changes** - Check code quality, tests, security
+3. **Run tests locally** (if possible) - Verify tests pass
+4. **Provide feedback** - Constructive, specific comments
+5. **Approve or request changes** - Clear next steps
+
+### For Authors
+
+1. **Write clear PR/MR description** - Explain what and why
+2. **Keep PRs small** - Easier to review
+3. **Respond to feedback** - Address all comments
+4. **Update PR** - Make requested changes
+5. **Request re-review** - When changes complete
+
+## Review Automation
+
+### Automated Checks
+
+- **Linting**: Automatic linting checks
+- **Type Checking**: Automatic type checking
+- **Tests**: Automatic test execution
+- **Coverage**: Automatic coverage checks
+- **Security Scanning**: Automatic security scans
+- **Build**: Automatic build verification
+
+### Pre-commit Hooks
+
+- Run linting before commit
+- Run tests before commit
+- Check for secrets before commit
+- Format code before commit
+
+## Review Best Practices
+
+### Do's
+
+- ✅ Provide specific, actionable feedback
+- ✅ Explain the "why" behind suggestions
+- ✅ Acknowledge good code
+- ✅ Ask questions when unclear
+- ✅ Review in timely manner
+- ✅ Focus on code, not person
+
+### Don'ts
+
+- ❌ Nitpick on style (use linters)
+- ❌ Be dismissive or rude
+- ❌ Request changes without explanation
+- ❌ Review without understanding context
+- ❌ Block on minor issues
+- ❌ Make personal attacks
+
+## Review Types
+
+### Light Review
+
+- Quick check for obvious issues
+- Verify tests pass
+- Check for secrets
+- Approve if looks good
+
+### Thorough Review
+
+- Detailed code analysis
+- Check all quality gates
+- Verify test coverage
+- Review security implications
+- Check performance impact
+
+## TDD in Code Reviews
+
+Code review-specific TDD validation (see `tdd-methodology.mdc` for core TDD principles):
+
+### TDD Review Checklist
+
+- [ ] Tests written first (TDD)
+- [ ] Tests fail initially (Red phase verified)
+- [ ] Implementation makes tests pass (Green phase)
+- [ ] Code refactored while keeping tests green (Refactor phase)
+- [ ] Test coverage adequate (see `quality-gates.mdc`)
+
+## Atomic Design in Reviews
+
+Code review-specific atomic design validation (see `code-structure.mdc` for complete rules):
+
+### Structure Validation
+
+- Verify code follows atomic design hierarchy
+- Check file sizes meet limits (atoms <100, molecules <200, organisms <500)
+- Ensure composition is correct (atoms → molecules → organisms)
+- Validate test structure mirrors source structure
+
+## Review Metrics
+
+### Track
+
+- Review turnaround time
+- Number of review iterations
+- Common issues found
+- Review coverage (all PRs reviewed)
+
+### Goals
+
+- Review within 24 hours
+- Minimize review iterations
+- Identify patterns in issues
+- 100% review coverage
+
+## Documentation
+
+- Document review standards
+- Provide examples of good/bad reviews
+- Document common issues
+- Include review templates
+- Document review process

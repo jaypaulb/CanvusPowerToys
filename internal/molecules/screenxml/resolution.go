@@ -26,8 +26,8 @@ var CommonResolutions = []Resolution{
 
 // ResolutionHandler manages resolution selection and detection.
 type ResolutionHandler struct {
-	resolutionSelect   *widget.Select
-	currentRes         Resolution
+	resolutionSelect *widget.Select
+	currentRes       Resolution
 	onResolutionChange func(Resolution)
 }
 
@@ -90,3 +90,4 @@ func (rh *ResolutionHandler) DetectResolution(gpuOutput string) (Resolution, err
 	// For now, return default resolution
 	return CommonResolutions[0], nil
 }
+

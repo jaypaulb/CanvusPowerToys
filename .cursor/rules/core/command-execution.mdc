@@ -1,0 +1,78 @@
+---
+description: Standard command execution patterns. Commands that don't self-terminate must use timeout. All commands require error handling and validation. Apply to all command executions.
+alwaysApply: true
+---
+
+# Command Execution Standards
+
+## Core Pattern
+
+### Commands That Self-Terminate
+
+For commands that complete on their own (most commands):
+
+```bash
+<command> 2>&1 | cat
+```
+
+### Commands That Don't Self-Terminate
+
+For commands that run indefinitely or may hang (e.g., `log --tail`, `watch`, interactive commands):
+
+```bash
+timeout <duration> <command> 2>&1 | cat
+```
+
+**Timeout Duration Guidelines:**
+
+- **Log tailing/monitoring**: `timeout 30s` or `timeout 60s` (adjust based on expected output)
+- **Long-running operations**: `timeout 300s` (5 minutes) or appropriate duration
+- **Interactive commands**: `timeout 30s` (prevents hanging)
+- **Network requests**: `timeout 30s` (prevents hanging on network issues)
+
+## Requirements
+
+- Use non-interactive flags (`-y`, `--yes`) where safe
+- Use non-paging flags where safe
+- Validate command outputs before proceeding
+- Always check exit codes
+- Capture stderr with `2>&1`
+- **Use timeout only for commands that don't self-terminate** (log tailing, watch, interactive commands)
+- Pipe to `cat` to prevent paging
+
+## Examples
+
+### Self-Terminating Command (No Timeout)
+
+```bash
+output=$(git status 2>&1 | cat)
+if [ $? -eq 0 ]; then
+    # Process successful output
+else
+    # Handle error
+fi
+```
+
+### Non-Terminating Command (With Timeout)
+
+```bash
+# Log tailing - will run indefinitely without timeout
+output=$(timeout 30s docker logs --tail 100 -f container_name 2>&1 | cat)
+if [ $? -eq 0 ]; then
+    # Process log output
+else
+    # Handle error or timeout
+fi
+```
+
+### Long-Running Operation (With Appropriate Timeout)
+
+```bash
+# Build operation - may take time but should complete
+output=$(timeout 300s npm run build 2>&1 | cat)
+if [ $? -eq 0 ]; then
+    # Process build output
+else
+    # Handle error or timeout
+fi
+```

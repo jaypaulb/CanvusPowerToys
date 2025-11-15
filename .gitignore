@@ -36,6 +36,10 @@ build/
 # Exception: webui/build contains build scripts that should be committed
 !webui/build/
 
+# Windows version info resource files
+*.syso
+resource.syso
+
 # Logs
 *.log
 

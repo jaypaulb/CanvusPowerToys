@@ -1,0 +1,27 @@
+---
+description: Universal error handling patterns. Implement comprehensive error handling, use custom exceptions, log appropriately, never expose sensitive data. Apply to all error handling.
+alwaysApply: true
+---
+
+# Error Handling Standards
+
+## Core Principles
+- Implement comprehensive error handling
+- Use custom exception classes for domain-specific errors
+- Log errors appropriately (exclude sensitive data)
+- Return meaningful error messages to users
+- Never expose sensitive data in errors
+
+## Error Handling Checklist
+- [ ] All external calls wrapped in try/catch
+- [ ] Custom exceptions for domain errors
+- [ ] Sensitive data excluded from logs
+- [ ] User-friendly error messages
+- [ ] Proper error propagation
+- [ ] Error recovery strategies where appropriate
+
+## Logging Standards
+- Use structured logging
+- Include context (user ID, request ID, etc.)
+- Never log passwords, tokens, or secrets
+- Use appropriate log levels (DEBUG, INFO, WARN, ERROR)

@@ -1,0 +1,298 @@
+---
+description: CI/CD integration patterns and standards. Covers GitHub Actions, GitLab CI, Jenkins, deployment workflows, and quality gate enforcement in CI/CD pipelines. Apply when working with CI/CD configuration files.
+globs: .github/workflows/*.yml,.github/workflows/*.yaml,.gitlab-ci.yml,jenkinsfile,Jenkinsfile,*.jenkinsfile
+alwaysApply: false
+---
+
+# CI/CD Integration Standards
+
+> **Note**: Assumes core rules (command execution, file operations, quality gates, TDD methodology) are already loaded.
+
+## CI/CD Principles
+
+### Core Requirements
+
+- **Automated Testing**: Run all tests on every commit/PR
+- **Quality Gates**: Enforce linting, type checking, test coverage
+- **Fast Feedback**: Provide quick feedback on failures
+- **Reproducible Builds**: Builds should be deterministic
+- **Security Scanning**: Scan for vulnerabilities
+- **Deployment Automation**: Automate deployment when quality gates pass
+
+## Quality Gate Enforcement
+
+CI/CD-specific quality gate implementation (see `quality-gates.mdc` for universal requirements):
+
+### Quality Gate Order
+
+1. Linting and type checking (fastest, fail early)
+2. Unit tests (fast)
+3. Integration tests (slower)
+4. Coverage check (>80%, 100% for critical paths)
+5. Security scan (see `security.mdc` for security requirements)
+6. Build and deploy (if all pass)
+
+## GitHub Actions Patterns
+
+### Basic Workflow Structure
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  quality-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup language environment
+        # Language-specific setup
+      - name: Lint
+        run: # Linting command
+      - name: Type Check
+        run: # Type checking command
+      - name: Test
+        run: # Test command
+      - name: Coverage
+        run: # Coverage check
+      - name: Security Scan
+        run: # Security scanning
+```
+
+### Language-Specific Examples
+
+**Python:**
+```yaml
+- name: Setup Python
+  uses: actions/setup-python@v4
+  with:
+    python-version: '3.11'
+- name: Install dependencies
+  run: pip install -r requirements.txt
+- name: Lint
+  run: ruff check .
+- name: Type Check
+  run: mypy .
+- name: Test
+  run: pytest
+- name: Coverage
+  run: pytest --cov --cov-report=xml
+```
+
+**Go:**
+```yaml
+- name: Setup Go
+  uses: actions/setup-go@v4
+  with:
+    go-version: '1.21'
+- name: Lint
+  run: golangci-lint run
+- name: Test
+  run: go test ./...
+- name: Coverage
+  run: go test -cover ./...
+```
+
+**TypeScript/Node.js:**
+```yaml
+- name: Setup Node.js
+  uses: actions/setup-node@v3
+  with:
+    node-version: '20'
+- name: Install dependencies
+  run: npm ci
+- name: Lint
+  run: npm run lint
+- name: Type Check
+  run: npm run type-check
+- name: Test
+  run: npm test
+- name: Coverage
+  run: npm run coverage
+```
+
+## GitLab CI Patterns
+
+### Basic Pipeline Structure
+
+```yaml
+stages:
+  - lint
+  - test
+  - coverage
+  - security
+  - deploy
+
+lint:
+  stage: lint
+  script:
+    - # Linting commands
+  only:
+    - merge_requests
+    - main
+
+test:
+  stage: test
+  script:
+    - # Test commands
+  coverage: '/Coverage: \d+\.\d+%/'
+
+coverage:
+  stage: coverage
+  script:
+    - # Coverage check
+  coverage: '/Coverage: \d+\.\d+%/'
+
+security:
+  stage: security
+  script:
+    - # Security scanning
+```
+
+### Quality Gate Enforcement
+
+```yaml
+quality-gates:
+  stage: test
+  script:
+    - echo "Running quality gates..."
+    - # Run all quality checks
+    - lint || exit 1
+    - type-check || exit 1
+    - test || exit 1
+    - coverage-check || exit 1
+  only:
+    - merge_requests
+```
+
+## Jenkins Patterns
+
+### Basic Pipeline Structure
+
+```groovy
+pipeline {
+    agent any
+    stages {
+        stage('Lint') {
+            steps {
+                sh 'lint-command'
+            }
+        }
+        stage('Type Check') {
+            steps {
+                sh 'type-check-command'
+            }
+        }
+        stage('Test') {
+            steps {
+                sh 'test-command'
+            }
+        }
+        stage('Coverage') {
+            steps {
+                sh 'coverage-check-command'
+            }
+        }
+        stage('Security Scan') {
+            steps {
+                sh 'security-scan-command'
+            }
+        }
+        stage('Deploy') {
+            when {
+                allOf {
+                    branch 'main'
+                    expression { currentBuild.result == 'SUCCESS' }
+                }
+            }
+            steps {
+                sh 'deploy-command'
+            }
+        }
+    }
+}
+```
+
+## Deployment Workflows
+
+### Deployment Strategy
+
+- **Manual Approval**: Require approval before production deployment
+- **Staged Deployment**: Deploy to staging first, then production
+- **Rollback Plan**: Automated rollback on deployment failure
+- **Health Checks**: Verify deployment success
+
+### Deployment Pattern
+
+```yaml
+deploy:
+  needs: [quality-gates]
+  runs-on: ubuntu-latest
+  if: github.ref == 'refs/heads/main'
+  steps:
+    - name: Deploy to Staging
+      run: # Deploy commands
+    - name: Health Check
+      run: # Health check commands
+    - name: Deploy to Production
+      if: success()
+      run: # Production deploy commands
+```
+
+## TDD in CI/CD
+
+CI/CD-specific TDD validation (see `tdd-methodology.mdc` for core TDD principles):
+
+### TDD Validation in CI/CD
+
+```yaml
+tdd-validation:
+  runs-on: ubuntu-latest
+  steps:
+    - name: Check test coverage
+      run: |
+        coverage=$(coverage-command)
+        if [ "$coverage" -lt 80 ]; then
+          echo "Coverage $coverage% is below 80% threshold"
+          exit 1
+        fi
+    - name: Verify tests exist
+      run: # Check that tests exist for all code
+```
+
+## Security Scanning
+
+### Security Checks
+
+- Dependency vulnerability scanning
+- Secret scanning (API keys, passwords)
+- Code security analysis
+- Container image scanning (if using containers)
+
+### Security Tools
+
+- **GitHub**: Dependabot, CodeQL
+- **GitLab**: Dependency Scanning, SAST
+- **Jenkins**: OWASP Dependency Check, SonarQube
+
+## Best Practices
+
+- **Fast Feedback**: Run fastest checks first
+- **Parallel Execution**: Run independent checks in parallel
+- **Caching**: Cache dependencies and build artifacts
+- **Matrix Testing**: Test against multiple language versions
+- **Conditional Execution**: Only run expensive checks when needed
+- **Artifact Storage**: Store build artifacts for debugging
+
+## Documentation
+
+- Document CI/CD pipeline structure
+- Document quality gate requirements
+- Document deployment process
+- Document rollback procedures
+- Include troubleshooting guides

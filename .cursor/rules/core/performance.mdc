@@ -1,0 +1,162 @@
+---
+description: Performance optimization guidelines. Covers profiling, benchmarking, caching strategies, and performance testing. Apply when optimizing code performance.
+alwaysApply: false
+---
+
+# Performance Optimization Standards
+
+> **Note**: Assumes core rules (command execution, file operations, quality gates, TDD methodology) are already loaded.
+
+## Performance Principles
+
+### Core Requirements
+
+- **Measure First**: Profile before optimizing
+- **Optimize Hot Paths**: Focus on frequently executed code
+- **Maintain Readability**: Don't sacrifice clarity for minor gains
+- **Test Performance**: Include performance tests in test suite
+- **Monitor in Production**: Track performance metrics
+
+## Profiling
+
+### Profiling Tools (Language-Specific)
+
+- **Python**: `cProfile`, `py-spy`, `line_profiler`
+- **Go**: `pprof`, `go tool pprof`
+- **TypeScript/JavaScript**: Chrome DevTools, `clinic.js`
+- **Rust**: `perf`, `flamegraph`, `cargo bench`
+- **C++**: `perf`, `valgrind`, `gprof`
+
+### Profiling Workflow
+
+1. **Identify bottlenecks**: Profile application to find slow code
+2. **Measure baseline**: Record current performance metrics
+3. **Optimize**: Make targeted improvements
+4. **Measure again**: Verify improvements
+5. **Repeat**: Iterate until performance goals met
+
+## Benchmarking
+
+### Benchmark Requirements
+
+- Use language-appropriate benchmarking tools
+- Run benchmarks multiple times for accuracy
+- Compare before/after performance
+- Document performance improvements
+- Include benchmarks in CI/CD (optional)
+
+### Benchmark Tools
+
+- **Python**: `pytest-benchmark`, `timeit`
+- **Go**: `testing.B`, `benchstat`
+- **TypeScript/JavaScript**: `benchmark.js`
+- **Rust**: `cargo bench`, `criterion`
+- **C++**: Google Benchmark
+
+## Caching Strategies
+
+### When to Cache
+
+- Frequently accessed data
+- Expensive computations
+- External API responses
+- Database query results
+
+### Caching Patterns
+
+- **In-Memory Cache**: Fast access, limited size
+- **Distributed Cache**: Shared across instances (Redis, Memcached)
+- **Application Cache**: Language-specific caching (Python `functools.lru_cache`)
+- **CDN Cache**: Static assets and API responses
+
+### Cache Invalidation
+
+- Set appropriate TTL (time-to-live)
+- Invalidate on data updates
+- Use cache versioning
+- Handle cache misses gracefully
+
+## Performance Testing
+
+### Performance Test Requirements
+
+- Test under realistic load
+- Measure response times
+- Test concurrent operations
+- Identify performance regressions
+- Set performance budgets
+
+### Performance Metrics
+
+- **Response Time**: Time to process request
+- **Throughput**: Requests per second
+- **Latency**: Time for single operation
+- **Resource Usage**: CPU, memory, I/O
+- **Scalability**: Performance under load
+
+## Code Optimization
+
+### Optimization Techniques
+
+- **Algorithm Optimization**: Use efficient algorithms
+- **Data Structure Selection**: Choose appropriate data structures
+- **Avoid Premature Optimization**: Optimize only when needed
+- **Profile-Guided Optimization**: Use profiling data
+- **Compiler Optimizations**: Use appropriate compiler flags
+
+### Language-Specific Optimizations
+
+- **Python**: Use `__slots__`, avoid global lookups, use generators
+- **Go**: Use appropriate data structures, avoid allocations
+- **TypeScript/JavaScript**: Minimize re-renders, use memoization
+- **Rust**: Use appropriate ownership patterns, avoid clones
+- **C++**: Use move semantics, avoid unnecessary copies
+
+## Database Performance
+
+### Query Optimization
+
+- Use appropriate indexes
+- Avoid N+1 queries
+- Use connection pooling
+- Optimize queries (EXPLAIN plans)
+- Use caching for frequent queries
+
+### Database Patterns
+
+- Use pagination for large result sets
+- Batch operations when possible
+- Use transactions appropriately
+- Monitor slow queries
+
+## API Performance
+
+### Optimization Techniques
+
+- Implement request batching
+- Use pagination
+- Implement rate limiting
+- Use compression (gzip, brotli)
+- Cache API responses
+- Use CDN for static assets
+
+## Monitoring
+
+### Performance Monitoring
+
+- Track key performance metrics
+- Set up alerts for performance degradation
+- Monitor resource usage
+- Track error rates
+- Use APM (Application Performance Monitoring) tools
+
+## Best Practices
+
+- ✅ Profile before optimizing
+- ✅ Optimize hot paths first
+- ✅ Use appropriate data structures
+- ✅ Implement caching where beneficial
+- ✅ Monitor performance in production
+- ✅ Set performance budgets
+- ✅ Test performance regressions
+- ✅ Document performance decisions

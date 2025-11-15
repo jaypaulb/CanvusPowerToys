@@ -1,0 +1,101 @@
+---
+description: Local agent workflow for human + AI collaboration. Defines task management, Git workflow, quality requirements, and multi-agent safety protocols. Apply to all agent interactions.
+alwaysApply: true
+---
+
+# Local Agent Workflow (Human + AI Collaboration)
+
+## Core Rules
+- [TASKS.md](mdc:TASKS.md) is the single source of truth for all project tasks
+- Every task must have a GitLab issue before work begins
+- Use conventional commits: `{type}({scope}): {description}`
+- **CRITICAL: Task reservation happens in main branch first**
+
+## Background Agent Support
+- **Autonomous Operation**: Agents can work independently without user intervention
+- **Task Selection**: Agents automatically select the next available task from TASKS.md
+- **Self-Healing**: Agents handle blockers by moving to next available task
+- **Zero Feedback**: Agents proceed without check-ins unless blocked
+
+## Task Reservation Protocol (MULTI-AGENT SAFE)
+
+### Step 1: Check Task Availability
+```bash
+glab issue list --search "Task X.X.X"
+git branch --list "feature/*Task X.X.X*"
+```
+
+### Step 2: Reserve Task in Main (CRITICAL)
+```bash
+git checkout main && git pull origin main
+# Update TASKS.md to mark task as in progress
+# Change: - [ ] Task X.X.X: description
+# To:     - [🔄] Task X.X.X: description - Status: In Progress (Reserving...)
+git add TASKS.md
+git commit -m "docs(tasks): reserve Task X.X.X for development"
+git push origin main
+```
+
+### Step 3: Create Issue and Branch
+```bash
+glab issue create --title "Task X.X.X: description" --description "requirements"
+git checkout -b feature/{issue-number}-description
+# Update TASKS.md with issue number
+```
+
+## Task Status Indicators
+- `- [ ]` = Not started
+- `- [🔄]` = In Progress (add Status: In Progress (Issue #X))
+- `- [✅]` = Completed (add Status: Completed (Issue #X))
+- `- [🚫]` = Blocked (add Status: Blocked (Issue #X))
+- `- [⏳]` = Reserved (temporary state during reservation)
+
+## Quality Requirements
+- **TDD methodology**: Write tests before implementation (see `tdd-methodology.mdc`)
+- Test coverage >80% (100% for critical paths and public APIs)
+- Docstrings for all public functions/classes
+- No secrets in code
+- Comprehensive error handling
+- Use environment variables for configuration
+- **IMPORTANT: Run quality checks individually to identify specific issues**
+
+## TDD Workflow Steps
+
+### For Each Feature/Change
+1. **Red**: Write failing test first
+   - Describe desired behavior in test
+   - Run test to confirm it fails
+2. **Green**: Write minimal code to pass
+   - Implement just enough to make test pass
+   - Run test to confirm it passes
+3. **Refactor**: Improve code quality
+   - Refactor while keeping tests green
+   - Run tests frequently during refactoring
+4. **Verify**: Run all tests
+   - Ensure no regressions
+   - Check test coverage
+
+## Blocker Protocol
+- Document blocker thoroughly in issue comments
+- Mark issue blocked: `glab issue edit {number} --label "blocked"`
+- Update TASKS.md as blocked
+- Move to next available task immediately
+
+## Completion Workflow
+- **CRITICAL: Verify TDD was followed**: All code must have tests written first
+- **CRITICAL: Run quality checks individually before MR**:
+  - `ruff check .`
+  - `black --check .`
+  - `mypy .`
+  - `pytest` (all tests must pass)
+  - `pytest --cov` (verify >80% coverage)
+- **CRITICAL: Self-merge MR if no issues found**: `glab mr merge {number} --squash --remove-source-branch --yes`
+- **CRITICAL: Close issue after merge**: `glab issue close {number}`
+- **CRITICAL: Switch back to main**: `git checkout main && git pull origin main`
+- Update TASKS.md as completed if not already done
+
+## Multi-Agent Safety Protocols
+- **Atomic Updates**: Task reservation must be atomic (single commit)
+- **Immediate Push**: Push task reservation to main immediately
+- **Conflict Detection**: Check for conflicts before claiming
+- **Graceful Degradation**: Move to next task if claim fails

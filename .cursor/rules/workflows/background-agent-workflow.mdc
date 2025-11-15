@@ -1,0 +1,107 @@
+---
+description: Background agent workflow for autonomous operation. Defines task selection, conflict resolution, implementation protocol, and blocker handling for unattended agent operation. Apply when agent is operating autonomously.
+alwaysApply: false
+---
+
+# Background Agent Workflow (Autonomous Operation)
+
+> **Note**: Assumes core rules (command execution, file operations, quality gates) are already loaded.
+
+## Core Principles
+- **Autonomous Operation**: Work independently without user intervention
+- **Self-Healing**: Handle blockers by moving to next available task
+- **Zero Feedback**: Proceed without check-ins unless blocked
+- **Multi-Agent Safety**: Prevent conflicts and duplicate work
+
+## Task Selection Protocol
+
+### Step 1: Find Next Available Task
+Read TASKS.md and find first unchecked task:
+- Look for pattern: `- [ ] **Task X.X.X**: description`
+- Skip tasks marked as: `- [🔄]`, `- [✅]`, `- [🚫]`
+
+### Step 2: Check Task Availability (CRITICAL)
+```bash
+glab issue list --search "Task X.X.X" --state all
+git branch --list "feature/*Task X.X.X*"
+git branch -r --list "origin/feature/*Task X.X.X*"
+```
+
+### Step 3: Reserve Task in Main (ATOMIC)
+```bash
+git checkout main && git pull origin main
+# Update TASKS.md to reserve: - [🔄] Task X.X.X - Status: In Progress (Reserving...)
+git add TASKS.md
+git commit -m "docs(tasks): reserve Task X.X.X for development"
+git push origin main
+```
+
+### Step 4: Create Issue and Branch
+```bash
+glab issue create --title "Task X.X.X: description" --description "requirements"
+git checkout -b feature/{issue-number}-description
+# Update TASKS.md with issue number
+```
+
+## Conflict Resolution
+
+### If Task Already in Progress
+- Move to next available task immediately
+- Do not attempt to take over existing work
+- Log the conflict in issue comments if appropriate
+
+### If Reservation Fails
+- Check if someone else reserved it first
+- If yes, move to next available task
+- If no, retry once, then move to next task
+
+## Implementation Protocol
+
+### TDD Workflow (Required)
+1. **Red**: Write failing test first
+2. **Green**: Write minimal code to pass
+3. **Refactor**: Improve code while keeping tests green
+4. **Verify**: Run all tests and check coverage
+
+### Quality Checks (Run Individually)
+```bash
+ruff check .
+black --check .
+mypy .
+pytest
+pytest --cov  # Verify >80% coverage
+```
+
+### Commit Standards
+- Use conventional commits: `{type}({scope}): {description}`
+- Commit frequently with meaningful messages
+- Include issue numbers in commits when relevant
+
+## Blocker Protocol
+
+### When Blocked
+1. Document blocker thoroughly in issue
+2. Mark issue as blocked: `glab issue edit {number} --label "blocked"`
+3. Update TASKS.md: `- [🚫] Task X.X.X - Status: Blocked (Issue #X)`
+4. Move to next available task immediately
+
+## Completion Workflow
+
+### Before MR
+- Verify TDD was followed (tests written before implementation)
+- Run quality checks individually
+- Ensure all tests pass
+- Verify test coverage >80%
+- Update documentation
+
+### MR Creation and Merge
+- Create MR: `glab mr create --title "feat: description (Issue #X)"`
+- Self-merge if no issues: `glab mr merge {number} --squash --remove-source-branch --yes`
+- Close issue: `glab issue close {number}`
+- Switch back to main: `git checkout main && git pull origin main`
+
+## Success Metrics
+- **Task Throughput**: Complete tasks without user intervention
+- **Conflict Avoidance**: Successfully claim tasks without conflicts
+- **Blocker Recovery**: Move to next task when blocked
+- **Quality Maintenance**: Pass all quality checks autonomously
