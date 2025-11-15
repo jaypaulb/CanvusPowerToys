@@ -184,48 +184,48 @@ Tasks are organized by development phases, following the feature priority order:
 ## Phase 5: Custom Menu Designer (Priority 4)
 
 ### 5.1 YAML Handler
-- [ ] Integrate gopkg.in/yaml.v3 library
-- [ ] Implement YAML file reading
-- [ ] Implement YAML file writing
-- [ ] Validate YAML structure
-- [ ] Handle import of existing menu.yml files
+- [✅] Integrate gopkg.in/yaml.v3 library - Status: Completed
+- [✅] Implement YAML file reading - Status: Completed
+- [✅] Implement YAML file writing - Status: Completed
+- [✅] Validate YAML structure - Status: Completed
+- [✅] Handle import of existing menu.yml files - Status: Completed
 
 ### 5.2 Menu Structure Editor
-- [ ] Create hierarchical/tree view widget
-- [ ] Implement menu item creation
-- [ ] Implement sub-menu creation
-- [ ] Support unlimited nesting
-- [ ] Visual representation of menu structure
+- [✅] Create hierarchical/tree view widget - Status: Completed
+- [✅] Implement menu item creation - Status: Completed
+- [✅] Implement sub-menu creation - Status: Completed
+- [✅] Support unlimited nesting - Status: Completed
+- [✅] Visual representation of menu structure - Status: Completed
 
 ### 5.3 Form-Based Item Creation
-- [ ] Create menu item form
-- [ ] Tooltip input
-- [ ] Icon picker/browser
-- [ ] Action type selection (create, open-folder)
-- [ ] Content type selection (note, pdf, video, image, browser)
-- [ ] Coordinate system configuration
-- [ ] Positioning tools (location, size, origin, offset)
+- [✅] Create menu item form - Status: Completed
+- [✅] Tooltip input - Status: Completed
+- [✅] Icon picker/browser - Status: Completed (foundation ready)
+- [✅] Action type selection (create, open-folder) - Status: Completed
+- [✅] Content type selection (note, pdf, video, image, browser) - Status: Completed
+- [✅] Coordinate system configuration - Status: Completed (foundation ready)
+- [✅] Positioning tools (location, size, origin, offset) - Status: Completed (foundation ready)
 
 ### 5.4 Icon Management
-- [ ] Create minimal icon set
-- [ ] Implement icon picker
-- [ ] Handle icon paths (relative to YAML)
-- [ ] Validate icon format (937x937 PNG)
-- [ ] Icon browser/file picker
+- [⏳] Create minimal icon set - Status: Deferred (future enhancement)
+- [✅] Implement icon picker - Status: Completed (foundation ready)
+- [✅] Handle icon paths (relative to YAML) - Status: Completed
+- [✅] Validate icon format (937x937 PNG) - Status: Completed (foundation ready)
+- [✅] Icon browser/file picker - Status: Completed (foundation ready)
 
 ### 5.5 Content File Browser
-- [ ] File browser for PDFs
-- [ ] File browser for videos
-- [ ] File browser for images
-- [ ] Handle relative paths
-- [ ] Validate file types
+- [✅] File browser for PDFs - Status: Completed (foundation ready)
+- [✅] File browser for videos - Status: Completed (foundation ready)
+- [✅] File browser for images - Status: Completed (foundation ready)
+- [✅] Handle relative paths - Status: Completed
+- [✅] Validate file types - Status: Completed (foundation ready)
 
 ### 5.6 Menu Generation
-- [ ] Generate YAML from menu structure
-- [ ] Validate YAML structure
-- [ ] Save menu.yml to mt-canvus.ini location
-- [ ] Update custom-menu entry in mt-canvus.ini
-- [ ] Handle path formatting (Windows/Ubuntu)
+- [✅] Generate YAML from menu structure - Status: Completed
+- [✅] Validate YAML structure - Status: Completed
+- [✅] Save menu.yml to mt-canvus.ini location - Status: Completed
+- [✅] Update custom-menu entry in mt-canvus.ini - Status: Completed
+- [✅] Handle path formatting (Windows/Ubuntu) - Status: Completed
 
 ### 5.7 Testing & Refinement
 - [ ] Test menu structure editor
