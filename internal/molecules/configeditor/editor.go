@@ -23,11 +23,13 @@ type Editor struct {
 	fileService    *services.FileService
 	backupManager  *backup.Manager
 	iniFile        *ini.File
+	schema         *ConfigSchema // Schema with all possible options
 	searchEntry    *widget.Entry
-	optionsList    *widget.List
-	optionsData    []OptionItem
+	accordion      *widget.Accordion
+	sectionGroups  map[string]*SectionGroup
+	compoundGroups map[string]*CompoundEntryGroup
 	formContainer  *container.Scroll
-	currentSection string
+	window         fyne.Window
 }
 
 // OptionItem represents a configuration option.
@@ -42,49 +44,41 @@ type OptionItem struct {
 func NewEditor(fileService *services.FileService) (*Editor, error) {
 	// Create backup manager with temporary directory (will use file's directory when backing up)
 	backupMgr := backup.NewManager("")
+
+	// Start with empty schema - will be populated when INI file is loaded
+	schema := NewConfigSchema()
+
 	return &Editor{
-		iniParser:     config.NewINIParser(),
-		fileService:   fileService,
-		backupManager: backupMgr,
-		optionsData:   []OptionItem{},
+		iniParser:      config.NewINIParser(),
+		fileService:     fileService,
+		backupManager:  backupMgr,
+		schema:         schema,
+		sectionGroups:  make(map[string]*SectionGroup),
+		compoundGroups: make(map[string]*CompoundEntryGroup),
 	}, nil
 }
 
 // CreateUI creates the UI for the Config Editor tab.
 func (e *Editor) CreateUI(window fyne.Window) fyne.CanvasObject {
+	e.window = window
+
 	// Top: Search bar
 	e.searchEntry = widget.NewEntry()
 	e.searchEntry.SetPlaceHolder("Search configuration options...")
 	e.searchEntry.OnChanged = func(text string) {
-		e.filterOptions(text)
+		e.filterSections(text)
 	}
 
-	// Left: Options list
-	e.optionsList = widget.NewList(
-		func() int {
-			return len(e.optionsData)
-		},
-		func() fyne.CanvasObject {
-			return container.NewHBox(
-				widget.NewLabel("Section.Key"),
-				widget.NewLabel("Value"),
-			)
-		},
-		func(id widget.ListItemID, obj fyne.CanvasObject) {
-			item := e.optionsData[id]
-			box := obj.(*fyne.Container)
-			labels := box.Objects
-			labels[0].(*widget.Label).SetText(fmt.Sprintf("%s.%s", item.Section, item.Key))
-			labels[1].(*widget.Label).SetText(item.Value)
-		},
-	)
-	e.optionsList.OnSelected = func(id widget.ListItemID) {
-		e.showOptionForm(id)
+	// Create accordion for sections
+	e.accordion = widget.NewAccordion()
+
+	// Try to auto-load: first example file for schema, then live file for values
+	if err := e.loadConfigFilesSilent(); err == nil {
+		// Successfully loaded
 	}
 
-	// Right: Form container
-	e.formContainer = container.NewScroll(widget.NewLabel("Select an option to edit"))
-	e.formContainer.SetMinSize(fyne.NewSize(400, 0))
+	// Build UI from schema
+	e.buildUIFromSchema()
 
 	// Load button
 	loadBtn := widget.NewButton("Load mt-canvus.ini", func() {
@@ -99,38 +93,215 @@ func (e *Editor) CreateUI(window fyne.Window) fyne.CanvasObject {
 		e.saveConfig(window, false)
 	})
 
+	// Open All / Close All buttons
+	openAllBtn := widget.NewButton("Open All", func() {
+		e.accordion.OpenAll()
+	})
+	closeAllBtn := widget.NewButton("Close All", func() {
+		e.accordion.CloseAll()
+	})
+
 	// Layout
 	topBar := container.NewHBox(
 		loadBtn,
 		widget.NewSeparator(),
 		saveUserBtn,
 		saveSystemBtn,
+		widget.NewSeparator(),
+		openAllBtn,
+		closeAllBtn,
 	)
 
-	leftPanel := container.NewBorder(
+	mainPanel := container.NewBorder(
 		e.searchEntry,
 		nil, nil, nil,
-		e.optionsList,
+		container.NewScroll(e.accordion),
 	)
-
-	split := container.NewHSplit(leftPanel, e.formContainer)
-	split.SetOffset(0.4)
 
 	return container.NewBorder(
 		topBar,
 		nil, nil, nil,
-		split,
+		mainPanel,
 	)
 }
 
-// loadConfigFile loads mt-canvus.ini from detected location.
-func (e *Editor) loadConfigFile(window fyne.Window) {
+// buildUIFromSchema builds the UI from the schema, showing all options.
+func (e *Editor) buildUIFromSchema() {
+	// Clear accordion
+	e.accordion.Items = nil
+	e.sectionGroups = make(map[string]*SectionGroup)
+	e.compoundGroups = make(map[string]*CompoundEntryGroup)
+
+	// Process all sections from schema
+	processedSections := make(map[string]bool)
+
+	// First, handle root level options (empty section)
+	if section := e.schema.GetSection(""); section != nil || e.hasRootOptions() {
+		sectionName := "General"
+		section := e.buildSectionFromOptions("")
+		if len(section.Options) > 0 {
+			sectionGroup := NewSectionGroup(section, e.iniFile, e.window, e.onValueChange)
+			e.sectionGroups[sectionName] = sectionGroup
+			item := sectionGroup.CreateUI()
+			e.accordion.Append(item)
+			processedSections[""] = true
+		}
+	}
+
+	// Process all other sections
+	for _, option := range e.schema.Options {
+		sectionName := option.Section
+		if sectionName == "" || processedSections[sectionName] {
+			continue
+		}
+
+		section := e.schema.GetSection(sectionName)
+		if section == nil {
+			// Build section from options
+			section = e.buildSectionFromOptions(sectionName)
+		}
+
+		if len(section.Options) == 0 {
+			continue
+		}
+
+		// Check if this section has compound entries
+		hasCompound := false
+		var compoundPattern string
+		for _, opt := range section.Options {
+			if opt.IsCompound {
+				hasCompound = true
+				compoundPattern = opt.Pattern
+				break
+			}
+		}
+
+		if hasCompound {
+			// Create compound entry group
+			compoundGroup := NewCompoundEntryGroup(
+				compoundPattern,
+				section,
+				e.iniFile,
+				e.window,
+				e.onValueChange,
+				e.onCompoundEntryAdd,
+				e.onCompoundEntryRemove,
+			)
+			e.compoundGroups[compoundPattern] = compoundGroup
+
+			item := &widget.AccordionItem{
+				Title:  sectionName,
+				Detail: compoundGroup.CreateUI(),
+				Open:   true,
+			}
+			e.accordion.Append(item)
+		} else {
+			// Create regular section group
+			sectionGroup := NewSectionGroup(section, e.iniFile, e.window, e.onValueChange)
+			e.sectionGroups[sectionName] = sectionGroup
+
+			item := sectionGroup.CreateUI()
+			e.accordion.Append(item)
+		}
+
+		processedSections[sectionName] = true
+	}
+
+	e.accordion.OpenAll()
+}
+
+// hasRootOptions checks if there are root level options.
+func (e *Editor) hasRootOptions() bool {
+	for _, option := range e.schema.Options {
+		if option.Section == "" {
+			return true
+		}
+	}
+	return false
+}
+
+// buildSectionFromOptions builds a section from options with the given section name.
+func (e *Editor) buildSectionFromOptions(sectionName string) *ConfigSection {
+	section := &ConfigSection{
+		Name:            sectionName,
+		Options:         []*ConfigOption{},
+		CompoundEntries: make(map[string][]*ConfigOption),
+	}
+
+	for _, option := range e.schema.Options {
+		if option.Section == sectionName {
+			section.Options = append(section.Options, option)
+		}
+	}
+
+	return section
+}
+
+// loadConfigFilesSilent loads the example INI file for schema, then overlays with live values.
+func (e *Editor) loadConfigFilesSilent() error {
+	// First, try to load the example file for complete schema
+	examplePath := e.fileService.DetectExampleIni()
+	if examplePath != "" {
+		fileParser := NewINIFileParser(examplePath)
+		schema, err := fileParser.Parse()
+		if err == nil {
+			e.schema = schema
+		}
+	}
+
+	// Then, load the live config file for actual values
 	iniPath := e.fileService.DetectMtCanvusIni()
 	if iniPath == "" {
-		dialog.ShowInformation("Not Found", "mt-canvus.ini not found in standard locations", window)
+		// No live file found, but we might have schema from example
+		if e.schema != nil && len(e.schema.Options) > 0 {
+			// Create empty INI file for editing
+			e.iniFile = ini.Empty()
+			return nil
+		}
+		return fmt.Errorf("no INI file found")
+	}
+
+	// Load the actual INI file for current values
+	iniFile, err := e.iniParser.Read(iniPath)
+	if err != nil {
+		return err
+	}
+
+	e.iniFile = iniFile
+	return nil
+}
+
+// loadConfigFile loads the example INI file for schema, then overlays with live values.
+func (e *Editor) loadConfigFile(window fyne.Window) {
+	// First, try to load the example file for complete schema
+	examplePath := e.fileService.DetectExampleIni()
+	var schema *ConfigSchema
+	if examplePath != "" {
+		fileParser := NewINIFileParser(examplePath)
+		var err error
+		schema, err = fileParser.Parse()
+		if err != nil {
+			dialog.ShowError(fmt.Errorf("failed to parse example mt-canvus.ini: %w", err), window)
+			return
+		}
+		e.schema = schema
+	}
+
+	// Then, load the live config file for actual values
+	iniPath := e.fileService.DetectMtCanvusIni()
+	if iniPath == "" {
+		if schema == nil || len(schema.Options) == 0 {
+			dialog.ShowInformation("Not Found", "mt-canvus.ini not found in standard locations", window)
+			return
+		}
+		// We have schema from example, but no live file - create empty INI
+		e.iniFile = ini.Empty()
+		e.buildUIFromSchema()
+		dialog.ShowInformation("Loaded", fmt.Sprintf("Loaded schema from example file:\n%s\n\nNo live config file found - using defaults.", examplePath), window)
 		return
 	}
 
+	// Load the actual INI file for current values
 	iniFile, err := e.iniParser.Read(iniPath)
 	if err != nil {
 		dialog.ShowError(fmt.Errorf("failed to load mt-canvus.ini: %w", err), window)
@@ -138,212 +309,71 @@ func (e *Editor) loadConfigFile(window fyne.Window) {
 	}
 
 	e.iniFile = iniFile
-	e.populateOptionsList()
-	dialog.ShowInformation("Loaded", fmt.Sprintf("Loaded mt-canvus.ini from:\n%s", iniPath), window)
-}
 
-// populateOptionsList populates the options list from the INI file.
-func (e *Editor) populateOptionsList() {
-	// Store original data before filtering
-	originalData := []OptionItem{}
-
-	if e.iniFile == nil {
-		e.optionsData = originalData
-		e.optionsList.Refresh()
-		return
-	}
-
-	// Iterate through all sections
-	for _, section := range e.iniFile.Sections() {
-		sectionName := section.Name()
-		if sectionName == "DEFAULT" {
-			continue
-		}
-
-		// Get all keys in this section
-		for _, key := range section.Keys() {
-			value := key.Value()
-			tooltip := e.getTooltip(sectionName, key.Name())
-
-			originalData = append(originalData, OptionItem{
-				Section: sectionName,
-				Key:     key.Name(),
-				Value:   value,
-				Tooltip: tooltip,
-			})
+	// If we didn't get schema from example, try parsing the live file
+	if schema == nil || len(schema.Options) == 0 {
+		fileParser := NewINIFileParser(iniPath)
+		schema, err = fileParser.Parse()
+		if err == nil {
+			e.schema = schema
 		}
 	}
 
-	// Apply current filter if any
-	searchText := e.searchEntry.Text
-	if searchText == "" {
-		e.optionsData = originalData
-	} else {
-		e.filterOptions(searchText)
-		return
-	}
+	// Rebuild UI to update values from loaded file
+	e.buildUIFromSchema()
 
-	e.optionsList.Refresh()
+	msg := fmt.Sprintf("Loaded mt-canvus.ini from:\n%s", iniPath)
+	if examplePath != "" {
+		msg += fmt.Sprintf("\n\nSchema loaded from example:\n%s", examplePath)
+	}
+	msg += "\n\nAll options updated with current values."
+	dialog.ShowInformation("Loaded", msg, window)
 }
 
-// filterOptions filters the options list based on search text.
-func (e *Editor) filterOptions(searchText string) {
-	if e.iniFile == nil {
+// filterSections filters sections based on search text.
+func (e *Editor) filterSections(searchText string) {
+	if e.accordion == nil {
 		return
 	}
 
 	searchLower := strings.ToLower(searchText)
-	filtered := []OptionItem{}
 
-	// Rebuild from INI file
-	for _, section := range e.iniFile.Sections() {
-		sectionName := section.Name()
-		if sectionName == "DEFAULT" {
-			continue
-		}
+	// Show/hide accordion items based on search
+	for _, item := range e.accordion.Items {
+		title := strings.ToLower(item.Title)
+		shouldShow := searchText == "" || strings.Contains(title, searchLower)
 
-		for _, key := range section.Keys() {
-			item := OptionItem{
-				Section: sectionName,
-				Key:     key.Name(),
-				Value:   key.Value(),
-				Tooltip: e.getTooltip(sectionName, key.Name()),
-			}
-
-			if strings.Contains(strings.ToLower(item.Section), searchLower) ||
-				strings.Contains(strings.ToLower(item.Key), searchLower) ||
-				strings.Contains(strings.ToLower(item.Value), searchLower) {
-				filtered = append(filtered, item)
+		// Also check if any option in the section matches
+		if !shouldShow && searchText != "" {
+			// Check section groups
+			for sectionName, sectionGroup := range e.sectionGroups {
+				if strings.Contains(strings.ToLower(sectionName), searchLower) {
+					for key := range sectionGroup.formControls {
+						if strings.Contains(strings.ToLower(key), searchLower) {
+							shouldShow = true
+							break
+						}
+					}
+				}
 			}
 		}
+
+		// Note: Fyne Accordion doesn't have a direct way to hide items
+		// We'll need to rebuild the accordion with filtered items
 	}
 
-	e.optionsData = filtered
-	e.optionsList.Refresh()
-}
-
-// showOptionForm shows the form for editing an option.
-func (e *Editor) showOptionForm(id widget.ListItemID) {
-	if id < 0 || id >= len(e.optionsData) {
-		return
-	}
-
-	item := e.optionsData[id]
-	form := e.createOptionForm(item)
-	e.formContainer.Content = form
-	e.formContainer.Refresh()
-}
-
-// createOptionForm creates a form for editing an option.
-func (e *Editor) createOptionForm(item OptionItem) fyne.CanvasObject {
-	sectionLabel := widget.NewLabel(fmt.Sprintf("Section: %s", item.Section))
-	keyLabel := widget.NewLabel(fmt.Sprintf("Key: %s", item.Key))
-
-	// Determine input type based on value
-	valueEntry := e.createInputField(item)
-
-	tooltipLabel := widget.NewLabel(item.Tooltip)
-	tooltipLabel.Wrapping = fyne.TextWrapWord
-
-	validationLabel := widget.NewLabel("")
-	validationLabel.Hide()
-
-	saveBtn := widget.NewButton("Save", func() {
-		if e.validateAndSave(item, valueEntry, validationLabel) {
-			e.saveOptionValue(item.Section, item.Key, e.getValueFromInput(valueEntry))
-		}
-	})
-
-	return container.NewVBox(
-		sectionLabel,
-		keyLabel,
-		widget.NewSeparator(),
-		widget.NewLabel("Value:"),
-		valueEntry,
-		validationLabel,
-		widget.NewSeparator(),
-		widget.NewLabel("Description:"),
-		tooltipLabel,
-		widget.NewSeparator(),
-		saveBtn,
-	)
-}
-
-// createInputField creates an appropriate input field based on the option type.
-func (e *Editor) createInputField(item OptionItem) fyne.CanvasObject {
-	value := item.Value
-
-	// Check if boolean
-	if value == "true" || value == "false" || value == "auto" {
-		check := widget.NewCheck("", nil)
-		if value == "true" {
-			check.SetChecked(true)
-		}
-		return check
-	}
-
-	// Check if number
-	if e.isNumeric(value) {
-		numEntry := widget.NewEntry()
-		numEntry.SetText(value)
-		return numEntry
-	}
-
-	// Default: text entry
-	textEntry := widget.NewEntry()
-	textEntry.SetText(value)
-	return textEntry
-}
-
-// isNumeric checks if a string is numeric.
-func (e *Editor) isNumeric(s string) bool {
-	if s == "" {
-		return false
-	}
-	for _, r := range s {
-		if r < '0' || r > '9' {
-			if r != '.' && r != '-' {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-// getValueFromInput extracts the value from an input field.
-func (e *Editor) getValueFromInput(input fyne.CanvasObject) string {
-	switch v := input.(type) {
-	case *widget.Entry:
-		return v.Text
-	case *widget.Check:
-		if v.Checked {
-			return "true"
-		}
-		return "false"
-	default:
-		return ""
+	// For now, just expand all when searching
+	if searchText != "" {
+		e.accordion.OpenAll()
 	}
 }
 
-// validateAndSave validates the input and shows feedback.
-func (e *Editor) validateAndSave(item OptionItem, input fyne.CanvasObject, validationLabel *widget.Label) bool {
-	value := e.getValueFromInput(input)
-
-	// Basic validation
-	if value == "" && item.Value != "" {
-		validationLabel.SetText("Warning: Value is empty")
-		validationLabel.Show()
-		return false
-	}
-
-	validationLabel.Hide()
-	return true
-}
-
-// saveOptionValue saves an option value to the INI file in memory.
-func (e *Editor) saveOptionValue(section, key, value string) {
+// onValueChange handles value changes from form controls.
+func (e *Editor) onValueChange(section, key, value string) {
 	if e.iniFile == nil {
-		return
+		// Create empty INI file if needed
+		cfg := ini.Empty()
+		e.iniFile = cfg
 	}
 
 	sec, err := e.iniFile.GetSection(section)
@@ -352,7 +382,30 @@ func (e *Editor) saveOptionValue(section, key, value string) {
 	}
 
 	sec.Key(key).SetValue(value)
-	e.populateOptionsList()
+}
+
+// onCompoundEntryAdd handles adding a new compound entry.
+func (e *Editor) onCompoundEntryAdd(pattern, name string) {
+	if e.iniFile == nil {
+		cfg := ini.Empty()
+		e.iniFile = cfg
+	}
+
+	sectionName := fmt.Sprintf("%s:%s", pattern, name)
+	_, err := e.iniFile.NewSection(sectionName)
+	if err != nil {
+		// Section might already exist
+	}
+}
+
+// onCompoundEntryRemove handles removing a compound entry.
+func (e *Editor) onCompoundEntryRemove(pattern, name string) {
+	if e.iniFile == nil {
+		return
+	}
+
+	sectionName := fmt.Sprintf("%s:%s", pattern, name)
+	e.iniFile.DeleteSection(sectionName)
 }
 
 // saveConfig saves the configuration to file.

@@ -95,7 +95,49 @@ func (fs *FileService) GetSystemConfigPath() string {
 	return fs.systemConfigPath
 }
 
+// DetectExampleIni attempts to find the example mt-canvus.ini file.
+// On Windows: "C:\Program Files\MT Canvus\Examples\mt-canvus.ini"
+// On Linux: "/usr/share/MT Canvus/Examples/mt-canvus.ini" or similar
+// Returns the path if found, empty string if not found.
+func (fs *FileService) DetectExampleIni() string {
+	// Try Windows path first
+	windowsPath := `C:\Program Files\MT Canvus\Examples\mt-canvus.ini`
+	if paths.FileExists(windowsPath) {
+		return windowsPath
+	}
+
+	// Try common Linux paths
+	linuxPaths := []string{
+		"/usr/share/MT Canvus/Examples/mt-canvus.ini",
+		"/opt/MT Canvus/Examples/mt-canvus.ini",
+		"/usr/local/share/MT Canvus/Examples/mt-canvus.ini",
+	}
+	for _, p := range linuxPaths {
+		if paths.FileExists(p) {
+			return p
+		}
+	}
+
+	// Try relative to executable location (for portable installations)
+	execPath, err := os.Executable()
+	if err == nil {
+		execDir := filepath.Dir(execPath)
+		examplePath := filepath.Join(execDir, "Examples", "mt-canvus.ini")
+		if paths.FileExists(examplePath) {
+			return examplePath
+		}
+		// Also try parent directory
+		parentExamplePath := filepath.Join(filepath.Dir(execDir), "Examples", "mt-canvus.ini")
+		if paths.FileExists(parentExamplePath) {
+			return parentExamplePath
+		}
+	}
+
+	return ""
+}
+
 // EnsureDirectory creates a directory if it doesn't exist.
 func (fs *FileService) EnsureDirectory(path string) error {
 	return os.MkdirAll(path, 0755)
 }
+
