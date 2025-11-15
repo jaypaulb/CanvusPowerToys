@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pages - Canvus PowerToys</title>
+  
+  <!-- Design System -->
+  <link rel="stylesheet" href="/css/design-system.css">
+  <link rel="stylesheet" href="/css/dark-theme.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  
+  <!-- Page Template -->
+  <link rel="stylesheet" href="/templates/css/page-template.css">
+  
+  <!-- Component Styles -->
+  <link rel="stylesheet" href="/atoms/css/button.css">
+  <link rel="stylesheet" href="/atoms/css/input.css">
+  <link rel="stylesheet" href="/atoms/css/card.css">
+  <link rel="stylesheet" href="/molecules/css/navbar.css">
+  <link rel="stylesheet" href="/molecules/css/canvas-header.css">
+  <link rel="stylesheet" href="/molecules/css/form-group.css">
+</head>
+<body>
+  <div class="page">
+    <!-- Page Header -->
+    <header class="page-header">
+      <nav class="navbar">
+        <a href="/" class="navbar-brand">Canvus PowerToys</a>
+        <div class="nav-mobile">
+          <button class="nav-mobile-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <div class="nav-mobile-menu" id="mobileMenu">
+            <a href="/" class="navbar-link">Home</a>
+            <a href="/pages.html" class="navbar-link active">Pages</a>
+            <a href="/macros.html" class="navbar-link">Macros</a>
+            <a href="/remote-upload.html" class="navbar-link">Remote Upload</a>
+            <a href="/rcu.html" class="navbar-link">RCU</a>
+          </div>
+        </div>
+        <ul class="navbar-nav nav-desktop">
+          <li><a href="/" class="navbar-link">Home</a></li>
+          <li><a href="/pages.html" class="navbar-link active">Pages</a></li>
+          <li><a href="/macros.html" class="navbar-link">Macros</a></li>
+          <li><a href="/remote-upload.html" class="navbar-link">Remote Upload</a></li>
+          <li><a href="/rcu.html" class="navbar-link">RCU</a></li>
+        </ul>
+      </nav>
+      <div class="canvas-header">
+        <div class="canvas-header-info">
+          <div class="canvas-header-title" id="canvasHeaderTitle">
+            Currently tracking <span id="installationName">...</span>
+          </div>
+          <div class="canvas-header-subtitle" id="canvasHeaderSubtitle">
+            Showing <span id="canvasName">...</span>
+          </div>
+        </div>
+        <div class="canvas-header-status">
+          <span class="status-indicator" id="statusIndicator"></span>
+          <span class="status-text" id="statusText">Connecting...</span>
+        </div>
+      </div>
+    </header>
+    
+    <!-- Page Main Content -->
+    <main class="page-main">
+      <div class="page-content">
+        <div class="page-section">
+          <h1 class="page-section-title">Pages Management</h1>
+          <p class="page-section-description">
+            Manage and organize canvas pages. Create, edit, and configure pages for your Canvus installation.
+          </p>
+        </div>
+        
+        <!-- Pages List -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Canvas Pages</h2>
+            <button class="btn btn-primary btn-sm" id="createPageBtn">Create New Page</button>
+          </div>
+          <div class="card-body">
+            <div id="pagesList">
+              <p class="text-muted">Loading pages...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    
+    <footer class="page-footer">
+      <p>Canvus PowerToys WebUI &copy; 2024</p>
+    </footer>
+  </div>
+  
+  <!-- Workspace Client -->
+  <script src="/molecules/js/workspace-client.js"></script>
+  
+  <!-- Page Scripts -->
+  <script src="/pages/js/pages.js"></script>
+  <script src="/pages/js/common.js"></script>
+</body>
+</html>
+
