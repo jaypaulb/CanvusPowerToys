@@ -94,10 +94,6 @@ func NewMainWindow(app fyne.App) *MainWindow {
 			Text:    "CSS Options",
 			Content: cssOptions,
 		},
-		&container.TabItem{
-			Text:    "Custom Menu",
-			Content: customMenu,
-		},
 	// Initialize WebUI Manager
 	var webUI fyne.CanvasObject
 	if fileService != nil {
@@ -132,7 +128,6 @@ func NewMainWindow(app fyne.App) *MainWindow {
 			Text:    "WebUI",
 			Content: webUI,
 		},
-	)
 	)
 
 	window.SetContent(tabs)
