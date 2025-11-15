@@ -1,15 +1,20 @@
-.PHONY: build build-linux build-windows test test-cover lint fmt vet clean
+.PHONY: build build-linux build-windows test test-cover lint fmt vet clean process-assets
+
+# Process WebUI assets (minify CSS, JS, HTML)
+process-assets:
+	@echo "Processing WebUI assets..."
+	@go run webui/build/process-assets.go
 
 # Build for current platform
-build:
+build: process-assets
 	go build -ldflags="-s -w" -o canvus-powertoys ./cmd/powertoys
 
 # Build for Linux
-build-linux:
+build-linux: process-assets
 	GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o canvus-powertoys-linux ./cmd/powertoys
 
 # Build for Windows
-build-windows:
+build-windows: process-assets
 	GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o canvus-powertoys.exe ./cmd/powertoys
 
 # Run tests
@@ -44,6 +49,10 @@ lint:
 clean:
 	rm -f canvus-powertoys canvus-powertoys.exe canvus-powertoys-linux
 
+# Check WebUI asset sizes
+check-assets:
+	@./webui/build/size-check.sh
+
 # Run all quality checks
-check: fmt vet test
+check: fmt vet test check-assets
 
