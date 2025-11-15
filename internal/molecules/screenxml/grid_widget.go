@@ -1,0 +1,176 @@
+package screenxml
+
+import (
+	"image/color"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/widget"
+)
+
+const (
+	GridCols = 10
+	GridRows = 5
+)
+
+// CellState represents the state of a grid cell.
+type CellState struct {
+	GPUOutput    string // Format: "gpu#.output#" (e.g., "0.1")
+	TouchArea    int    // Touch area index (-1 if not assigned)
+	IsLayoutArea bool   // True if part of layout area (pink frame)
+}
+
+// GridWidget is a custom widget for displaying a 10x5 grid.
+type GridWidget struct {
+	widget.BaseWidget
+	cells       [GridRows][GridCols]*CellState
+	onCellClick func(row, col int)
+	onCellDrag  func(startRow, startCol, endRow, endCol int)
+	dragStart   *fyne.Position
+}
+
+// NewGridWidget creates a new grid widget.
+func NewGridWidget() *GridWidget {
+	grid := &GridWidget{
+		cells: [GridRows][GridCols]*CellState{},
+	}
+
+	// Initialize all cells
+	for row := 0; row < GridRows; row++ {
+		for col := 0; col < GridCols; col++ {
+			grid.cells[row][col] = &CellState{
+				TouchArea:    -1,
+				IsLayoutArea: false,
+			}
+		}
+	}
+
+	grid.ExtendBaseWidget(grid)
+	return grid
+}
+
+// SetOnCellClick sets the callback for cell click events.
+func (g *GridWidget) SetOnCellClick(fn func(row, col int)) {
+	g.onCellClick = fn
+}
+
+// SetOnCellDrag sets the callback for cell drag events.
+func (g *GridWidget) SetOnCellDrag(fn func(startRow, startCol, endRow, endCol int)) {
+	g.onCellDrag = fn
+}
+
+// GetCell returns the state of a cell.
+func (g *GridWidget) GetCell(row, col int) *CellState {
+	if row < 0 || row >= GridRows || col < 0 || col >= GridCols {
+		return nil
+	}
+	return g.cells[row][col]
+}
+
+// SetCellGPUOutput sets the GPU output for a cell.
+func (g *GridWidget) SetCellGPUOutput(row, col int, gpuOutput string) {
+	if row < 0 || row >= GridRows || col < 0 || col >= GridCols {
+		return
+	}
+	g.cells[row][col].GPUOutput = gpuOutput
+	g.Refresh()
+}
+
+// ClearCellGPUOutput clears the GPU output for a cell.
+func (g *GridWidget) ClearCellGPUOutput(row, col int) {
+	if row < 0 || row >= GridRows || col < 0 || col >= GridCols {
+		return
+	}
+	g.cells[row][col].GPUOutput = ""
+	g.Refresh()
+}
+
+// CreateRenderer creates the renderer for the grid widget.
+func (g *GridWidget) CreateRenderer() fyne.WidgetRenderer {
+	return &gridRenderer{
+		grid:   g,
+		cells:  make([][]fyne.CanvasObject, GridRows),
+		border: canvas.NewRectangle(color.RGBA{R: 200, G: 200, B: 200, A: 255}),
+	}
+}
+
+// gridRenderer renders the grid widget.
+type gridRenderer struct {
+	grid   *GridWidget
+	cells  [][]fyne.CanvasObject
+	border *canvas.Rectangle
+}
+
+func (r *gridRenderer) Layout(size fyne.Size) {
+	cellWidth := size.Width / GridCols
+	cellHeight := size.Height / GridRows
+
+	for row := 0; row < GridRows; row++ {
+		if r.cells[row] == nil {
+			r.cells[row] = make([]fyne.CanvasObject, GridCols)
+		}
+		for col := 0; col < GridCols; col++ {
+			if r.cells[row][col] == nil {
+				rect := canvas.NewRectangle(color.RGBA{R: 255, G: 255, B: 255, A: 255})
+				rect.StrokeColor = color.RGBA{R: 150, G: 150, B: 150, A: 255}
+				rect.StrokeWidth = 1
+				r.cells[row][col] = rect
+			}
+			x := float32(col) * cellWidth
+			y := float32(row) * cellHeight
+			r.cells[row][col].Resize(fyne.NewSize(cellWidth, cellHeight))
+			r.cells[row][col].Move(fyne.NewPos(x, y))
+		}
+	}
+
+	r.border.Resize(size)
+	r.border.Move(fyne.NewPos(0, 0))
+}
+
+func (r *gridRenderer) MinSize() fyne.Size {
+	return fyne.NewSize(600, 300) // Minimum size for 10x5 grid
+}
+
+func (r *gridRenderer) Objects() []fyne.CanvasObject {
+	objects := []fyne.CanvasObject{r.border}
+	for row := 0; row < GridRows; row++ {
+		for col := 0; col < GridCols; col++ {
+			if r.cells[row][col] != nil {
+				objects = append(objects, r.cells[row][col])
+			}
+		}
+	}
+	return objects
+}
+
+func (r *gridRenderer) Refresh() {
+	cellState := r.grid.cells
+	for row := 0; row < GridRows; row++ {
+		for col := 0; col < GridCols; col++ {
+			if r.cells[row][col] != nil {
+				rect := r.cells[row][col].(*canvas.Rectangle)
+				state := cellState[row][col]
+
+				// Set cell color based on state
+				if state.GPUOutput != "" {
+					// Cell has GPU output assigned - light blue
+					rect.FillColor = color.RGBA{R: 173, G: 216, B: 230, A: 255}
+				} else if state.IsLayoutArea {
+					// Layout area - light pink border
+					rect.FillColor = color.RGBA{R: 255, G: 240, B: 245, A: 255}
+					rect.StrokeColor = color.RGBA{R: 255, G: 192, B: 203, A: 255}
+					rect.StrokeWidth = 2
+				} else {
+					// Default - white
+					rect.FillColor = color.RGBA{R: 255, G: 255, B: 255, A: 255}
+					rect.StrokeColor = color.RGBA{R: 150, G: 150, B: 150, A: 255}
+					rect.StrokeWidth = 1
+				}
+			}
+		}
+	}
+	canvas.Refresh(r.grid)
+}
+
+func (r *gridRenderer) Destroy() {
+}
