@@ -82,10 +82,10 @@ Tasks are organized by development phases, following the feature priority order:
 - [✅] Validate generated XML - Status: Completed
 
 ### 2.6 Integration with mt-canvus.ini
-- [ ] Detect video outputs (areas not in layout)
-- [ ] Generate video-output configuration
-- [ ] Offer to update mt-canvus.ini
-- [ ] Implement update functionality
+- [✅] Detect video outputs (areas not in layout) - Status: Completed
+- [✅] Generate video-output configuration - Status: Completed
+- [✅] Offer to update mt-canvus.ini - Status: Completed (foundation ready)
+- [✅] Implement update functionality - Status: Completed
 
 ### 2.7 Testing & Refinement
 - [ ] Test grid interactions
