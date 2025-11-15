@@ -2,7 +2,6 @@ package screenxml
 
 import (
 	"fmt"
-	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -15,85 +14,80 @@ import (
 // Creator is the main Screen.xml Creator component.
 type Creator struct {
 	grid            *GridWidget
-	gpuAssignment   *GPUAssignment
-	touchAreaHandler *TouchAreaHandler
-	resolutionHandler *ResolutionHandler
+	gridContainer   *GridContainer
 	xmlGenerator    *XMLGenerator
 	iniIntegration  *INIIntegration
 	fileService     *services.FileService
+	window          fyne.Window
 }
 
 // NewCreator creates a new Screen.xml Creator.
 func NewCreator(fileService *services.FileService) (*Creator, error) {
 	grid := NewGridWidget()
-	gpuAssignment := NewGPUAssignment(grid)
-	touchAreaHandler := NewTouchAreaHandler(grid)
-	resolutionHandler := NewResolutionHandler()
+	gridContainer := NewGridContainer(grid)
 
 	creator := &Creator{
-		grid:              grid,
-		gpuAssignment:     gpuAssignment,
-		touchAreaHandler:   touchAreaHandler,
-		resolutionHandler:  resolutionHandler,
-		iniIntegration:     NewINIIntegration(),
-		fileService:        fileService,
+		grid:            grid,
+		gridContainer:      gridContainer,
+		iniIntegration:   NewINIIntegration(),
+		fileService:      fileService,
 	}
 
-	// Initialize XML generator
-	resolution := resolutionHandler.GetCurrentResolution()
-	creator.xmlGenerator = NewXMLGenerator(grid, gpuAssignment, touchAreaHandler, resolution)
+	// Initialize XML generator (simplified - no longer need separate handlers)
+	defaultRes := Resolution{Width: 1920, Height: 1080, Name: "1920x1080 (Full HD)"}
+	creator.xmlGenerator = NewXMLGenerator(grid, nil, nil, defaultRes)
 
 	return creator, nil
 }
 
 // CreateUI creates the UI for the Screen.xml Creator tab.
 func (c *Creator) CreateUI(window fyne.Window) fyne.CanvasObject {
-	// Left panel: Controls
-	controls := container.NewVBox(
-		widget.NewLabel("Screen.xml Creator"),
-		widget.NewSeparator(),
-		c.gpuAssignment.CreateUI(),
-		widget.NewSeparator(),
-		c.touchAreaHandler.CreateUI(),
-		widget.NewSeparator(),
-		c.resolutionHandler.CreateUI(),
-		widget.NewSeparator(),
-		c.createActionButtons(window),
+	c.window = window
+
+	// Top: 3 buttons only
+	topBar := container.NewHBox(
+		widget.NewButton("Generate Screen.xml", func() {
+			c.generateAndPreview(window)
+		}),
+		widget.NewButton("Save screen.xml", func() {
+			c.saveScreenXML(window)
+		}),
+		widget.NewButton("Update mt-canvus.ini", func() {
+			c.updateMtCanvusIni(window)
+		}),
 	)
 
-	// Right panel: Grid
-	gridContainer := container.NewBorder(
-		widget.NewLabel("10x5 Grid - Click cells to assign GPU outputs, drag to assign touch areas"),
+	// Main: Grid with cell widgets wrapped in drag selection widget
+	dragSelectionWidget := NewDragSelectionWidget(c.gridContainer)
+
+	return container.NewBorder(
+		topBar,
 		nil, nil, nil,
-		c.grid,
+		dragSelectionWidget,
 	)
-
-	// Split view
-	split := container.NewHSplit(controls, gridContainer)
-	split.SetOffset(0.3) // 30% for controls, 70% for grid
-
-	return split
 }
 
-// createActionButtons creates the action buttons (Generate, Save, etc.).
-func (c *Creator) createActionButtons(window fyne.Window) fyne.CanvasObject {
-	generateBtn := widget.NewButton("Generate screen.xml", func() {
-		c.generateAndPreview(window)
-	})
+// updateMtCanvusIni updates mt-canvus.ini with video-output configuration.
+func (c *Creator) updateMtCanvusIni(window fyne.Window) {
+	iniPath := c.fileService.DetectMtCanvusIni()
+	if iniPath == "" {
+		dialog.ShowInformation("Not Found", "mt-canvus.ini not found in standard locations", window)
+		return
+	}
 
-	saveBtn := widget.NewButton("Save screen.xml", func() {
-		c.saveScreenXML(window)
-	})
+	videoOutputs := c.iniIntegration.DetectVideoOutputs(c.grid)
+	if len(videoOutputs) == 0 {
+		dialog.ShowInformation("No Outputs", "No video outputs detected. Assign GPU outputs to cells first.", window)
+		return
+	}
 
-	detectBtn := widget.NewButton("Auto-detect mt-canvus.ini", func() {
-		c.autoDetectConfig(window)
-	})
+	if err := c.iniIntegration.UpdateMtCanvusIni(iniPath, videoOutputs); err != nil {
+		dialog.ShowError(err, window)
+		return
+	}
 
-	return container.NewVBox(
-		generateBtn,
-		saveBtn,
-		detectBtn,
-	)
+	config := c.iniIntegration.GenerateVideoOutputConfig(videoOutputs)
+	dialog.ShowInformation("Success", fmt.Sprintf("mt-canvus.ini updated successfully.\n\nvideo-output=%s", config), window)
 }
 
 // generateAndPreview generates screen.xml and shows preview.
@@ -148,59 +142,8 @@ func (c *Creator) saveScreenXML(window fyne.Window) {
 			return
 		}
 
-		// Offer to update mt-canvus.ini
-		if c.iniIntegration.ShouldUpdateIni(c.grid) {
-			c.offerUpdateIni(window)
-		} else {
-			dialog.ShowInformation("Success", "screen.xml saved successfully", window)
-		}
+		dialog.ShowInformation("Success", "screen.xml saved successfully", window)
 	}, window)
 }
 
-// offerUpdateIni offers to update mt-canvus.ini with video-output.
-func (c *Creator) offerUpdateIni(window fyne.Window) {
-	videoOutputs := c.iniIntegration.DetectVideoOutputs(c.grid)
-	config := c.iniIntegration.GenerateVideoOutputConfig(videoOutputs)
-
-	content := widget.NewRichTextFromMarkdown(fmt.Sprintf(`
-**Update mt-canvus.ini?**
-
-Detected video outputs: %s
-
-Would you like to update mt-canvus.ini with:
-video-output=%s
-`, strings.Join(videoOutputs, ", "), config))
-
-	updateBtn := widget.NewButton("Update", func() {
-		iniPath := c.fileService.DetectMtCanvusIni()
-		if iniPath == "" {
-			dialog.ShowError(fmt.Errorf("mt-canvus.ini not found"), window)
-			return
-		}
-
-		if err := c.iniIntegration.UpdateMtCanvusIni(iniPath, videoOutputs); err != nil {
-			dialog.ShowError(err, window)
-			return
-		}
-
-		dialog.ShowInformation("Success", "mt-canvus.ini updated successfully", window)
-	})
-
-	cancelBtn := widget.NewButton("Cancel", func() {})
-
-	dialog.ShowCustom("Update mt-canvus.ini", "Cancel", container.NewVBox(
-		content,
-		container.NewHBox(updateBtn, cancelBtn),
-	), window)
-}
-
-// autoDetectConfig attempts to auto-detect mt-canvus.ini.
-func (c *Creator) autoDetectConfig(window fyne.Window) {
-	iniPath := c.fileService.DetectMtCanvusIni()
-	if iniPath == "" {
-		dialog.ShowInformation("Not Found", "mt-canvus.ini not found in standard locations", window)
-	} else {
-		dialog.ShowInformation("Found", fmt.Sprintf("Found mt-canvus.ini at:\n%s", iniPath), window)
-	}
-}
 
