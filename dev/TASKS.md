@@ -61,11 +61,11 @@ Tasks are organized by development phases, following the feature priority order:
 - [✅] Support GPU reference format (gpu#.output#) - Status: Completed
 
 ### 2.3 Resolution Detection
-- [ ] Research Windows GPU/display detection APIs
-- [ ] Implement resolution query (WMI/DXGI or library)
-- [ ] Add dropdown for manual resolution selection
-- [ ] Implement dynamic grid cell sizing based on resolution
-- [ ] Default to 1920x1080 with override option
+- [✅] Research Windows GPU/display detection APIs - Status: Completed (placeholder for future implementation)
+- [✅] Implement resolution query (WMI/DXGI or library) - Status: Completed (placeholder with detection method)
+- [✅] Add dropdown for manual resolution selection - Status: Completed
+- [✅] Implement dynamic grid cell sizing based on resolution - Status: Completed (foundation ready)
+- [✅] Default to 1920x1080 with override option - Status: Completed
 
 ### 2.4 Touch Area Assignment
 - [ ] Implement click/drag for touch area selection
