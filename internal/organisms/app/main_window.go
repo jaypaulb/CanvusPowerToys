@@ -25,13 +25,17 @@ func NewMainWindow(app fyne.App) *MainWindow {
 
 	// Create tabs
 	// Initialize Screen.xml Creator
-	fileService := services.NewFileService()
-	creator, err := screenxml.NewCreator(fileService)
+	fileService, err := services.NewFileService()
 	var screenXMLCreator fyne.CanvasObject
 	if err == nil {
-		screenXMLCreator = creator.CreateUI(window)
+		creator, err := screenxml.NewCreator(fileService)
+		if err == nil {
+			screenXMLCreator = creator.CreateUI(window)
+		} else {
+			screenXMLCreator = widget.NewLabel("Screen.xml Creator - Error initializing")
+		}
 	} else {
-		screenXMLCreator = widget.NewLabel("Screen.xml Creator - Error initializing")
+		screenXMLCreator = widget.NewLabel("Screen.xml Creator - Error initializing file service")
 	}
 
 	tabs := container.NewAppTabs(

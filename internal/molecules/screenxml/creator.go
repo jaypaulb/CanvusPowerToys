@@ -172,8 +172,8 @@ video-output=%s
 `, strings.Join(videoOutputs, ", "), config))
 
 	updateBtn := widget.NewButton("Update", func() {
-		iniPath, err := c.fileService.DetectCanvusINI()
-		if err != nil || iniPath == "" {
+		iniPath := c.fileService.DetectMtCanvusIni()
+		if iniPath == "" {
 			dialog.ShowError(fmt.Errorf("mt-canvus.ini not found"), window)
 			return
 		}
@@ -196,8 +196,8 @@ video-output=%s
 
 // autoDetectConfig attempts to auto-detect mt-canvus.ini.
 func (c *Creator) autoDetectConfig(window fyne.Window) {
-	iniPath, err := c.fileService.DetectCanvusINI()
-	if err != nil || iniPath == "" {
+	iniPath := c.fileService.DetectMtCanvusIni()
+	if iniPath == "" {
 		dialog.ShowInformation("Not Found", "mt-canvus.ini not found in standard locations", window)
 	} else {
 		dialog.ShowInformation("Found", fmt.Sprintf("Found mt-canvus.ini at:\n%s", iniPath), window)
