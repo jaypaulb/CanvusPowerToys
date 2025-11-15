@@ -42,8 +42,19 @@ func (ii *INIIntegration) GenerateVideoOutputConfig(videoOutputs []string) strin
 		return ""
 	}
 
-	// Format: video-output=gpu0.output1,gpu0.output2,...
-	return strings.Join(videoOutputs, ",")
+	// Convert from UI format (1:1, 1:2, etc.) to INI format (gpu0.output1, gpu0.output2, etc.)
+	var converted []string
+	for _, output := range videoOutputs {
+		parts := strings.Split(output, ":")
+		if len(parts) == 2 {
+			var gpu, out int
+			fmt.Sscanf(parts[0], "%d", &gpu)
+			fmt.Sscanf(parts[1], "%d", &out)
+			// Convert from 1-based to 0-based for INI
+			converted = append(converted, fmt.Sprintf("gpu%d.output%d", gpu-1, out-1))
+		}
+	}
+	return strings.Join(converted, ",")
 }
 
 // UpdateMtCanvusIni updates mt-canvus.ini with video-output configuration.
@@ -82,3 +93,4 @@ func (ii *INIIntegration) ShouldUpdateIni(grid *GridWidget) bool {
 	videoOutputs := ii.DetectVideoOutputs(grid)
 	return len(videoOutputs) > 0
 }
+
