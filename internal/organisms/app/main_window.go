@@ -53,6 +53,19 @@ func NewMainWindow(app fyne.App) *MainWindow {
 		configEditor = widget.NewLabel("Config Editor - Error initializing file service")
 	}
 
+	// Initialize CSS Options Manager
+	var cssOptions fyne.CanvasObject
+	if fileService != nil {
+		cssMgr, err := cssoptions.NewManager(fileService)
+		if err == nil {
+			cssOptions = cssMgr.CreateUI(window)
+		} else {
+			cssOptions = widget.NewLabel("CSS Options Manager - Error initializing")
+		}
+	} else {
+		cssOptions = widget.NewLabel("CSS Options Manager - Error initializing file service")
+	}
+
 	tabs := container.NewAppTabs(
 		&container.TabItem{
 			Text:    "Screen.xml Creator",
@@ -62,19 +75,6 @@ func NewMainWindow(app fyne.App) *MainWindow {
 			Text:    "Config Editor",
 			Content: configEditor,
 		},
-		// Initialize CSS Options Manager
-		var cssOptions fyne.CanvasObject
-		if fileService != nil {
-			cssMgr, err := cssoptions.NewManager(fileService)
-			if err == nil {
-				cssOptions = cssMgr.CreateUI(window)
-			} else {
-				cssOptions = widget.NewLabel("CSS Options Manager - Error initializing")
-			}
-		} else {
-			cssOptions = widget.NewLabel("CSS Options Manager - Error initializing file service")
-		}
-
 		&container.TabItem{
 			Text:    "CSS Options",
 			Content: cssOptions,
