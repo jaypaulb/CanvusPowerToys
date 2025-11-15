@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	webuiatoms "github.com/jaypaulb/CanvusPowerToys/internal/atoms/webui"
 	webuimolecules "github.com/jaypaulb/CanvusPowerToys/internal/molecules/webui"
 	"github.com/jaypaulb/CanvusPowerToys/internal/organisms/services"
 )
@@ -19,10 +20,14 @@ type Server struct {
 	fileService   *services.FileService
 	apiBaseURL    string
 	authToken     string
+	uploadDir     string
 }
 
 // NewServer creates a new WebUI server instance.
-func NewServer(fileService *services.FileService, apiBaseURL, authToken, port string) (*Server, error) {
+func NewServer(fileService *services.FileService, apiBaseURL, authToken, port, uploadDir string) (*Server, error) {
+	// Create API client
+	apiClient := webuiatoms.NewAPIClient(apiBaseURL, authToken)
+
 	// Create canvas service
 	canvasService, err := webuimolecules.NewCanvasService(fileService, apiBaseURL, authToken)
 	if err != nil {
@@ -30,7 +35,7 @@ func NewServer(fileService *services.FileService, apiBaseURL, authToken, port st
 	}
 
 	// Create API routes
-	apiRoutes := webuimolecules.NewAPIRoutes(canvasService)
+	apiRoutes := webuimolecules.NewAPIRoutes(canvasService, apiClient, uploadDir)
 
 	return &Server{
 		canvasService: canvasService,
@@ -39,6 +44,7 @@ func NewServer(fileService *services.FileService, apiBaseURL, authToken, port st
 		fileService:   fileService,
 		apiBaseURL:    apiBaseURL,
 		authToken:     authToken,
+		uploadDir:     uploadDir,
 	}, nil
 }
 
@@ -55,8 +61,9 @@ func (s *Server) Start() error {
 	// Register API routes
 	s.apiRoutes.RegisterRoutes(mux)
 
-	// Register static file handlers (will be added when frontend is ready)
-	// mux.Handle("/", http.FileServer(http.FS(staticFiles)))
+	// Register static file handlers
+	staticHandler := webuimolecules.NewStaticHandler()
+	staticHandler.ServeFiles(mux)
 
 	// Create HTTP server
 	s.httpServer = &http.Server{

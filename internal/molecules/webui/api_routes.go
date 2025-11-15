@@ -3,21 +3,38 @@ package webui
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
+
+	webuiatoms "github.com/jaypaulb/CanvusPowerToys/internal/atoms/webui"
 )
 
 // APIRoutes handles registration of API routes for the WebUI server.
 type APIRoutes struct {
 	canvasService *CanvasService
 	sseHandler    *SSEHandler
+	apiClient     *webuiatoms.APIClient
+	pagesHandler  *PagesHandler
+	macrosHandler *MacrosHandler
+	uploadHandler *UploadHandler
+	rcuHandler    *RCUHandler
 }
 
 // NewAPIRoutes creates a new API routes handler.
-func NewAPIRoutes(canvasService *CanvasService) *APIRoutes {
+func NewAPIRoutes(canvasService *CanvasService, apiClient *webuiatoms.APIClient, uploadDir string) *APIRoutes {
 	sseHandler := NewSSEHandler(canvasService)
+	pagesHandler := NewPagesHandler(apiClient, canvasService)
+	macrosHandler := NewMacrosHandler(apiClient, canvasService)
+	uploadHandler := NewUploadHandler(apiClient, canvasService, uploadDir)
+	rcuHandler := NewRCUHandler(apiClient, canvasService)
 
 	return &APIRoutes{
 		canvasService: canvasService,
 		sseHandler:    sseHandler,
+		apiClient:     apiClient,
+		pagesHandler:  pagesHandler,
+		macrosHandler: macrosHandler,
+		uploadHandler: uploadHandler,
+		rcuHandler:    rcuHandler,
 	}
 }
 
@@ -34,6 +51,48 @@ func (ar *APIRoutes) RegisterRoutes(mux *http.ServeMux) {
 
 	// Health check endpoint
 	mux.HandleFunc("/api/health", ar.handleHealth)
+
+	// Pages endpoints
+	mux.HandleFunc("/api/pages", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			ar.pagesHandler.HandleList(w, r)
+		} else if r.Method == http.MethodPost {
+			ar.pagesHandler.HandleCreate(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Macros endpoints
+	mux.HandleFunc("/api/macros/groups", ar.macrosHandler.HandleGroups)
+	mux.HandleFunc("/api/macros/pinned", ar.macrosHandler.HandlePinned)
+	mux.HandleFunc("/api/macros/", func(w http.ResponseWriter, r *http.Request) {
+		// Handle dynamic routes: /api/macros/{id}/move, /api/macros/{id}/copy, /api/macros/{id}/unpin
+		path := r.URL.Path
+		if contains(path, "/move") {
+			ar.macrosHandler.HandleMove(w, r)
+		} else if contains(path, "/copy") {
+			ar.macrosHandler.HandleCopy(w, r)
+		} else if contains(path, "/unpin") {
+			ar.macrosHandler.HandleUnpin(w, r)
+		} else {
+			http.Error(w, "Not found", http.StatusNotFound)
+		}
+	})
+
+	// Remote upload endpoints
+	mux.HandleFunc("/api/remote-upload", ar.uploadHandler.HandleUpload)
+	mux.HandleFunc("/api/remote-upload/history", ar.uploadHandler.HandleHistory)
+
+	// RCU endpoints
+	mux.HandleFunc("/api/rcu/config", ar.rcuHandler.HandleConfig)
+	mux.HandleFunc("/api/rcu/status", ar.rcuHandler.HandleStatus)
+	mux.HandleFunc("/api/rcu/test", ar.rcuHandler.HandleTest)
+}
+
+// contains checks if a string contains a substring.
+func contains(s, substr string) bool {
+	return strings.Contains(s, substr)
 }
 
 // handleCanvasInfo returns current canvas information.
