@@ -3,7 +3,6 @@ package webui
 import (
 	"context"
 	"fmt"
-	"time"
 
 	webuiatoms "github.com/jaypaulb/CanvusPowerToys/internal/atoms/webui"
 	"github.com/jaypaulb/CanvusPowerToys/internal/organisms/services"
