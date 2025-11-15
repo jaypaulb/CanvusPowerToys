@@ -124,6 +124,40 @@ func (c *APIClient) Put(endpoint string, data interface{}) ([]byte, error) {
 	return body, nil
 }
 
+// Patch performs a PATCH request to the Canvus API.
+func (c *APIClient) Patch(endpoint string, data interface{}) ([]byte, error) {
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal data: %w", err)
+	}
+
+	url := c.baseURL + endpoint
+	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Private-Token", c.authToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("API error: %d - %s", resp.StatusCode, string(body))
+	}
+
+	return body, nil
+}
+
 // Delete performs a DELETE request to the Canvus API.
 func (c *APIClient) Delete(endpoint string) error {
 	url := c.baseURL + endpoint
@@ -147,4 +181,5 @@ func (c *APIClient) Delete(endpoint string) error {
 
 	return nil
 }
+
 

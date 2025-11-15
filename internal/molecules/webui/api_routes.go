@@ -66,19 +66,13 @@ func (ar *APIRoutes) RegisterRoutes(mux *http.ServeMux) {
 	// Macros endpoints
 	mux.HandleFunc("/api/macros/groups", ar.macrosHandler.HandleGroups)
 	mux.HandleFunc("/api/macros/pinned", ar.macrosHandler.HandlePinned)
-	mux.HandleFunc("/api/macros/", func(w http.ResponseWriter, r *http.Request) {
-		// Handle dynamic routes: /api/macros/{id}/move, /api/macros/{id}/copy, /api/macros/{id}/unpin
-		path := r.URL.Path
-		if contains(path, "/move") {
-			ar.macrosHandler.HandleMove(w, r)
-		} else if contains(path, "/copy") {
-			ar.macrosHandler.HandleCopy(w, r)
-		} else if contains(path, "/unpin") {
-			ar.macrosHandler.HandleUnpin(w, r)
-		} else {
-			http.Error(w, "Not found", http.StatusNotFound)
-		}
-	})
+	mux.HandleFunc("/api/macros/move", ar.macrosHandler.HandleMove)
+	mux.HandleFunc("/api/macros/copy", ar.macrosHandler.HandleCopy)
+	mux.HandleFunc("/api/macros/pin-all", ar.macrosHandler.HandlePinAll)
+	mux.HandleFunc("/api/macros/unpin-all", ar.macrosHandler.HandleUnpin)
+	mux.HandleFunc("/api/macros/auto-grid", ar.macrosHandler.HandleAutoGrid)
+	mux.HandleFunc("/api/macros/group-color", ar.macrosHandler.HandleGroupColor)
+	mux.HandleFunc("/api/macros/group-title", ar.macrosHandler.HandleGroupTitle)
 
 	// Remote upload endpoints
 	mux.HandleFunc("/api/remote-upload", ar.uploadHandler.HandleUpload)
