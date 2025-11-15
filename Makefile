@@ -14,8 +14,15 @@ build-linux: process-assets
 	GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o canvus-powertoys-linux ./cmd/powertoys
 
 # Build for Windows
+# Note: Fyne requires CGO for Windows cross-compilation
+# Requires: sudo apt-get install gcc-mingw-w64-x86-64
 build-windows: process-assets
-	GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o canvus-powertoys.exe ./cmd/powertoys
+	@echo "Building for Windows (requires mingw-w64 for CGO)..."
+	@if ! command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then \
+		echo "ERROR: x86_64-w64-mingw32-gcc not found. Install with: sudo apt-get install gcc-mingw-w64-x86-64"; \
+		exit 1; \
+	fi
+	CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc go build -ldflags="-s -w" -o canvus-powertoys.exe ./cmd/powertoys
 
 # Run tests
 test:
