@@ -5,7 +5,6 @@ import (
 
 	"github.com/jaypaulb/CanvusPowerToys/internal/atoms/config"
 	"github.com/jaypaulb/CanvusPowerToys/internal/organisms/services"
-	"gopkg.in/ini.v1"
 )
 
 // ClientResolver handles resolution of client_id from installation_name.
@@ -36,15 +35,8 @@ func (r *ClientResolver) GetInstallationName() (string, error) {
 		return GetDeviceName()
 	}
 
-	// INIParser.Read returns *ini.File
-	iniFileTyped, ok := iniFile.(*ini.File)
-	if !ok {
-		// Type assertion failed, use device name
-		return GetDeviceName()
-	}
-
 	// Try to get installation_name from [canvas] section
-	canvasSection := iniFileTyped.Section("canvas")
+	canvasSection := iniFile.Section("canvas")
 	if canvasSection == nil {
 		// No [canvas] section, use device name
 		return GetDeviceName()
