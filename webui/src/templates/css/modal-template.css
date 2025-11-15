@@ -120,15 +120,15 @@
     border-radius: 0;
     margin: 0;
   }
-  
+
   .modal-overlay {
     padding: 0;
   }
-  
+
   .modal-footer {
     flex-direction: column;
   }
-  
+
   .modal-footer .btn {
     width: 100%;
   }

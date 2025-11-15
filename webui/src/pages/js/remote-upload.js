@@ -15,9 +15,9 @@ function initUploadForm() {
   const form = document.getElementById('uploadForm');
   const fileInput = document.getElementById('fileInput');
   const clearBtn = document.getElementById('clearBtn');
-  
+
   form.addEventListener('submit', handleUpload);
-  
+
   clearBtn.addEventListener('click', () => {
     fileInput.value = '';
     document.getElementById('uploadPath').value = '';
@@ -31,36 +31,36 @@ function initUploadForm() {
  */
 async function handleUpload(e) {
   e.preventDefault();
-  
+
   const fileInput = document.getElementById('fileInput');
   const uploadPath = document.getElementById('uploadPath').value;
   const files = fileInput.files;
-  
+
   if (files.length === 0) {
     alert('Please select at least one file to upload');
     return;
   }
-  
+
   const baseURL = window.location.origin;
   const formData = new FormData();
-  
+
   for (let i = 0; i < files.length; i++) {
     formData.append('files', files[i]);
   }
-  
+
   if (uploadPath) {
     formData.append('path', uploadPath);
   }
-  
+
   // Show progress
   const progressDiv = document.getElementById('uploadProgress');
   const progressFill = document.getElementById('progressFill');
   const progressText = document.getElementById('progressText');
   progressDiv.style.display = 'block';
-  
+
   try {
     const xhr = new XMLHttpRequest();
-    
+
     xhr.upload.addEventListener('progress', (e) => {
       if (e.lengthComputable) {
         const percentComplete = (e.loaded / e.total) * 100;
@@ -68,7 +68,7 @@ async function handleUpload(e) {
         progressText.textContent = `${Math.round(percentComplete)}%`;
       }
     });
-    
+
     xhr.addEventListener('load', () => {
       if (xhr.status === 200) {
         const response = JSON.parse(xhr.responseText);
@@ -79,17 +79,20 @@ async function handleUpload(e) {
       }
       progressDiv.style.display = 'none';
     });
-    
+
     xhr.addEventListener('error', () => {
       showUploadError('Network error during upload');
       progressDiv.style.display = 'none';
     });
-    
+
     xhr.open('POST', `${baseURL}/api/remote-upload`);
     xhr.send(formData);
-    
+
   } catch (error) {
-    console.error('Error uploading files:', error);
+    // Only log in development
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      console.error('Error uploading files:', error);
+    }
     showUploadError('Error uploading files');
     progressDiv.style.display = 'none';
   }
@@ -100,7 +103,7 @@ async function handleUpload(e) {
  */
 function showUploadResults(results) {
   const resultsDiv = document.getElementById('uploadResults');
-  
+
   if (results.success && results.files) {
     resultsDiv.innerHTML = `
       <div class="card" style="background-color: rgba(16, 185, 129, 0.1); border-color: #10b981;">
@@ -138,7 +141,7 @@ function showUploadError(message) {
 async function loadUploadHistory() {
   const baseURL = window.location.origin;
   const historyDiv = document.getElementById('uploadHistory');
-  
+
   try {
     const response = await fetch(`${baseURL}/api/remote-upload/history`);
     if (response.ok) {
@@ -148,7 +151,10 @@ async function loadUploadHistory() {
       historyDiv.innerHTML = '<p class="text-muted">Unable to load upload history</p>';
     }
   } catch (error) {
-    console.error('Error loading upload history:', error);
+    // Only log in development
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      console.error('Error loading upload history:', error);
+    }
     historyDiv.innerHTML = '<p class="text-muted">Error loading upload history</p>';
   }
 }
@@ -158,12 +164,12 @@ async function loadUploadHistory() {
  */
 function renderUploadHistory(history) {
   const historyDiv = document.getElementById('uploadHistory');
-  
+
   if (!history || history.length === 0) {
     historyDiv.innerHTML = '<p class="text-muted">No upload history available</p>';
     return;
   }
-  
+
   historyDiv.innerHTML = history.map(item => `
     <div class="card mb-md">
       <div class="card-body">

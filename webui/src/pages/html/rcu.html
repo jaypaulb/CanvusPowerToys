@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RCU - Canvus PowerToys</title>
-  
+
   <!-- Design System -->
   <link rel="stylesheet" href="/css/design-system.css">
   <link rel="stylesheet" href="/css/dark-theme.css">
   <link rel="stylesheet" href="/css/responsive.css">
-  
+
   <!-- Page Template -->
   <link rel="stylesheet" href="/templates/css/page-template.css">
-  
+
   <!-- Component Styles -->
   <link rel="stylesheet" href="/atoms/css/button.css">
   <link rel="stylesheet" href="/atoms/css/input.css">
@@ -66,7 +66,7 @@
         </div>
       </div>
     </header>
-    
+
     <!-- Page Main Content -->
     <main class="page-main">
       <div class="page-content">
@@ -76,7 +76,7 @@
             Remote Control Unit management. Configure and manage RCU settings for your Canvus installation.
           </p>
         </div>
-        
+
         <!-- RCU Configuration -->
         <div class="card">
           <div class="card-header">
@@ -89,19 +89,19 @@
                 <input type="checkbox" class="checkbox" id="rcuEnabled" name="enabled">
                 <div class="input-help">Enable remote control unit functionality</div>
               </div>
-              
+
               <div class="form-group">
                 <label class="input-label" for="rcuPort">RCU Port</label>
                 <input type="number" class="input" id="rcuPort" name="port" placeholder="8080" min="1024" max="65535">
                 <div class="input-help">Port number for RCU communication</div>
               </div>
-              
+
               <div class="form-group">
                 <label class="input-label" for="rcuTimeout">Timeout (seconds)</label>
                 <input type="number" class="input" id="rcuTimeout" name="timeout" placeholder="30" min="1" max="300">
                 <div class="input-help">Connection timeout in seconds</div>
               </div>
-              
+
               <div class="form-actions">
                 <button type="submit" class="btn btn-primary">Save Configuration</button>
                 <button type="button" class="btn btn-secondary" id="testRcuBtn">Test Connection</button>
@@ -109,7 +109,7 @@
             </form>
           </div>
         </div>
-        
+
         <!-- RCU Status -->
         <div class="card mt-lg">
           <div class="card-header">
@@ -123,15 +123,15 @@
         </div>
       </div>
     </main>
-    
+
     <footer class="page-footer">
       <p>Canvus PowerToys WebUI &copy; 2024</p>
     </footer>
   </div>
-  
+
   <!-- Workspace Client -->
   <script src="/molecules/js/workspace-client.js"></script>
-  
+
   <!-- Page Scripts -->
   <script src="/pages/js/rcu.js"></script>
   <script src="/pages/js/common.js"></script>

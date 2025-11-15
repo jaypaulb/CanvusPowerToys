@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Remote Content Upload - Admin - Canvus PowerToys</title>
-  
+
   <!-- Design System -->
   <link rel="stylesheet" href="/css/design-system.css">
   <link rel="stylesheet" href="/css/dark-theme.css">
   <link rel="stylesheet" href="/css/responsive.css">
-  
+
   <!-- Page Template -->
   <link rel="stylesheet" href="/templates/css/page-template.css">
-  
+
   <!-- Component Styles -->
   <link rel="stylesheet" href="/atoms/css/button.css">
   <link rel="stylesheet" href="/atoms/css/input.css">
@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="/molecules/css/navbar.css">
   <link rel="stylesheet" href="/molecules/css/canvas-header.css">
   <link rel="stylesheet" href="/molecules/css/form-group.css">
-  
+
   <!-- Page Styles -->
   <link rel="stylesheet" href="/pages/css/remote-upload.css">
 </head>
@@ -69,18 +69,18 @@
         </div>
       </div>
     </header>
-    
+
     <!-- Page Main Content -->
     <main class="page-main">
       <div class="page-content">
         <div class="page-section">
           <h1 class="page-section-title">Remote Content Upload - Admin</h1>
           <p class="page-section-description">
-            Upload and manage remote content for your Canvus installation. 
+            Upload and manage remote content for your Canvus installation.
             Admin interface for content distribution.
           </p>
         </div>
-        
+
         <!-- Upload Form -->
         <div class="card">
           <div class="card-header">
@@ -94,13 +94,13 @@
                 <input type="file" class="input" id="fileInput" multiple accept="*/*">
                 <div class="input-help">You can select multiple files at once</div>
               </div>
-              
+
               <div class="form-group">
                 <label class="input-label" for="uploadPath">Upload Path (optional)</label>
                 <input type="text" class="input" id="uploadPath" placeholder="/content/">
                 <div class="input-help">Leave empty to use default path</div>
               </div>
-              
+
               <div class="form-actions">
                 <button type="submit" class="btn btn-primary" id="uploadBtn">
                   Upload Files
@@ -110,7 +110,7 @@
                 </button>
               </div>
             </form>
-            
+
             <!-- Upload Progress -->
             <div id="uploadProgress" class="mt-lg" style="display: none;">
               <div class="progress-bar">
@@ -118,12 +118,12 @@
               </div>
               <p class="progress-text" id="progressText">0%</p>
             </div>
-            
+
             <!-- Upload Results -->
             <div id="uploadResults" class="mt-lg"></div>
           </div>
         </div>
-        
+
         <!-- Upload History -->
         <div class="card mt-lg">
           <div class="card-header">
@@ -137,15 +137,15 @@
         </div>
       </div>
     </main>
-    
+
     <footer class="page-footer">
       <p>Canvus PowerToys WebUI &copy; 2024</p>
     </footer>
   </div>
-  
+
   <!-- Workspace Client -->
   <script src="/molecules/js/workspace-client.js"></script>
-  
+
   <!-- Page Scripts -->
   <script src="/pages/js/remote-upload.js"></script>
   <script src="/pages/js/common.js"></script>

@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Canvus PowerToys WebUI</title>
-  
+
   <!-- Design System -->
   <link rel="stylesheet" href="/css/design-system.css">
   <link rel="stylesheet" href="/css/dark-theme.css">
   <link rel="stylesheet" href="/css/responsive.css">
-  
+
   <!-- Page Template -->
   <link rel="stylesheet" href="/templates/css/page-template.css">
-  
+
   <!-- Component Styles -->
   <link rel="stylesheet" href="/atoms/css/button.css">
   <link rel="stylesheet" href="/atoms/css/card.css">
@@ -27,7 +27,7 @@
     <header class="page-header">
       <nav class="navbar">
         <a href="/" class="navbar-brand">Canvus PowerToys</a>
-        
+
         <!-- Mobile Navigation -->
         <div class="nav-mobile">
           <button class="nav-mobile-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
@@ -45,7 +45,7 @@
             <a href="/rcu.html" class="navbar-link">RCU</a>
           </div>
         </div>
-        
+
         <!-- Desktop Navigation -->
         <ul class="navbar-nav nav-desktop">
           <li><a href="/" class="navbar-link active">Home</a></li>
@@ -55,7 +55,7 @@
           <li><a href="/rcu.html" class="navbar-link">RCU</a></li>
         </ul>
       </nav>
-      
+
       <!-- Canvas Header -->
       <div class="canvas-header">
         <div class="canvas-header-info">
@@ -72,18 +72,18 @@
         </div>
       </div>
     </header>
-    
+
     <!-- Page Main Content -->
     <main class="page-main">
       <div class="page-content">
         <div class="page-section">
           <h1 class="page-section-title">Welcome to Canvus PowerToys WebUI</h1>
           <p class="page-section-description">
-            Manage your Canvus installation remotely through this web interface. 
+            Manage your Canvus installation remotely through this web interface.
             Select a page below to get started.
           </p>
         </div>
-        
+
         <!-- Page Cards Grid -->
         <div class="page-cards-grid">
           <!-- Pages Management Card -->
@@ -103,7 +103,7 @@
               <span class="page-card-link">Go to Pages →</span>
             </div>
           </a>
-          
+
           <!-- Macros Card -->
           <a href="/macros.html" class="page-card">
             <div class="page-card-icon">
@@ -118,14 +118,14 @@
             </div>
             <h2 class="page-card-title">Macros</h2>
             <p class="page-card-description">
-              Organize macros with grouping and pinning. Move and copy macros between groups. 
+              Organize macros with grouping and pinning. Move and copy macros between groups.
               Manage your macro library efficiently.
             </p>
             <div class="page-card-footer">
               <span class="page-card-link">Go to Macros →</span>
             </div>
           </a>
-          
+
           <!-- Remote Content Upload Card -->
           <a href="/remote-upload.html" class="page-card">
             <div class="page-card-icon">
@@ -137,14 +137,14 @@
             </div>
             <h2 class="page-card-title">Remote Content Upload - Admin</h2>
             <p class="page-card-description">
-              Upload and manage remote content for your Canvus installation. 
+              Upload and manage remote content for your Canvus installation.
               Admin interface for content distribution.
             </p>
             <div class="page-card-footer">
               <span class="page-card-link">Go to Remote Upload →</span>
             </div>
           </a>
-          
+
           <!-- RCU Card -->
           <a href="/rcu.html" class="page-card">
             <div class="page-card-icon">
@@ -164,58 +164,58 @@
         </div>
       </div>
     </main>
-    
+
     <!-- Page Footer -->
     <footer class="page-footer">
       <p>Canvus PowerToys WebUI &copy; 2024</p>
     </footer>
   </div>
-  
+
   <!-- Workspace Client -->
   <script src="/molecules/js/workspace-client.js"></script>
-  
+
   <!-- Page Scripts -->
   <script>
     // Mobile menu toggle
     const mobileMenuToggle = document.getElementById('mobileMenuToggle');
     const mobileMenu = document.getElementById('mobileMenu');
-    
+
     if (mobileMenuToggle && mobileMenu) {
       mobileMenuToggle.addEventListener('click', () => {
         mobileMenu.classList.toggle('open');
       });
     }
-    
+
     // Initialize workspace client
     const workspaceClient = new WorkspaceClient();
     const baseURL = window.location.origin;
-    
+
     workspaceClient.on('connected', () => {
       updateStatus('connected', 'Connected');
     });
-    
+
     workspaceClient.on('disconnected', () => {
       updateStatus('disconnected', 'Disconnected');
     });
-    
+
     workspaceClient.on('reconnecting', (attempts) => {
       updateStatus('connecting', `Reconnecting (${attempts})...`);
     });
-    
+
     workspaceClient.on('canvas_update', (data) => {
       if (data.canvas_name) {
         document.getElementById('canvasName').textContent = data.canvas_name;
       }
     });
-    
+
     function updateStatus(status, text) {
       const indicator = document.getElementById('statusIndicator');
       const statusText = document.getElementById('statusText');
-      
+
       indicator.className = `status-indicator ${status}`;
       statusText.textContent = text;
     }
-    
+
     // Fetch installation info
     fetch(`${baseURL}/api/installation/info`)
       .then(response => response.json())
@@ -225,9 +225,12 @@
         }
       })
       .catch(error => {
-        console.error('Error fetching installation info:', error);
+        // Only log in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          console.error('Error fetching installation info:', error);
+        }
       });
-    
+
     // Fetch current canvas info
     fetch(`${baseURL}/api/canvas/info`)
       .then(response => response.json())
@@ -237,9 +240,12 @@
         }
       })
       .catch(error => {
-        console.error('Error fetching canvas info:', error);
+        // Only log in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          console.error('Error fetching canvas info:', error);
+        }
       });
-    
+
     // Connect to workspace subscription
     workspaceClient.connect(baseURL);
   </script>

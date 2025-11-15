@@ -27,40 +27,40 @@
     const modalTitle = document.getElementById('modalTitle');
     const modalBody = document.getElementById('modalBody');
     const modalFooter = document.getElementById('modalFooter');
-    
+
     modalTitle.textContent = title;
     modalBody.innerHTML = content;
     modalFooter.innerHTML = footer;
-    
+
     overlay.style.display = 'flex';
     overlay.classList.remove('closing');
     modal.classList.remove('closing');
-    
+
     // Focus management
     const firstFocusable = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
     if (firstFocusable) {
       firstFocusable.focus();
     }
   }
-  
+
   function hideModal() {
     const overlay = document.getElementById('modalOverlay');
     const modal = document.getElementById('modal');
-    
+
     overlay.classList.add('closing');
     modal.classList.add('closing');
-    
+
     setTimeout(() => {
       overlay.style.display = 'none';
     }, 250);
   }
-  
+
   // Close button handler
   const modalClose = document.getElementById('modalClose');
   if (modalClose) {
     modalClose.addEventListener('click', hideModal);
   }
-  
+
   // Close on overlay click
   const modalOverlay = document.getElementById('modalOverlay');
   if (modalOverlay) {
@@ -70,7 +70,7 @@
       }
     });
   }
-  
+
   // Close on Escape key
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && modalOverlay.style.display === 'flex') {

@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 async function loadRCUConfig() {
   const baseURL = window.location.origin;
-  
+
   try {
     const response = await fetch(`${baseURL}/api/rcu/config`);
     if (response.ok) {
@@ -24,7 +24,10 @@ async function loadRCUConfig() {
       document.getElementById('rcuTimeout').value = config.timeout || '';
     }
   } catch (error) {
-    console.error('Error loading RCU config:', error);
+    // Only log in development
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      console.error('Error loading RCU config:', error);
+    }
   }
 }
 
@@ -34,7 +37,7 @@ async function loadRCUConfig() {
 async function loadRCUStatus() {
   const baseURL = window.location.origin;
   const statusDiv = document.getElementById('rcuStatus');
-  
+
   try {
     const response = await fetch(`${baseURL}/api/rcu/status`);
     if (response.ok) {
@@ -44,7 +47,10 @@ async function loadRCUStatus() {
       statusDiv.innerHTML = '<p class="text-muted">Unable to load RCU status</p>';
     }
   } catch (error) {
-    console.error('Error loading RCU status:', error);
+    // Only log in development
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      console.error('Error loading RCU status:', error);
+    }
     statusDiv.innerHTML = '<p class="text-muted">Error loading RCU status</p>';
   }
 }
@@ -54,7 +60,7 @@ async function loadRCUStatus() {
  */
 function renderRCUStatus(status) {
   const statusDiv = document.getElementById('rcuStatus');
-  
+
   statusDiv.innerHTML = `
     <div class="form-group">
       <label class="input-label">Status</label>
@@ -73,7 +79,7 @@ function renderRCUStatus(status) {
 function initRCUForm() {
   const form = document.getElementById('rcuForm');
   const testBtn = document.getElementById('testRcuBtn');
-  
+
   form.addEventListener('submit', handleSaveConfig);
   testBtn.addEventListener('click', handleTestConnection);
 }
@@ -83,21 +89,21 @@ function initRCUForm() {
  */
 async function handleSaveConfig(e) {
   e.preventDefault();
-  
+
   const baseURL = window.location.origin;
   const formData = {
     enabled: document.getElementById('rcuEnabled').checked,
     port: parseInt(document.getElementById('rcuPort').value) || 8080,
     timeout: parseInt(document.getElementById('rcuTimeout').value) || 30
   };
-  
+
   try {
     const response = await fetch(`${baseURL}/api/rcu/config`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData)
     });
-    
+
     if (response.ok) {
       alert('Configuration saved successfully');
       loadRCUStatus();
@@ -105,7 +111,10 @@ async function handleSaveConfig(e) {
       alert('Failed to save configuration');
     }
   } catch (error) {
-    console.error('Error saving RCU config:', error);
+    // Only log in development
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      console.error('Error saving RCU config:', error);
+    }
     alert('Error saving configuration');
   }
 }
@@ -115,12 +124,12 @@ async function handleSaveConfig(e) {
  */
 async function handleTestConnection() {
   const baseURL = window.location.origin;
-  
+
   try {
     const response = await fetch(`${baseURL}/api/rcu/test`, {
       method: 'POST'
     });
-    
+
     if (response.ok) {
       const result = await response.json();
       alert(result.success ? 'Connection test successful' : 'Connection test failed');
@@ -128,7 +137,10 @@ async function handleTestConnection() {
       alert('Connection test failed');
     }
   } catch (error) {
-    console.error('Error testing RCU connection:', error);
+    // Only log in development
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      console.error('Error testing RCU connection:', error);
+    }
     alert('Error testing connection');
   }
 }

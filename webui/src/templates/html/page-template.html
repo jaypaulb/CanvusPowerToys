@@ -4,22 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{PAGE_TITLE}} - Canvus PowerToys</title>
-  
+
   <!-- Design System -->
   <link rel="stylesheet" href="/css/design-system.css">
   <link rel="stylesheet" href="/css/dark-theme.css">
   <link rel="stylesheet" href="/css/responsive.css">
-  
+
   <!-- Page Template -->
   <link rel="stylesheet" href="/templates/css/page-template.css">
-  
+
   <!-- Component Styles -->
   <link rel="stylesheet" href="/atoms/css/button.css">
   <link rel="stylesheet" href="/atoms/css/input.css">
   <link rel="stylesheet" href="/atoms/css/card.css">
   <link rel="stylesheet" href="/atoms/css/badge.css">
   <link rel="stylesheet" href="/atoms/css/link.css">
-  
+
   <link rel="stylesheet" href="/molecules/css/navbar.css">
   <link rel="stylesheet" href="/molecules/css/canvas-header.css">
   <link rel="stylesheet" href="/molecules/css/form-group.css">
@@ -31,7 +31,7 @@
     <header class="page-header">
       <nav class="navbar">
         <a href="/" class="navbar-brand">Canvus PowerToys</a>
-        
+
         <!-- Mobile Navigation -->
         <div class="nav-mobile">
           <button class="nav-mobile-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
@@ -49,7 +49,7 @@
             <a href="/rcu.html" class="navbar-link">RCU</a>
           </div>
         </div>
-        
+
         <!-- Desktop Navigation -->
         <ul class="navbar-nav nav-desktop">
           <li><a href="/" class="navbar-link">Home</a></li>
@@ -59,7 +59,7 @@
           <li><a href="/rcu.html" class="navbar-link">RCU</a></li>
         </ul>
       </nav>
-      
+
       <!-- Canvas Header -->
       <div class="canvas-header">
         <div class="canvas-header-info">
@@ -76,65 +76,65 @@
         </div>
       </div>
     </header>
-    
+
     <!-- Page Main Content -->
     <main class="page-main">
       <div class="page-content">
         {{PAGE_CONTENT}}
       </div>
     </main>
-    
+
     <!-- Page Footer -->
     <footer class="page-footer">
       <p>Canvus PowerToys WebUI &copy; 2024</p>
     </footer>
   </div>
-  
+
   <!-- Workspace Client -->
   <script src="/molecules/js/workspace-client.js"></script>
-  
+
   <!-- Page Scripts -->
   <script>
     // Mobile menu toggle
     const mobileMenuToggle = document.getElementById('mobileMenuToggle');
     const mobileMenu = document.getElementById('mobileMenu');
-    
+
     if (mobileMenuToggle && mobileMenu) {
       mobileMenuToggle.addEventListener('click', () => {
         mobileMenu.classList.toggle('open');
       });
     }
-    
+
     // Initialize workspace client
     const workspaceClient = new WorkspaceClient();
     const baseURL = window.location.origin;
-    
+
     workspaceClient.on('connected', () => {
       updateStatus('connected', 'Connected');
     });
-    
+
     workspaceClient.on('disconnected', () => {
       updateStatus('disconnected', 'Disconnected');
     });
-    
+
     workspaceClient.on('reconnecting', (attempts) => {
       updateStatus('connecting', `Reconnecting (${attempts})...`);
     });
-    
+
     workspaceClient.on('canvas_update', (data) => {
       if (data.canvas_name) {
         document.getElementById('canvasName').textContent = data.canvas_name;
       }
     });
-    
+
     function updateStatus(status, text) {
       const indicator = document.getElementById('statusIndicator');
       const statusText = document.getElementById('statusText');
-      
+
       indicator.className = `status-indicator ${status}`;
       statusText.textContent = text;
     }
-    
+
     // Fetch installation info
     fetch(`${baseURL}/api/installation/info`)
       .then(response => response.json())
@@ -144,9 +144,12 @@
         }
       })
       .catch(error => {
-        console.error('Error fetching installation info:', error);
+        // Only log in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          console.error('Error fetching installation info:', error);
+        }
       });
-    
+
     // Connect to workspace subscription
     workspaceClient.connect(baseURL);
   </script>

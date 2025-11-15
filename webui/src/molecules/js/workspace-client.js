@@ -36,7 +36,10 @@ class WorkspaceClient {
         const data = JSON.parse(event.data);
         this.emit('canvas_update', data);
       } catch (error) {
-        console.error('Error parsing canvas update:', error);
+        // Only log in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          console.error('Error parsing canvas update:', error);
+        }
       }
     });
 
@@ -118,7 +121,10 @@ class WorkspaceClient {
         try {
           callback(data);
         } catch (error) {
-          console.error(`Error in event listener for ${event}:`, error);
+          // Only log in development
+          if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.error(`Error in event listener for ${event}:`, error);
+          }
         }
       });
     }

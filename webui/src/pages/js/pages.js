@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadPages() {
   const baseURL = window.location.origin;
   const pagesList = document.getElementById('pagesList');
-  
+
   try {
     const response = await fetch(`${baseURL}/api/pages`);
     if (response.ok) {
@@ -24,7 +24,10 @@ async function loadPages() {
       pagesList.innerHTML = '<p class="text-muted">Unable to load pages</p>';
     }
   } catch (error) {
-    console.error('Error loading pages:', error);
+    // Only log in development
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      console.error('Error loading pages:', error);
+    }
     pagesList.innerHTML = '<p class="text-muted">Error loading pages</p>';
   }
 }
@@ -34,12 +37,12 @@ async function loadPages() {
  */
 function renderPages(pages) {
   const pagesList = document.getElementById('pagesList');
-  
+
   if (!pages || pages.length === 0) {
     pagesList.innerHTML = '<p class="text-muted">No pages found. Create your first page above.</p>';
     return;
   }
-  
+
   pagesList.innerHTML = pages.map(page => `
     <div class="card mb-md">
       <div class="card-body">
@@ -83,21 +86,24 @@ function showCreatePageModal() {
  */
 async function createPage(name) {
   const baseURL = window.location.origin;
-  
+
   try {
     const response = await fetch(`${baseURL}/api/pages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name })
     });
-    
+
     if (response.ok) {
       loadPages();
     } else {
       alert('Failed to create page');
     }
   } catch (error) {
-    console.error('Error creating page:', error);
+    // Only log in development
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      console.error('Error creating page:', error);
+    }
     alert('Error creating page');
   }
 }

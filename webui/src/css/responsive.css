@@ -67,20 +67,20 @@
     max-width: 720px;
     padding: var(--spacing-lg);
   }
-  
+
   .grid-2 {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .grid-3 {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   /* Show desktop navigation */
   .nav-desktop {
     display: flex;
   }
-  
+
   .nav-mobile {
     display: none;
   }
@@ -92,15 +92,15 @@
     max-width: 1200px;
     padding: var(--spacing-xl);
   }
-  
+
   .grid-2 {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .grid-3 {
     grid-template-columns: repeat(3, 1fr);
   }
-  
+
   /* Forms: side-by-side on desktop */
   .form-row {
     display: grid;
@@ -118,7 +118,7 @@
     min-height: 44px;
     min-width: 44px;
   }
-  
+
   /* Larger tap targets for mobile */
   .touch-target {
     padding: var(--spacing-md);

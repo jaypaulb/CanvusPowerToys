@@ -40,7 +40,7 @@
   .form-row {
     flex-direction: row;
   }
-  
+
   .form-row .form-group {
     flex: 1;
   }
@@ -63,7 +63,7 @@
   .form-actions {
     flex-direction: column;
   }
-  
+
   .form-actions .btn {
     width: 100%;
   }
