@@ -323,11 +323,11 @@ Tasks are organized by development phases, following the feature priority order:
 - [✅] Refactor to atomic design - Status: Completed
 
 ### 6.9 Frontend - Pages & RCU Refactor
-- [ ] Refactor pages.html to atomic design - Status: Pending
-- [ ] Improve mobile UX for pages.html - Status: Pending
-- [ ] Refactor rcu.html to atomic design - Status: Pending
-- [ ] Improve mobile UX for rcu.html - Status: Pending
-- [ ] Better form handling - Status: Pending
+- [✅] Refactor pages.html to atomic design - Status: Completed
+- [✅] Improve mobile UX for pages.html - Status: Completed
+- [✅] Refactor rcu.html to atomic design - Status: Completed
+- [✅] Improve mobile UX for rcu.html - Status: Completed
+- [✅] Better form handling - Status: Completed
 
 ### 6.10 Asset Optimization Pipeline
 - [ ] Set up asset processing pipeline - Status: Pending (see docs/webui-asset-optimization.md)
