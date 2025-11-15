@@ -54,11 +54,11 @@ Tasks are organized by development phases, following the feature priority order:
 - [✅] Handle grid cell interactions (click, drag) - Status: Completed
 
 ### 2.2 GPU Output Assignment
-- [🔄] Implement number drawing method UI - Status: In Progress
-- [ ] Create GPU output assignment workflow
-- [ ] Add click-to-assign functionality
-- [ ] Implement rollback (click again to remove)
-- [ ] Support GPU reference format (gpu#.output#)
+- [✅] Implement number drawing method UI - Status: Completed
+- [✅] Create GPU output assignment workflow - Status: Completed
+- [✅] Add click-to-assign functionality - Status: Completed
+- [✅] Implement rollback (click again to remove) - Status: Completed
+- [✅] Support GPU reference format (gpu#.output#) - Status: Completed
 
 ### 2.3 Resolution Detection
 - [ ] Research Windows GPU/display detection APIs
