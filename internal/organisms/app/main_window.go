@@ -6,6 +6,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/configeditor"
+	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/custommenu"
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/cssoptions"
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/screenxml"
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/tray"
