@@ -261,11 +261,14 @@ Tasks are organized by development phases, following the feature priority order:
 - [✅] API client for Canvus Server communication - Status: Completed (placeholder with connection test)
 
 ### 6.4 WebUI Pages (TBD After Analysis)
-- [ ] Define pages to implement
-- [ ] Implement page routing
-- [ ] Create page templates
-- [ ] Implement API endpoints
-- [ ] Static file serving
+- [✅] Define pages to implement - Status: Completed (see docs/webui-pages-analysis.md)
+- [✅] Analyze existing canvus-webui pages - Status: Completed
+- [✅] Identify pages to exclude - Status: Completed
+- [✅] Define implementation priorities - Status: Completed
+- [ ] Implement page routing - Status: Pending
+- [ ] Create page templates - Status: Pending
+- [ ] Implement API endpoints - Status: Pending
+- [ ] Static file serving - Status: Pending
 
 ---
 
