@@ -236,17 +236,22 @@ Tasks are organized by development phases, following the feature priority order:
 
 ---
 
-## Phase 6: WebUI Integration (Priority 5 - Deferred)
+## Phase 6: WebUI Integration (Priority 5 - In Progress)
+
+**Reference Documents:**
+- `docs/webui-pages-analysis.md` - Pages analysis and selection
+- `docs/webui-implementation-plan.md` - Complete implementation plan
+- `docs/webui-asset-optimization.md` - Asset optimization strategy
 
 ### 6.1 WebUI Analysis Project
-- [⏳] **SEPARATE PROJECT STEP:** Analyze canvus-webui - Status: Deferred (reference available)
-- [⏳] Document existing features - Status: Deferred
-- [⏳] Identify features to port - Status: Deferred
-- [⏳] Identify features to exclude - Status: Deferred
-- [⏳] Define integration approach - Status: Deferred
-- [⏳] Estimate effort and timeline - Status: Deferred
+- [✅] **SEPARATE PROJECT STEP:** Analyze canvus-webui - Status: Completed (see docs/webui-pages-analysis.md)
+- [✅] Document existing features - Status: Completed
+- [✅] Identify features to port - Status: Completed
+- [✅] Identify features to exclude - Status: Completed
+- [✅] Define integration approach - Status: Completed (see docs/webui-implementation-plan.md)
+- [✅] Estimate effort and timeline - Status: Completed
 
-### 6.2 WebUI Foundation (After Analysis)
+### 6.2 WebUI Foundation
 - [✅] Implement HTTP server in Go process - Status: Completed (placeholder)
 - [✅] On-demand server activation - Status: Completed (placeholder)
 - [✅] LAN accessibility (bind to 0.0.0.0) - Status: Completed (placeholder, default port 8080)
@@ -260,15 +265,97 @@ Tasks are organized by development phases, following the feature priority order:
 - [✅] Instructions for token generation - Status: Completed (placeholder)
 - [✅] API client for Canvus Server communication - Status: Completed (placeholder with connection test)
 
-### 6.4 WebUI Pages (TBD After Analysis)
-- [✅] Define pages to implement - Status: Completed (see docs/webui-pages-analysis.md)
-- [✅] Analyze existing canvus-webui pages - Status: Completed
-- [✅] Identify pages to exclude - Status: Completed
-- [✅] Define implementation priorities - Status: Completed
-- [ ] Implement page routing - Status: Pending
-- [ ] Create page templates - Status: Pending
-- [ ] Implement API endpoints - Status: Pending
-- [ ] Static file serving - Status: Pending
+### 6.4 Backend - Canvas Tracking (Atomic Design)
+- [ ] Implement atom: client_resolver.go - Status: Pending (read mt-canvus.ini, extract installation_name)
+- [ ] Implement atom: device_name.go - Status: Pending (OS-specific device name detection)
+- [ ] Implement atom: canvas_tracker.go - Status: Pending (canvas ID state management)
+- [ ] Implement atom: workspace_subscriber.go - Status: Pending (SSE subscription to Canvus API)
+- [ ] Implement molecule: canvas_service.go - Status: Pending (composes client resolver + workspace subscriber)
+- [ ] Implement molecule: sse_handler.go - Status: Pending (HTTP SSE endpoint handler)
+- [ ] Implement molecule: api_routes.go - Status: Pending (route registration)
+- [ ] Implement organism: server.go - Status: Pending (main HTTP server)
+- [ ] Test canvas tracking end-to-end - Status: Pending
+
+### 6.5 Frontend - Atomic Components & Design System
+- [ ] Create atom: button component - Status: Pending (HTML/JS/CSS, MultiTaction colors)
+- [ ] Create atom: input component - Status: Pending
+- [ ] Create atom: card component - Status: Pending
+- [ ] Create atom: badge component - Status: Pending
+- [ ] Create atom: link component - Status: Pending
+- [ ] Create molecule: navbar component - Status: Pending (mobile hamburger, desktop full)
+- [ ] Create molecule: canvas-header component - Status: Pending (installation_name + canvas_name)
+- [ ] Create molecule: form-group component - Status: Pending
+- [ ] Create molecule: page-card component - Status: Pending
+- [ ] Create molecule: sse-client.js - Status: Pending (shared SSE utility)
+- [ ] Create template: page-template.html/css - Status: Pending (base page structure)
+- [ ] Create template: modal-template.html/css - Status: Pending
+- [ ] Create design-system.css - Status: Pending (MultiTaction brand colors, typography, spacing)
+- [ ] Create dark-theme.css - Status: Pending (dark mode styles)
+- [ ] Create responsive.css - Status: Pending (mobile-first breakpoints)
+
+### 6.6 Frontend - Main Page Redesign
+- [ ] Remove UUID generation logic - Status: Pending
+- [ ] Remove canvas search/feedback loop - Status: Pending
+- [ ] Implement navigation hub design - Status: Pending (page descriptions + links)
+- [ ] Integrate canvas header - Status: Pending ("Currently tracking {installation_name} showing {canvas_name}")
+- [ ] Add connection status indicator - Status: Pending
+- [ ] Implement SSE client connection - Status: Pending
+- [ ] Mobile optimization - Status: Pending (touch-friendly, responsive)
+
+### 6.7 Frontend - Macros Page Refactor
+- [ ] Remove delete button from Manage tab - Status: Pending
+- [ ] Remove delete API endpoint calls - Status: Pending
+- [ ] Remove Undelete tab entirely - Status: Pending
+- [ ] Improve Grouping tab UX - Status: Pending
+- [ ] Improve Pinning tab UX - Status: Pending
+- [ ] Improve Manage tab (move/copy only) - Status: Pending
+- [ ] Refactor to atomic design - Status: Pending
+- [ ] Mobile optimization - Status: Pending
+
+### 6.8 Frontend - Remote Upload Page Refactor
+- [ ] Rename route from /upload.html to /remote-upload.html - Status: Pending
+- [ ] Update page title to "Remote Content Upload - Admin" - Status: Pending
+- [ ] Update navbar links - Status: Pending
+- [ ] Improve file upload UX - Status: Pending
+- [ ] Add progress indicators - Status: Pending
+- [ ] Improve error handling - Status: Pending
+- [ ] Mobile file upload support - Status: Pending
+- [ ] Refactor to atomic design - Status: Pending
+
+### 6.9 Frontend - Pages & RCU Refactor
+- [ ] Refactor pages.html to atomic design - Status: Pending
+- [ ] Improve mobile UX for pages.html - Status: Pending
+- [ ] Refactor rcu.html to atomic design - Status: Pending
+- [ ] Improve mobile UX for rcu.html - Status: Pending
+- [ ] Better form handling - Status: Pending
+
+### 6.10 Asset Optimization Pipeline
+- [ ] Set up asset processing pipeline - Status: Pending (see docs/webui-asset-optimization.md)
+- [ ] Integrate minification (tdewolff/minify) - Status: Pending
+- [ ] Create build script for asset processing - Status: Pending
+- [ ] Integrate into Makefile/CI/CD - Status: Pending
+- [ ] Add size monitoring - Status: Pending
+- [ ] Minify all CSS files - Status: Pending
+- [ ] Minify all JavaScript files - Status: Pending
+- [ ] Minify all HTML files - Status: Pending
+- [ ] Remove unused code (tree-shaking) - Status: Pending
+- [ ] Remove console.log statements - Status: Pending
+- [ ] Use CSS variables for brand colors - Status: Pending
+
+### 6.11 Testing & Refinement
+- [ ] Test canvas tracking (client_id resolution) - Status: Pending
+- [ ] Test workspace subscription - Status: Pending
+- [ ] Test canvas_id updates - Status: Pending
+- [ ] Test reconnection logic - Status: Pending
+- [ ] Test pages management functionality - Status: Pending
+- [ ] Test macros (move, copy, grouping, pinning) - Status: Pending
+- [ ] Test remote content upload - Status: Pending
+- [ ] Test RCU functionality - Status: Pending
+- [ ] Test mobile responsiveness - Status: Pending
+- [ ] Test dark mode on all pages - Status: Pending
+- [ ] Verify accessibility (WCAG 2.1 AA) - Status: Pending
+- [ ] Performance testing with embedded assets - Status: Pending
+- [ ] Binary size verification - Status: Pending
 
 ---
 
