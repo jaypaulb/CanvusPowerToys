@@ -1,7 +1,10 @@
 package webui
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/jaypaulb/CanvusPowerToys/internal/atoms/config"
 	"github.com/jaypaulb/CanvusPowerToys/internal/organisms/services"
@@ -52,12 +55,53 @@ func (r *ClientResolver) GetInstallationName() (string, error) {
 }
 
 // ResolveClientID queries the Canvus API to find client_id matching installation_name.
-// This will be implemented when we have the API client ready.
-// For now, this is a placeholder that returns an error.
 func (r *ClientResolver) ResolveClientID(apiBaseURL, authToken, installationName string) (string, error) {
-	// TODO: Implement API call to GET /api/v1/clients
-	// TODO: Match installation_name in response
-	// TODO: Return matching client_id
-	// TODO: Handle errors (not found, API errors, etc.)
-	return "", fmt.Errorf("not implemented: requires Canvus API client")
+	// Create HTTP client
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	// Query Canvus API for clients
+	url := fmt.Sprintf("%s/api/v1/clients", apiBaseURL)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Private-Token", authToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("API error: %d", resp.StatusCode)
+	}
+
+	// Parse response
+	var clients []struct {
+		ID               string `json:"id"`
+		InstallationName string `json:"installation_name"`
+		Name             string `json:"name"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&clients); err != nil {
+		return "", fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	// Find matching client by installation_name
+	for _, client := range clients {
+		if client.InstallationName == installationName {
+			return client.ID, nil
+		}
+		// Also try matching by name as fallback
+		if client.Name == installationName {
+			return client.ID, nil
+		}
+	}
+
+	return "", fmt.Errorf("client not found: no client with installation_name '%s'", installationName)
 }
