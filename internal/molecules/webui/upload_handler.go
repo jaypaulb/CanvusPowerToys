@@ -83,15 +83,13 @@ func (h *UploadHandler) HandleUpload(w http.ResponseWriter, r *http.Request) {
 		dst.Close()
 
 		// Upload to Canvus API
-		endpoint := fmt.Sprintf("/api/v1/canvases/%s/upload", canvasID)
+		// TODO: Actually upload file to Canvus API
+		// This would require multipart form upload to the API
 		uploadedFiles = append(uploadedFiles, map[string]interface{}{
 			"name": fileHeader.Filename,
 			"size": fileHeader.Size,
 			"path": uploadPath,
 		})
-
-		// TODO: Actually upload file to Canvus API
-		// This would require multipart form upload to the API
 	}
 
 	w.Header().Set("Content-Type", "application/json")

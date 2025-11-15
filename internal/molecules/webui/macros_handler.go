@@ -203,7 +203,7 @@ func (h *MacrosHandler) HandleUnpin(w http.ResponseWriter, r *http.Request) {
 
 	// Unpin macro via Canvus API
 	endpoint := fmt.Sprintf("/api/v1/canvases/%s/macros/%s/unpin", canvasID, macroID)
-	err := h.apiClient.Post(endpoint, nil)
+	_, err := h.apiClient.Post(endpoint, nil)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to unpin macro: %v", err), http.StatusInternalServerError)
 		return
