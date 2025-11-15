@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"gopkg.in/ini.v1"
-
 	"github.com/jaypaulb/CanvusPowerToys/internal/atoms/config"
 )
 

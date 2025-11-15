@@ -85,7 +85,6 @@ func (xg *XMLGenerator) Generate() ([]byte, error) {
 	}
 
 	// Generate XML
-	xmlGen := config.NewXMLGenerator()
 	var buf []byte
 	// We'll use encoding/xml directly for proper formatting
 	xmlData, err := xml.MarshalIndent(screenXML, "", "  ")
