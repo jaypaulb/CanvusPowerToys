@@ -6,6 +6,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/configeditor"
+	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/cssoptions"
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/screenxml"
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/tray"
 	"github.com/jaypaulb/CanvusPowerToys/internal/organisms/services"
@@ -61,9 +62,22 @@ func NewMainWindow(app fyne.App) *MainWindow {
 			Text:    "Config Editor",
 			Content: configEditor,
 		},
+		// Initialize CSS Options Manager
+		var cssOptions fyne.CanvasObject
+		if fileService != nil {
+			cssMgr, err := cssoptions.NewManager(fileService)
+			if err == nil {
+				cssOptions = cssMgr.CreateUI(window)
+			} else {
+				cssOptions = widget.NewLabel("CSS Options Manager - Error initializing")
+			}
+		} else {
+			cssOptions = widget.NewLabel("CSS Options Manager - Error initializing file service")
+		}
+
 		&container.TabItem{
 			Text:    "CSS Options",
-			Content: widget.NewLabel("CSS Options Manager - Coming soon"),
+			Content: cssOptions,
 		},
 		&container.TabItem{
 			Text:    "Custom Menu",
