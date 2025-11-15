@@ -266,15 +266,15 @@ Tasks are organized by development phases, following the feature priority order:
 - [✅] API client for Canvus Server communication - Status: Completed (placeholder with connection test)
 
 ### 6.4 Backend - Canvas Tracking (Atomic Design)
-- [ ] Implement atom: client_resolver.go - Status: Pending (read mt-canvus.ini, extract installation_name)
-- [ ] Implement atom: device_name.go - Status: Pending (OS-specific device name detection)
-- [ ] Implement atom: canvas_tracker.go - Status: Pending (canvas ID state management)
-- [ ] Implement atom: workspace_subscriber.go - Status: Pending (SSE subscription to Canvus API)
-- [ ] Implement molecule: canvas_service.go - Status: Pending (composes client resolver + workspace subscriber)
-- [ ] Implement molecule: sse_handler.go - Status: Pending (HTTP SSE endpoint handler)
-- [ ] Implement molecule: api_routes.go - Status: Pending (route registration)
-- [ ] Implement organism: server.go - Status: Pending (main HTTP server)
-- [ ] Test canvas tracking end-to-end - Status: Pending
+- [✅] Implement atom: client_resolver.go - Status: Completed (read mt-canvus.ini, extract installation_name)
+- [✅] Implement atom: device_name.go - Status: Completed (OS-specific device name detection)
+- [✅] Implement atom: canvas_tracker.go - Status: Completed (canvas ID state management)
+- [✅] Implement atom: workspace_subscriber.go - Status: Completed (SSE subscription to Canvus API)
+- [✅] Implement molecule: canvas_service.go - Status: Completed (composes client resolver + workspace subscriber)
+- [✅] Implement molecule: sse_handler.go - Status: Completed (HTTP SSE endpoint handler)
+- [✅] Implement molecule: api_routes.go - Status: Completed (route registration)
+- [✅] Implement organism: server.go - Status: Completed (main HTTP server)
+- [ ] Test canvas tracking end-to-end - Status: Pending (requires API client implementation for ResolveClientID)
 
 ### 6.5 Frontend - Atomic Components & Design System
 - [ ] Create atom: button component - Status: Pending (HTML/JS/CSS, MultiTaction colors)
