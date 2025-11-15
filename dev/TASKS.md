@@ -303,14 +303,14 @@ Tasks are organized by development phases, following the feature priority order:
 - [✅] Mobile optimization - Status: Completed (touch-friendly, responsive)
 
 ### 6.7 Frontend - Macros Page Refactor
-- [ ] Remove delete button from Manage tab - Status: Pending
-- [ ] Remove delete API endpoint calls - Status: Pending
-- [ ] Remove Undelete tab entirely - Status: Pending
-- [ ] Improve Grouping tab UX - Status: Pending
-- [ ] Improve Pinning tab UX - Status: Pending
-- [ ] Improve Manage tab (move/copy only) - Status: Pending
-- [ ] Refactor to atomic design - Status: Pending
-- [ ] Mobile optimization - Status: Pending
+- [✅] Remove delete button from Manage tab - Status: Completed (not included in new design)
+- [✅] Remove delete API endpoint calls - Status: Completed (not included in new design)
+- [✅] Remove Undelete tab entirely - Status: Completed (not included in new design)
+- [✅] Improve Grouping tab UX - Status: Completed (atomic design components)
+- [✅] Improve Pinning tab UX - Status: Completed (atomic design components)
+- [✅] Improve Manage tab (move/copy only) - Status: Completed (move and copy buttons only)
+- [✅] Refactor to atomic design - Status: Completed
+- [✅] Mobile optimization - Status: Completed (touch-friendly, responsive)
 
 ### 6.8 Frontend - Remote Upload Page Refactor
 - [ ] Rename route from /upload.html to /remote-upload.html - Status: Pending
