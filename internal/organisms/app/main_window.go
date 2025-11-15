@@ -10,6 +10,7 @@ import (
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/cssoptions"
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/screenxml"
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/tray"
+	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/webui"
 	"github.com/jaypaulb/CanvusPowerToys/internal/organisms/services"
 )
 
@@ -97,9 +98,22 @@ func NewMainWindow(app fyne.App) *MainWindow {
 			Text:    "Custom Menu",
 			Content: customMenu,
 		},
+		// Initialize WebUI Manager
+		var webUI fyne.CanvasObject
+		if fileService != nil {
+			webUIMgr, err := webui.NewManager(fileService)
+			if err == nil {
+				webUI = webUIMgr.CreateUI(window)
+			} else {
+				webUI = widget.NewLabel("WebUI - Error initializing")
+			}
+		} else {
+			webUI = widget.NewLabel("WebUI - Error initializing file service")
+		}
+
 		&container.TabItem{
 			Text:    "WebUI",
-			Content: widget.NewLabel("WebUI Settings - Coming soon"),
+			Content: webUI,
 		},
 	)
 
