@@ -62,6 +62,7 @@ func (r *ClientResolver) ResolveClientID(apiBaseURL, authToken, installationName
 	}
 
 	// Query Canvus API for clients
+	// Base URL should already include /api/v1 if provided, but we'll be explicit
 	url := fmt.Sprintf("%s/api/v1/clients", apiBaseURL)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {

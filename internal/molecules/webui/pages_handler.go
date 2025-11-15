@@ -35,8 +35,9 @@ func (h *PagesHandler) HandleList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch pages from Canvus API
-	endpoint := fmt.Sprintf("/api/v1/canvases/%s/pages", canvasID)
+	// Fetch anchors (pages) from Canvus API
+	// Note: "Pages" in WebUI are "Anchors" in Canvus API
+	endpoint := fmt.Sprintf("/api/v1/canvases/%s/anchors", canvasID)
 	data, err := h.apiClient.Get(endpoint)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to fetch pages: %v", err), http.StatusInternalServerError)
@@ -49,7 +50,8 @@ func (h *PagesHandler) HandleList(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-// HandleCreate handles POST /api/pages - Create a new page.
+// HandleCreate handles POST /api/pages - Create a new anchor (page).
+// Note: Anchors are created as widgets with widget_type="Anchor" in the Canvus API.
 func (h *PagesHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -76,9 +78,14 @@ func (h *PagesHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create page via Canvus API
-	endpoint := fmt.Sprintf("/api/v1/canvases/%s/pages", canvasID)
-	data, err := h.apiClient.Post(endpoint, req)
+	// Create anchor (page) as a widget via Canvus API
+	// Anchors are widgets with widget_type="Anchor"
+	payload := map[string]interface{}{
+		"widget_type": "Anchor",
+		"anchor_name": req.Name,
+	}
+	endpoint := fmt.Sprintf("/api/v1/canvases/%s/widgets", canvasID)
+	data, err := h.apiClient.Post(endpoint, payload)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to create page: %v", err), http.StatusInternalServerError)
 		return
@@ -89,4 +96,5 @@ func (h *PagesHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	w.Write(data)
 }
+
 

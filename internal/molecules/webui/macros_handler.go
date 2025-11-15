@@ -10,6 +10,9 @@ import (
 )
 
 // MacrosHandler handles macros management API endpoints.
+// NOTE: The Canvus API documentation does not include macros endpoints.
+// Macros may be implemented as widgets or may require a different approach.
+// This handler uses assumed endpoints that need verification against actual API.
 type MacrosHandler struct {
 	apiClient     *webuiatoms.APIClient
 	canvasService *CanvasService
