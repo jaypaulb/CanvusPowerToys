@@ -79,9 +79,22 @@ func NewMainWindow(app fyne.App) *MainWindow {
 			Text:    "CSS Options",
 			Content: cssOptions,
 		},
+		// Initialize Custom Menu Designer
+		var customMenu fyne.CanvasObject
+		if fileService != nil {
+			menuDesigner, err := custommenu.NewDesigner(fileService)
+			if err == nil {
+				customMenu = menuDesigner.CreateUI(window)
+			} else {
+				customMenu = widget.NewLabel("Custom Menu Designer - Error initializing")
+			}
+		} else {
+			customMenu = widget.NewLabel("Custom Menu Designer - Error initializing file service")
+		}
+
 		&container.TabItem{
 			Text:    "Custom Menu",
-			Content: widget.NewLabel("Custom Menu Designer - Coming soon"),
+			Content: customMenu,
 		},
 		&container.TabItem{
 			Text:    "WebUI",
