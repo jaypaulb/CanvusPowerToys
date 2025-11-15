@@ -9,15 +9,17 @@ import (
 )
 
 const (
-	GridCols = 10
-	GridRows = 5
+	GridCols = 6
+	GridRows = 4
 )
 
 // CellState represents the state of a grid cell.
 type CellState struct {
-	GPUOutput    string // Format: "gpu#.output#" (e.g., "0.1")
-	TouchArea    int    // Touch area index (-1 if not assigned)
-	IsLayoutArea bool   // True if part of layout area (pink frame)
+	GPUOutput    string     // Format: "gpu#:output#" (e.g., "1:2")
+	TouchArea    int        // Touch area index (-1 if not assigned)
+	IsLayoutArea bool       // True if part of layout area (pink frame)
+	Resolution   Resolution // Resolution for this cell (default: 1920x1080)
+	Index        string     // Index string (empty by default)
 }
 
 // GridWidget is a custom widget for displaying a 10x5 grid.
@@ -42,6 +44,8 @@ func NewGridWidget() *GridWidget {
 			grid.cells[row][col] = &CellState{
 				TouchArea:    -1,
 				IsLayoutArea: false,
+				Resolution:   Resolution{Width: 1920, Height: 1080, Name: "1920x1080 (Full HD)"},
+				Index:        "",
 			}
 		}
 	}
@@ -83,6 +87,24 @@ func (g *GridWidget) ClearCellGPUOutput(row, col int) {
 		return
 	}
 	g.cells[row][col].GPUOutput = ""
+	g.Refresh()
+}
+
+// SetCellResolution sets the resolution for a cell.
+func (g *GridWidget) SetCellResolution(row, col int, res Resolution) {
+	if row < 0 || row >= GridRows || col < 0 || col >= GridCols {
+		return
+	}
+	g.cells[row][col].Resolution = res
+	g.Refresh()
+}
+
+// SetCellIndex sets the index for a cell.
+func (g *GridWidget) SetCellIndex(row, col int, index string) {
+	if row < 0 || row >= GridRows || col < 0 || col >= GridCols {
+		return
+	}
+	g.cells[row][col].Index = index
 	g.Refresh()
 }
 
@@ -188,6 +210,9 @@ func (r *gridRenderer) MinSize() fyne.Size {
 func (r *gridRenderer) Objects() []fyne.CanvasObject {
 	objects := []fyne.CanvasObject{r.border}
 	for row := 0; row < GridRows; row++ {
+		if r.cells[row] == nil {
+			continue
+		}
 		for col := 0; col < GridCols; col++ {
 			if r.cells[row][col] != nil {
 				objects = append(objects, r.cells[row][col])
@@ -200,7 +225,18 @@ func (r *gridRenderer) Objects() []fyne.CanvasObject {
 func (r *gridRenderer) Refresh() {
 	cellState := r.grid.cells
 	for row := 0; row < GridRows; row++ {
+		// Ensure row slice is initialized
+		if r.cells[row] == nil {
+			r.cells[row] = make([]fyne.CanvasObject, GridCols)
+		}
 		for col := 0; col < GridCols; col++ {
+			// Ensure cell is initialized
+			if r.cells[row][col] == nil {
+				rect := canvas.NewRectangle(color.RGBA{R: 255, G: 255, B: 255, A: 255})
+				rect.StrokeColor = color.RGBA{R: 150, G: 150, B: 150, A: 255}
+				rect.StrokeWidth = 1
+				r.cells[row][col] = rect
+			}
 			if r.cells[row][col] != nil {
 				rect := r.cells[row][col].(*canvas.Rectangle)
 				state := cellState[row][col]
@@ -228,3 +264,4 @@ func (r *gridRenderer) Refresh() {
 
 func (r *gridRenderer) Destroy() {
 }
+

@@ -16,13 +16,25 @@ build-linux: process-assets
 # Build for Windows
 # Note: Fyne requires CGO for Windows cross-compilation
 # Requires: sudo apt-get install gcc-mingw-w64-x86-64
+# Optional: goversioninfo for .exe version info (go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest)
 build-windows: process-assets
 	@echo "Building for Windows (requires mingw-w64 for CGO)..."
 	@if ! command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then \
 		echo "ERROR: x86_64-w64-mingw32-gcc not found. Install with: sudo apt-get install gcc-mingw-w64-x86-64"; \
 		exit 1; \
 	fi
-	CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc go build -ldflags="-s -w" -o canvus-powertoys.exe ./cmd/powertoys
+	@if command -v goversioninfo >/dev/null 2>&1; then \
+		echo "Generating version info..."; \
+		goversioninfo -64 versioninfo.json; \
+	fi
+	@VERSION=$$(grep 'Version.*=' internal/atoms/version/version.go | sed -n 's/.*"\([^"]*\)".*/\1/p'); \
+	BUILD_DATE=$$(date -u +"%Y-%m-%dT%H:%M:%SZ"); \
+	GIT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
+	OUTPUT_FILE="canvus-powertoys.$$VERSION.exe"; \
+	CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc go build \
+		-ldflags="-s -w -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.Version=$$VERSION -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.BuildDate=$$BUILD_DATE -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.GitCommit=$$GIT_COMMIT" \
+		-o $$OUTPUT_FILE ./cmd/powertoys; \
+	echo "Built: $$OUTPUT_FILE"
 
 # Run tests
 test:

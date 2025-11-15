@@ -1,0 +1,39 @@
+{
+  "FixedFileInfo": {
+    "FileVersion": {
+      "Major": 1,
+      "Minor": 0,
+      "Patch": 1,
+      "Build": 0
+    },
+    "ProductVersion": {
+      "Major": 1,
+      "Minor": 0,
+      "Patch": 1,
+      "Build": 0
+    },
+    "FileFlagsMask": "3f",
+    "FileFlags ": "00",
+    "FileOS": "040004",
+    "FileType": "01",
+    "FileSubType": "00"
+  },
+  "StringFileInfo": {
+    "Comments": "Canvus PowerToys - Configuration and management tool for Multitaction Canvus",
+    "CompanyName": "Canvus PowerToys",
+    "FileDescription": "Canvus PowerToys",
+    "FileVersion": "1.0.1.0",
+    "InternalName": "canvus-powertoys",
+    "LegalCopyright": "Copyright © 2024",
+    "OriginalFilename": "canvus-powertoys.exe",
+    "ProductName": "Canvus PowerToys",
+    "ProductVersion": "1.0.1.0"
+  },
+  "VarFileInfo": {
+    "Translation": {
+      "LangID": "0409",
+      "CharsetID": "04B0"
+    }
+  }
+}
+
