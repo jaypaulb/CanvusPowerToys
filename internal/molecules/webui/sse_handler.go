@@ -5,17 +5,15 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-
-	webuimolecules "github.com/jaypaulb/CanvusPowerToys/internal/molecules/webui"
 )
 
 // SSEHandler handles Server-Sent Events for canvas_id updates.
 type SSEHandler struct {
-	canvasService *webuimolecules.CanvasService
+	canvasService *CanvasService
 }
 
 // NewSSEHandler creates a new SSE handler.
-func NewSSEHandler(canvasService *webuimolecules.CanvasService) *SSEHandler {
+func NewSSEHandler(canvasService *CanvasService) *SSEHandler {
 	return &SSEHandler{
 		canvasService: canvasService,
 	}

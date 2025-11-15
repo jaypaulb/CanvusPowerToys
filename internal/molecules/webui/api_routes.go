@@ -3,18 +3,16 @@ package webui
 import (
 	"encoding/json"
 	"net/http"
-
-	webuimolecules "github.com/jaypaulb/CanvusPowerToys/internal/molecules/webui"
 )
 
 // APIRoutes handles registration of API routes for the WebUI server.
 type APIRoutes struct {
-	canvasService *webuimolecules.CanvasService
+	canvasService *CanvasService
 	sseHandler    *SSEHandler
 }
 
 // NewAPIRoutes creates a new API routes handler.
-func NewAPIRoutes(canvasService *webuimolecules.CanvasService) *APIRoutes {
+func NewAPIRoutes(canvasService *CanvasService) *APIRoutes {
 	sseHandler := NewSSEHandler(canvasService)
 
 	return &APIRoutes{
