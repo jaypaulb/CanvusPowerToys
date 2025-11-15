@@ -81,15 +81,6 @@ func NewMainWindow(app fyne.App) *MainWindow {
 		customMenu = widget.NewLabel("Custom Menu Designer - Error initializing file service")
 	}
 
-	tabs := container.NewAppTabs(
-		&container.TabItem{
-			Text:    "Screen.xml Creator",
-			Content: screenXMLCreator,
-		},
-		&container.TabItem{
-			Text:    "Config Editor",
-			Content: configEditor,
-		},
 	// Initialize WebUI Manager
 	var webUI fyne.CanvasObject
 	if fileService != nil {
