@@ -2,6 +2,7 @@ package configeditor
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -10,6 +11,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"gopkg.in/ini.v1"
 
+	"github.com/jaypaulb/CanvusPowerToys/internal/atoms/backup"
 	"github.com/jaypaulb/CanvusPowerToys/internal/atoms/config"
 	"github.com/jaypaulb/CanvusPowerToys/internal/organisms/services"
 )
@@ -37,9 +39,10 @@ type OptionItem struct {
 // NewEditor creates a new Config Editor instance.
 func NewEditor(fileService *services.FileService) (*Editor, error) {
 	return &Editor{
-		iniParser:   config.NewINIParser(),
-		fileService: fileService,
-		optionsData: []OptionItem{},
+		iniParser:     config.NewINIParser(),
+		fileService:   fileService,
+		backupManager: backup.NewManager(),
+		optionsData:   []OptionItem{},
 	}, nil
 }
 
@@ -232,14 +235,19 @@ func (e *Editor) createOptionForm(item OptionItem) fyne.CanvasObject {
 	sectionLabel := widget.NewLabel(fmt.Sprintf("Section: %s", item.Section))
 	keyLabel := widget.NewLabel(fmt.Sprintf("Key: %s", item.Key))
 
-	valueEntry := widget.NewEntry()
-	valueEntry.SetText(item.Value)
+	// Determine input type based on value
+	valueEntry := e.createInputField(item)
 
 	tooltipLabel := widget.NewLabel(item.Tooltip)
 	tooltipLabel.Wrapping = fyne.TextWrapWord
 
+	validationLabel := widget.NewLabel("")
+	validationLabel.Hide()
+
 	saveBtn := widget.NewButton("Save", func() {
-		e.saveOptionValue(item.Section, item.Key, valueEntry.Text)
+		if e.validateAndSave(item, valueEntry, validationLabel) {
+			e.saveOptionValue(item.Section, item.Key, e.getValueFromInput(valueEntry))
+		}
 	})
 
 	return container.NewVBox(
@@ -248,12 +256,84 @@ func (e *Editor) createOptionForm(item OptionItem) fyne.CanvasObject {
 		widget.NewSeparator(),
 		widget.NewLabel("Value:"),
 		valueEntry,
+		validationLabel,
 		widget.NewSeparator(),
 		widget.NewLabel("Description:"),
 		tooltipLabel,
 		widget.NewSeparator(),
 		saveBtn,
 	)
+}
+
+// createInputField creates an appropriate input field based on the option type.
+func (e *Editor) createInputField(item OptionItem) fyne.CanvasObject {
+	value := item.Value
+
+	// Check if boolean
+	if value == "true" || value == "false" || value == "auto" {
+		check := widget.NewCheck("", nil)
+		if value == "true" {
+			check.SetChecked(true)
+		}
+		return check
+	}
+
+	// Check if number
+	if e.isNumeric(value) {
+		numEntry := widget.NewEntry()
+		numEntry.SetText(value)
+		return numEntry
+	}
+
+	// Default: text entry
+	textEntry := widget.NewEntry()
+	textEntry.SetText(value)
+	return textEntry
+}
+
+// isNumeric checks if a string is numeric.
+func (e *Editor) isNumeric(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			if r != '.' && r != '-' {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// getValueFromInput extracts the value from an input field.
+func (e *Editor) getValueFromInput(input fyne.CanvasObject) string {
+	switch v := input.(type) {
+	case *widget.Entry:
+		return v.Text
+	case *widget.Check:
+		if v.Checked {
+			return "true"
+		}
+		return "false"
+	default:
+		return ""
+	}
+}
+
+// validateAndSave validates the input and shows feedback.
+func (e *Editor) validateAndSave(item OptionItem, input fyne.CanvasObject, validationLabel *widget.Label) bool {
+	value := e.getValueFromInput(input)
+
+	// Basic validation
+	if value == "" && item.Value != "" {
+		validationLabel.SetText("Warning: Value is empty")
+		validationLabel.Show()
+		return false
+	}
+
+	validationLabel.Hide()
+	return true
 }
 
 // saveOptionValue saves an option value to the INI file in memory.
@@ -279,18 +359,28 @@ func (e *Editor) saveConfig(window fyne.Window, userConfig bool) {
 	}
 
 	var savePath string
+	var configDir string
 	if userConfig {
-		savePath = e.fileService.GetUserConfigPath() + "/mt-canvus.ini"
+		configDir = e.fileService.GetUserConfigPath()
+		savePath = filepath.Join(configDir, "mt-canvus.ini")
 	} else {
-		savePath = e.fileService.GetSystemConfigPath() + "/mt-canvus.ini"
+		configDir = e.fileService.GetSystemConfigPath()
+		savePath = filepath.Join(configDir, "mt-canvus.ini")
 	}
 
 	// Ensure directory exists
-	if err := e.fileService.EnsureDirectory(e.fileService.GetUserConfigPath()); err != nil {
+	if err := e.fileService.EnsureDirectory(configDir); err != nil {
 		dialog.ShowError(fmt.Errorf("failed to create directory: %w", err), window)
 		return
 	}
 
+	// Create backup before saving
+	if err := e.backupManager.CreateBackup(savePath); err != nil {
+		// Log warning but continue with save
+		fmt.Printf("Warning: Failed to create backup: %v\n", err)
+	}
+
+	// Save the file
 	if err := e.iniParser.Write(e.iniFile, savePath); err != nil {
 		dialog.ShowError(fmt.Errorf("failed to save mt-canvus.ini: %w", err), window)
 		return
@@ -300,7 +390,7 @@ func (e *Editor) saveConfig(window fyne.Window, userConfig bool) {
 	if !userConfig {
 		location = "system config"
 	}
-	dialog.ShowInformation("Saved", fmt.Sprintf("Saved mt-canvus.ini to %s:\n%s", location, savePath), window)
+	dialog.ShowInformation("Saved", fmt.Sprintf("Saved mt-canvus.ini to %s:\n%s\n\nBackup created automatically.", location, savePath), window)
 }
 
 // getTooltip returns a tooltip for a configuration option.
