@@ -27,7 +27,7 @@ func NewManager(backupDir string) *Manager {
 	}
 }
 
-// CreateBackup creates a backup of a file if it has changed.
+// CreateBackup creates a backup of a file with date suffix in the same folder.
 // Returns the backup path if created, empty string if no backup needed.
 func (m *Manager) CreateBackup(filePath string) (string, error) {
 	// Check if file exists
@@ -42,22 +42,20 @@ func (m *Manager) CreateBackup(filePath string) (string, error) {
 		return "", fmt.Errorf("failed to read file: %w", err)
 	}
 
-	// Ensure backup directory exists
-	if err := os.MkdirAll(m.backupDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create backup directory: %w", err)
-	}
+	// Generate backup filename with date suffix in same folder
+	dir := filepath.Dir(filePath)
+	baseName := filepath.Base(filePath)
+	ext := filepath.Ext(baseName)
+	nameWithoutExt := baseName[:len(baseName)-len(ext)]
 
-	// Generate backup filename with timestamp
-	timestamp := time.Now().Format("20060102_150405")
-	backupName := fmt.Sprintf("%s_%s%s",
-		filepath.Base(filePath),
-		timestamp,
-		BackupSuffix)
-	backupPath := filepath.Join(m.backupDir, backupName)
+	// Format: filename.2024-01-15.ext
+	dateStr := time.Now().Format("2006-01-02")
+	backupName := fmt.Sprintf("%s.%s%s", nameWithoutExt, dateStr, ext)
+	backupPath := filepath.Join(dir, backupName)
 
-	// Check if this exact content was already backed up
-	if m.hasIdenticalBackup(originalData) {
-		// No need to create duplicate backup
+	// Check if backup already exists for today
+	if _, err := os.Stat(backupPath); err == nil {
+		// Backup for today already exists, skip
 		return "", nil
 	}
 
@@ -66,87 +64,9 @@ func (m *Manager) CreateBackup(filePath string) (string, error) {
 		return "", fmt.Errorf("failed to write backup: %w", err)
 	}
 
-	// Rotate old backups
-	if err := m.rotateBackups(filepath.Base(filePath)); err != nil {
-		// Log error but don't fail the backup
-		// The backup was created successfully
-	}
-
 	return backupPath, nil
 }
 
-// hasIdenticalBackup checks if identical content was already backed up.
-func (m *Manager) hasIdenticalBackup(data []byte) bool {
-	entries, err := os.ReadDir(m.backupDir)
-	if err != nil {
-		return false
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-
-		backupPath := filepath.Join(m.backupDir, entry.Name())
-		backupData, err := os.ReadFile(backupPath)
-		if err != nil {
-			continue
-		}
-
-		if len(backupData) == len(data) {
-			identical := true
-			for i := range data {
-				if backupData[i] != data[i] {
-					identical = false
-					break
-				}
-			}
-			if identical {
-				return true
-			}
-		}
-	}
-
-	return false
-}
-
-// rotateBackups removes old backups, keeping only the most recent MaxBackups.
-func (m *Manager) rotateBackups(baseName string) error {
-	entries, err := os.ReadDir(m.backupDir)
-	if err != nil {
-		return err
-	}
-
-	// Find all backups for this file
-	var backups []os.DirEntry
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		name := entry.Name()
-		// Check if this is a backup of the target file
-		if len(name) > len(baseName) && name[:len(baseName)] == baseName {
-			backups = append(backups, entry)
-		}
-	}
-
-	// If we have more than MaxBackups, remove the oldest
-	if len(backups) > MaxBackups {
-		// Sort by modification time (oldest first)
-		// Simple approach: remove the ones with oldest timestamps in filename
-		// For simplicity, we'll remove the ones that sort first alphabetically
-		// (which should be oldest if timestamp format is consistent)
-		toRemove := len(backups) - MaxBackups
-		for i := 0; i < toRemove; i++ {
-			backupPath := filepath.Join(m.backupDir, backups[i].Name())
-			if err := os.Remove(backupPath); err != nil {
-				return fmt.Errorf("failed to remove old backup: %w", err)
-			}
-		}
-	}
-
-	return nil
-}
 
 // RestoreBackup restores a file from a backup.
 func (m *Manager) RestoreBackup(backupPath, targetPath string) error {
