@@ -35,11 +35,13 @@ type Manager struct {
 	movingEnabled        *widget.Check
 	scalingEnabled       *widget.Check
 	rotationEnabled      *widget.Check
-	videoLoopEnabled     *widget.Check
 	kioskModeEnabled     *widget.Check
 	kioskPlusEnabled     *widget.Check
 	hideTitleBarsEnabled *widget.Check
 	hideResizeHandlesEnabled *widget.Check
+	hideSidebarEnabled   *widget.Check
+	hideMainMenuEnabled  *widget.Check
+	hideFingerMenuEnabled *widget.Check
 	statusLabel          *widget.Label
 }
 
@@ -73,23 +75,19 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 	widgetOptionsTooltip := widget.NewLabel("Control widget interaction capabilities (temporary, reverts on canvas close)")
 
 	movingLabel := widget.NewLabel("Enable Moving")
-	movingTooltip := widget.NewLabel("Allow users to move canvas items")
+	movingTooltip := widget.NewLabel("Allow users to move canvas items (default: enabled)")
 	m.movingEnabled = widget.NewCheck("", nil)
+	m.movingEnabled.SetChecked(true) // Default: enabled
 
 	scalingLabel := widget.NewLabel("Enable Scaling")
-	scalingTooltip := widget.NewLabel("Allow users to resize canvas items")
+	scalingTooltip := widget.NewLabel("Allow users to resize canvas items (default: enabled)")
 	m.scalingEnabled = widget.NewCheck("", nil)
+	m.scalingEnabled.SetChecked(true) // Default: enabled
 
 	rotationLabel := widget.NewLabel("Enable Rotation")
-	rotationTooltip := widget.NewLabel("Allow users to rotate canvas items")
+	rotationTooltip := widget.NewLabel("Allow users to rotate canvas items (default: disabled)")
 	m.rotationEnabled = widget.NewCheck("", nil)
-
-	// Video Loop option
-	videoLoopLabel := widget.NewLabel("Enable Video Looping")
-	videoLoopTooltip := widget.NewLabel("Warning: May use significant memory with large videos")
-	videoLoopWarning := widget.NewLabel("⚠ Memory Warning: Large videos may consume significant resources")
-	videoLoopWarning.Importance = widget.WarningImportance
-	m.videoLoopEnabled = widget.NewCheck("", nil)
+	m.rotationEnabled.SetChecked(false) // Default: disabled
 
 	// UI Visibility Options
 	uiVisibilityLabel := widget.NewLabel("UI Visibility Options")
@@ -103,15 +101,51 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 	hideResizeHandlesTooltip := widget.NewLabel("Hide resize handles on canvas items")
 	m.hideResizeHandlesEnabled = widget.NewCheck("", nil)
 
-	// Kiosk Mode option
-	kioskModeLabel := widget.NewLabel("Enable Kiosk Mode")
-	kioskModeTooltip := widget.NewLabel("Requires: default-canvas set, auto-pin=0")
-	m.kioskModeEnabled = widget.NewCheck("", nil)
+	hideSidebarLabel := widget.NewLabel("Hide Sidebar")
+	hideSidebarTooltip := widget.NewLabel("Hide sidebar menu that appears by widgets")
+	m.hideSidebarEnabled = widget.NewCheck("", nil)
 
-	// Kiosk Plus Mode option
+	hideMainMenuLabel := widget.NewLabel("Hide Main Menu")
+	hideMainMenuTooltip := widget.NewLabel("Hide main menu at side/bottom of screen")
+	m.hideMainMenuEnabled = widget.NewCheck("", nil)
+
+	hideFingerMenuLabel := widget.NewLabel("Hide Finger Menu")
+	hideFingerMenuTooltip := widget.NewLabel("Hide finger menu (CanvusCanvasMenu)")
+	m.hideFingerMenuEnabled = widget.NewCheck("", nil)
+
+	// Kiosk Mode option - mutually exclusive with Kiosk Plus
+	kioskModeLabel := widget.NewLabel("Enable Kiosk Mode")
+	kioskModeTooltip := widget.NewLabel("Requires: default-canvas set, auto-pin=0. Hides all UI elements including finger menu")
+	m.kioskModeEnabled = widget.NewCheck("", func(checked bool) {
+		if checked && m.kioskPlusEnabled.Checked {
+			m.kioskPlusEnabled.SetChecked(false)
+		}
+		// Auto-enable all UI visibility options when kiosk mode is enabled
+		if checked {
+			m.hideTitleBarsEnabled.SetChecked(true)
+			m.hideResizeHandlesEnabled.SetChecked(true)
+			m.hideSidebarEnabled.SetChecked(true)
+			m.hideMainMenuEnabled.SetChecked(true)
+			m.hideFingerMenuEnabled.SetChecked(true)
+		}
+	})
+
+	// Kiosk Plus Mode option - mutually exclusive with Kiosk Mode
 	kioskPlusLabel := widget.NewLabel("Enable Kiosk Plus Mode")
-	kioskPlusTooltip := widget.NewLabel("Requires: default-canvas set, auto-pin=0")
-	m.kioskPlusEnabled = widget.NewCheck("", nil)
+	kioskPlusTooltip := widget.NewLabel("Requires: default-canvas set, auto-pin=0. Hides all UI elements except finger menu")
+	m.kioskPlusEnabled = widget.NewCheck("", func(checked bool) {
+		if checked && m.kioskModeEnabled.Checked {
+			m.kioskModeEnabled.SetChecked(false)
+		}
+		// Auto-enable all UI visibility options except finger menu when kiosk plus is enabled
+		if checked {
+			m.hideTitleBarsEnabled.SetChecked(true)
+			m.hideResizeHandlesEnabled.SetChecked(true)
+			m.hideSidebarEnabled.SetChecked(true)
+			m.hideMainMenuEnabled.SetChecked(true)
+			m.hideFingerMenuEnabled.SetChecked(false) // Keep finger menu visible
+		}
+	})
 
 	// Status label
 	m.statusLabel = widget.NewLabel("Ready")
@@ -144,17 +178,19 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 			rotationTooltip, widget.NewLabel(""),
 		),
 		widget.NewSeparator(),
-		videoLoopLabel, m.videoLoopEnabled,
-		videoLoopTooltip,
-		videoLoopWarning,
-		widget.NewSeparator(),
 		uiVisibilityLabel,
-		container.NewGridWithColumns(2,
-			hideTitleBarsLabel, m.hideTitleBarsEnabled,
-			hideTitleBarsTooltip, widget.NewLabel(""),
-			hideResizeHandlesLabel, m.hideResizeHandlesEnabled,
-			hideResizeHandlesTooltip, widget.NewLabel(""),
-		),
+	container.NewGridWithColumns(2,
+		hideTitleBarsLabel, m.hideTitleBarsEnabled,
+		hideTitleBarsTooltip, widget.NewLabel(""),
+		hideResizeHandlesLabel, m.hideResizeHandlesEnabled,
+		hideResizeHandlesTooltip, widget.NewLabel(""),
+		hideSidebarLabel, m.hideSidebarEnabled,
+		hideSidebarTooltip, widget.NewLabel(""),
+		hideMainMenuLabel, m.hideMainMenuEnabled,
+		hideMainMenuTooltip, widget.NewLabel(""),
+		hideFingerMenuLabel, m.hideFingerMenuEnabled,
+		hideFingerMenuTooltip, widget.NewLabel(""),
+	),
 		widget.NewSeparator(),
 		container.NewGridWithColumns(2,
 			kioskModeLabel, m.kioskModeEnabled,
@@ -321,75 +357,39 @@ func (m *Manager) generateCSS() string {
 	var css strings.Builder
 
 	// Widget Options: Control moving, scaling, and rotation
-	// Note: These are temporary and revert when canvas is closed
-	// Always generate CSS for widget options (users can disable them)
-	css.WriteString("/* Widget Options CSS - Control widget interaction capabilities */\n")
-	css.WriteString("/* Note: These are temporary and revert when canvas is closed */\n")
-	css.WriteString("CanvusCanvasWidget > * {\n")
-	if m.movingEnabled.Checked {
-		css.WriteString("  input-translate: true !important;\n")
-	} else {
-		css.WriteString("  input-translate: false !important;\n")
+	// Defaults: moving=true, scaling=true, rotation=false
+	// Only generate CSS if it differs from defaults
+	needsWidgetCSS := false
+	var widgetRules []string
+
+	if !m.movingEnabled.Checked {
+		// Default is enabled, so we need to disable it
+		widgetRules = append(widgetRules, "input-translate: false !important;")
+		needsWidgetCSS = true
 	}
-	if m.scalingEnabled.Checked {
-		css.WriteString("  input-scale: true !important;\n")
-	} else {
-		css.WriteString("  input-scale: false !important;\n")
+	if !m.scalingEnabled.Checked {
+		// Default is enabled, so we need to disable it
+		widgetRules = append(widgetRules, "input-scale: false !important;")
+		needsWidgetCSS = true
 	}
 	if m.rotationEnabled.Checked {
-		css.WriteString("  input-rotation: true !important;\n")
-	} else {
-		css.WriteString("  input-rotation: false !important;\n")
-	}
-	css.WriteString("}\n\n")
-
-	// Video Looping: Enable looping for video widgets
-	// Note: playmode: loop may need testing - similar to playmode: no-loop used for animated icons
-	if m.videoLoopEnabled.Checked {
-		css.WriteString("/* Video Looping CSS - Enables automatic looping for videos */\n")
-		css.WriteString("/* Warning: May consume significant memory with large videos */\n")
-		css.WriteString("CanvusCanvasVideo {\n")
-		css.WriteString("  playmode: loop !important;\n")
-		css.WriteString("}\n\n")
-		css.WriteString("/* Note: A toggle button for video looping would require plugin code (C++), not just CSS */\n")
-		css.WriteString("/* This is a future enhancement that would need a custom button widget */\n\n")
+		// Default is disabled, so we need to enable it
+		widgetRules = append(widgetRules, "input-rotation: true !important;")
+		needsWidgetCSS = true
 	}
 
-	// Kiosk Mode: Hide UI layers (SidebarWidget and MainMenu), hide finger menu
-	if m.kioskModeEnabled.Checked {
-		css.WriteString("/* Kiosk Mode CSS - Hides UI layers for kiosk presentation mode */\n")
-		css.WriteString("/* Hides sidebar menu that appears by widgets */\n")
-		css.WriteString("SidebarWidget {\n")
-		css.WriteString("  display: none !important;\n")
+	if needsWidgetCSS {
+		css.WriteString("/* Widget Options CSS - Control widget interaction capabilities */\n")
+		css.WriteString("/* Note: These are temporary and revert when canvas is closed */\n")
+		css.WriteString("/* Defaults: moving=enabled, scaling=enabled, rotation=disabled */\n")
+		css.WriteString("CanvusCanvasWidget > * {\n")
+		for _, rule := range widgetRules {
+			css.WriteString("  " + rule + "\n")
+		}
 		css.WriteString("}\n\n")
-		css.WriteString("/* Hides main menu at side/bottom of screen */\n")
-		css.WriteString("MainMenu {\n")
-		css.WriteString("  display: none !important;\n")
-		css.WriteString("}\n\n")
-		css.WriteString("/* Hides finger menu (CanvusCanvasMenu) */\n")
-		css.WriteString("CanvusCanvasMenu {\n")
-		css.WriteString("  display: none !important;\n")
-		css.WriteString("}\n\n")
-		css.WriteString("/* Note: Third-party touch menus are not affected by these rules */\n\n")
 	}
 
-	// Kiosk Plus Mode: Hide UI layers but keep finger menu visible
-	if m.kioskPlusEnabled.Checked {
-		css.WriteString("/* Kiosk Plus Mode CSS - Hides UI layers but keeps finger menu enabled */\n")
-		css.WriteString("/* Hides sidebar menu that appears by widgets */\n")
-		css.WriteString("SidebarWidget {\n")
-		css.WriteString("  display: none !important;\n")
-		css.WriteString("}\n\n")
-		css.WriteString("/* Hides main menu at side/bottom of screen */\n")
-		css.WriteString("MainMenu {\n")
-		css.WriteString("  display: none !important;\n")
-		css.WriteString("}\n\n")
-		css.WriteString("/* Keep finger menu (CanvusCanvasMenu) visible for content creation */\n")
-		css.WriteString("/* CanvusCanvasMenu is NOT hidden in Plus mode */\n\n")
-		css.WriteString("/* Note: Third-party touch menus are not affected by these rules */\n\n")
-	}
-
-	// Hide Title Bars
+	// UI Visibility Options - Individual controls
 	if m.hideTitleBarsEnabled.Checked {
 		css.WriteString("/* Hide Title Bars CSS - Hides title bars on canvas items */\n")
 		css.WriteString("TitleBarWidget {\n")
@@ -397,7 +397,6 @@ func (m *Manager) generateCSS() string {
 		css.WriteString("}\n\n")
 	}
 
-	// Hide Resize Handles
 	if m.hideResizeHandlesEnabled.Checked {
 		css.WriteString("/* Hide Resize Handles CSS - Hides resize handles on canvas items */\n")
 		css.WriteString("CanvusResizeHandleWidget {\n")
@@ -405,12 +404,29 @@ func (m *Manager) generateCSS() string {
 		css.WriteString("}\n\n")
 	}
 
-	// Ensure third-party touch menu is not hidden (applies to both kiosk modes)
-	if m.kioskModeEnabled.Checked || m.kioskPlusEnabled.Checked {
-		css.WriteString("/* Ensure third-party touch menus remain visible */\n")
-		css.WriteString("/* Third-party menus should not be hidden by kiosk modes */\n")
-		css.WriteString("/* Note: Adjust selector if third-party menus use different class names */\n\n")
+	if m.hideSidebarEnabled.Checked {
+		css.WriteString("/* Hide Sidebar CSS - Hides sidebar menu that appears by widgets */\n")
+		css.WriteString("SidebarWidget {\n")
+		css.WriteString("  display: none !important;\n")
+		css.WriteString("}\n\n")
 	}
+
+	if m.hideMainMenuEnabled.Checked {
+		css.WriteString("/* Hide Main Menu CSS - Hides main menu at side/bottom of screen */\n")
+		css.WriteString("MainMenu {\n")
+		css.WriteString("  display: none !important;\n")
+		css.WriteString("}\n\n")
+	}
+
+	if m.hideFingerMenuEnabled.Checked {
+		css.WriteString("/* Hide Finger Menu CSS - Hides finger menu (CanvusCanvasMenu) */\n")
+		css.WriteString("CanvusCanvasMenu {\n")
+		css.WriteString("  display: none !important;\n")
+		css.WriteString("}\n\n")
+	}
+
+	// Note: Third-party touch menus are not affected by these rules
+	css.WriteString("/* Note: Third-party touch menus are not affected by these rules */\n\n")
 
 	return css.String()
 }
@@ -464,10 +480,12 @@ func (m *Manager) updatePluginFolders(iniFile *ini.File, iniPath, pluginDir stri
 
 // launchCanvusWithConfig launches Canvus with the current CSS configuration.
 func (m *Manager) launchCanvusWithConfig(window fyne.Window) {
-	// Check if any options are enabled
-	if !m.movingEnabled.Checked && !m.scalingEnabled.Checked && !m.rotationEnabled.Checked &&
-		!m.videoLoopEnabled.Checked && !m.kioskModeEnabled.Checked && !m.kioskPlusEnabled.Checked &&
-		!m.hideTitleBarsEnabled.Checked && !m.hideResizeHandlesEnabled.Checked {
+	// Check if any options are enabled (widget options or UI visibility)
+	hasWidgetOptions := !m.movingEnabled.Checked || !m.scalingEnabled.Checked || m.rotationEnabled.Checked
+	hasUIOptions := m.hideTitleBarsEnabled.Checked || m.hideResizeHandlesEnabled.Checked ||
+		m.hideSidebarEnabled.Checked || m.hideMainMenuEnabled.Checked || m.hideFingerMenuEnabled.Checked
+
+	if !hasWidgetOptions && !hasUIOptions {
 		dialog.ShowError(fmt.Errorf("please enable at least one CSS option before launching"), window)
 		return
 	}
@@ -533,13 +551,13 @@ func (m *Manager) launchCanvusWithPath(window fyne.Window, canvusExe string) {
 // findCanvusExecutable attempts to find the Canvus executable in common locations.
 func (m *Manager) findCanvusExecutable() string {
 	// Common Windows installation locations
+	// Canvus executable is: %PROGRAMFILES%\MT Canvus\bin\mt-canvus-app.exe
 	possiblePaths := []string{
-		`C:\Program Files\MultiTaction\Canvus\Canvus.exe`,
-		`C:\Program Files (x86)\MultiTaction\Canvus\Canvus.exe`,
-		`C:\MultiTaction\Canvus\Canvus.exe`,
+		`C:\Program Files\MT Canvus\bin\mt-canvus-app.exe`,
+		`C:\Program Files (x86)\MT Canvus\bin\mt-canvus-app.exe`,
 	}
 
-	// Check if Canvus.exe exists in any of these locations
+	// Check if mt-canvus-app.exe exists in any of these locations
 	for _, path := range possiblePaths {
 		if _, err := os.Stat(path); err == nil {
 			return path
@@ -548,14 +566,14 @@ func (m *Manager) findCanvusExecutable() string {
 
 	// Check environment variables
 	if programFiles := os.Getenv("ProgramFiles"); programFiles != "" {
-		path := filepath.Join(programFiles, "MultiTaction", "Canvus", "Canvus.exe")
+		path := filepath.Join(programFiles, "MT Canvus", "bin", "mt-canvus-app.exe")
 		if _, err := os.Stat(path); err == nil {
 			return path
 		}
 	}
 
 	if programFilesX86 := os.Getenv("ProgramFiles(x86)"); programFilesX86 != "" {
-		path := filepath.Join(programFilesX86, "MultiTaction", "Canvus", "Canvus.exe")
+		path := filepath.Join(programFilesX86, "MT Canvus", "bin", "mt-canvus-app.exe")
 		if _, err := os.Stat(path); err == nil {
 			return path
 		}
@@ -574,17 +592,14 @@ func (m *Manager) getCSSDirectory() string {
 func (m *Manager) generateCSSFileName() string {
 	var parts []string
 
-	if m.movingEnabled.Checked {
-		parts = append(parts, "move")
+	if !m.movingEnabled.Checked {
+		parts = append(parts, "nomove")
 	}
-	if m.scalingEnabled.Checked {
-		parts = append(parts, "scale")
+	if !m.scalingEnabled.Checked {
+		parts = append(parts, "noscale")
 	}
 	if m.rotationEnabled.Checked {
 		parts = append(parts, "rotate")
-	}
-	if m.videoLoopEnabled.Checked {
-		parts = append(parts, "loop")
 	}
 	if m.kioskModeEnabled.Checked {
 		parts = append(parts, "kiosk")
@@ -597,6 +612,15 @@ func (m *Manager) generateCSSFileName() string {
 	}
 	if m.hideResizeHandlesEnabled.Checked {
 		parts = append(parts, "noresize")
+	}
+	if m.hideSidebarEnabled.Checked {
+		parts = append(parts, "nosidebar")
+	}
+	if m.hideMainMenuEnabled.Checked {
+		parts = append(parts, "nomainmenu")
+	}
+	if m.hideFingerMenuEnabled.Checked {
+		parts = append(parts, "nofinger")
 	}
 
 	if len(parts) == 0 {
@@ -611,17 +635,14 @@ func (m *Manager) generateCSSFileName() string {
 func (m *Manager) generateShortcutName() string {
 	var parts []string
 
-	if m.movingEnabled.Checked {
-		parts = append(parts, "Move")
+	if !m.movingEnabled.Checked {
+		parts = append(parts, "NoMove")
 	}
-	if m.scalingEnabled.Checked {
-		parts = append(parts, "Scale")
+	if !m.scalingEnabled.Checked {
+		parts = append(parts, "NoScale")
 	}
 	if m.rotationEnabled.Checked {
 		parts = append(parts, "Rotate")
-	}
-	if m.videoLoopEnabled.Checked {
-		parts = append(parts, "Loop")
 	}
 	if m.kioskModeEnabled.Checked {
 		parts = append(parts, "Kiosk")
@@ -634,6 +655,15 @@ func (m *Manager) generateShortcutName() string {
 	}
 	if m.hideResizeHandlesEnabled.Checked {
 		parts = append(parts, "NoResize")
+	}
+	if m.hideSidebarEnabled.Checked {
+		parts = append(parts, "NoSidebar")
+	}
+	if m.hideMainMenuEnabled.Checked {
+		parts = append(parts, "NoMainMenu")
+	}
+	if m.hideFingerMenuEnabled.Checked {
+		parts = append(parts, "NoFinger")
 	}
 
 	if len(parts) == 0 {

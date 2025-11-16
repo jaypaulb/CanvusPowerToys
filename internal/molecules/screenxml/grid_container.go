@@ -117,6 +117,7 @@ func (gc *GridContainer) updateSelectedCells() {
 }
 
 // positionToCell converts a position to cell coordinates.
+// Accounts for spacing between cells (2px gap).
 func (gc *GridContainer) positionToCell(pos fyne.Position) (row, col int) {
 	size := gc.container.Size()
 	if size.Width == 0 || size.Height == 0 {
@@ -124,11 +125,14 @@ func (gc *GridContainer) positionToCell(pos fyne.Position) (row, col int) {
 		return -1, -1
 	}
 
-	cellWidth := float32(size.Width) / float32(GridCols)
-	cellHeight := float32(size.Height) / float32(GridRows)
+	// Account for spacing (2px gap between cells)
+	spacing := float32(2)
+	cellWidth := (size.Width - float32(GridCols-1)*spacing) / float32(GridCols)
+	cellHeight := (size.Height - float32(GridRows-1)*spacing) / float32(GridRows)
 
-	col = int(pos.X / cellWidth)
-	row = int(pos.Y / cellHeight)
+	// Calculate which cell the position is in, accounting for spacing
+	col = int(pos.X / (cellWidth + spacing))
+	row = int(pos.Y / (cellHeight + spacing))
 
 	// Clamp to valid range
 	if row < 0 {

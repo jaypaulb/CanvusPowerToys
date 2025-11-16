@@ -178,8 +178,10 @@ type gridRenderer struct {
 }
 
 func (r *gridRenderer) Layout(size fyne.Size) {
-	cellWidth := size.Width / GridCols
-	cellHeight := size.Height / GridRows
+	// Add spacing between cells (2px gap)
+	spacing := float32(2)
+	cellWidth := (size.Width - float32(GridCols-1)*spacing) / GridCols
+	cellHeight := (size.Height - float32(GridRows-1)*spacing) / GridRows
 
 	for row := 0; row < GridRows; row++ {
 		if r.cells[row] == nil {
@@ -192,8 +194,9 @@ func (r *gridRenderer) Layout(size fyne.Size) {
 				rect.StrokeWidth = 1
 				r.cells[row][col] = rect
 			}
-			x := float32(col) * cellWidth
-			y := float32(row) * cellHeight
+			// Calculate position with spacing
+			x := float32(col) * (cellWidth + spacing)
+			y := float32(row) * (cellHeight + spacing)
 			r.cells[row][col].Resize(fyne.NewSize(cellWidth, cellHeight))
 			r.cells[row][col].Move(fyne.NewPos(x, y))
 		}

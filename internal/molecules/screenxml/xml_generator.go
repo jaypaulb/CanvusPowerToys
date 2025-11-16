@@ -89,6 +89,7 @@ type XMLGenerator struct {
 	touchAreas      *TouchAreaHandler
 	resolution      Resolution
 	defaultRes      Resolution
+	areaPerGPU      bool // If true, create area per window (per GPU); if false, area per GPU output (per screen)
 }
 
 // NewXMLGenerator creates a new XML generator.
@@ -99,7 +100,15 @@ func NewXMLGenerator(grid *GridWidget, gpuAssignments *GPUAssignment, touchAreas
 		touchAreas:     touchAreas,
 		resolution:     resolution,
 		defaultRes:     CommonResolutions[0], // 1920x1080
+		areaPerGPU:     false, // Default: area per Screen (per GPU output)
 	}
+}
+
+// SetAreaPerGPU sets whether to create area per GPU (window) or per Screen (GPU output).
+// true = per GPU (one area per window matching all outputs on that GPU)
+// false = per Screen (one area per GPU output, each output is one screen)
+func (xg *XMLGenerator) SetAreaPerGPU(perGPU bool) {
+	xg.areaPerGPU = perGPU
 }
 
 // Generate generates screen.xml content from the grid configuration.
@@ -121,14 +130,29 @@ func (xg *XMLGenerator) Generate() ([]byte, error) {
 	// Group cells by GPU output to create windows
 	gpuGroups := xg.groupCellsByGPU()
 
-	// Create a window for each GPU (group by GPU number, not GPU output)
-	windowsByGPU := xg.groupByGPU(gpuGroups)
+	if xg.areaPerGPU {
+		// Area per GPU (window) mode: Create one area per window matching all outputs on that GPU
+		// Group by GPU number to create windows
+		windowsByGPU := xg.groupByGPU(gpuGroups)
 
-	// Create windows for each GPU
-	for gpuNum, outputs := range windowsByGPU {
-		window := xg.createWindowForGPU(gpuNum, outputs)
-		if window != nil {
-			screenXML.Windows = append(screenXML.Windows, *window)
+		// Create windows for each GPU
+		for gpuNum, outputs := range windowsByGPU {
+			window := xg.createWindowForGPU(gpuNum, outputs)
+			if window != nil {
+				screenXML.Windows = append(screenXML.Windows, *window)
+			}
+		}
+	} else {
+		// Area per Screen (GPU output) mode: Create one area per GPU output (each output is one screen)
+		// Create a window for each GPU (group by GPU number, not GPU output)
+		windowsByGPU := xg.groupByGPU(gpuGroups)
+
+		// Create windows for each GPU, with one area per output
+		for gpuNum, outputs := range windowsByGPU {
+			window := xg.createWindowForScreen(gpuNum, outputs)
+			if window != nil {
+				screenXML.Windows = append(screenXML.Windows, *window)
+			}
 		}
 	}
 
@@ -146,32 +170,45 @@ func (xg *XMLGenerator) Generate() ([]byte, error) {
 	return buf, nil
 }
 
-// calculateLayerSize calculates the total layer size from all assigned cells.
+// calculateLayerSize calculates the total layer size from cells with layer > 0.
+// Only considers cells that have a layer index > 0 (not layer 0 or empty).
 func (xg *XMLGenerator) calculateLayerSize() string {
-	// Find the maximum graphics coordinates
+	// Find the maximum graphics coordinates from cells with layer > 0
 	maxX, maxY := 0, 0
 
 	for row := 0; row < GridRows; row++ {
 		for col := 0; col < GridCols; col++ {
 			cell := xg.grid.GetCell(row, col)
 			if cell != nil && cell.GPUOutput != "" {
-				// Calculate cell's graphics coordinates
-				x := col * cell.Resolution.Width
-				y := row * cell.Resolution.Height
-				cellMaxX := x + cell.Resolution.Width
-				cellMaxY := y + cell.Resolution.Height
-
-				if cellMaxX > maxX {
-					maxX = cellMaxX
+				// Check if cell has a layer index > 0
+				hasLayer := false
+				if cell.Index != "" {
+					var layerIdx int
+					if _, err := fmt.Sscanf(cell.Index, "%d", &layerIdx); err == nil && layerIdx > 0 {
+						hasLayer = true
+					}
 				}
-				if cellMaxY > maxY {
-					maxY = cellMaxY
+
+				// Only consider cells with layer > 0
+				if hasLayer {
+					// Calculate cell's graphics coordinates
+					x := col * cell.Resolution.Width
+					y := row * cell.Resolution.Height
+					cellMaxX := x + cell.Resolution.Width
+					cellMaxY := y + cell.Resolution.Height
+
+					if cellMaxX > maxX {
+						maxX = cellMaxX
+					}
+					if cellMaxY > maxY {
+						maxY = cellMaxY
+					}
 				}
 			}
 		}
 	}
 
-	// If no cells assigned, return "0 0" for auto-calculation
+	// If no cells with layer assigned, return "0 0" for auto-calculation
 	if maxX == 0 && maxY == 0 {
 		return "0 0"
 	}
@@ -200,7 +237,8 @@ func (xg *XMLGenerator) groupByGPU(gpuGroups map[string][]CellCoord) map[int]map
 	return windowsByGPU
 }
 
-// createWindowForGPU creates a WindowConfig for a GPU with multiple outputs.
+// createWindowForGPU creates a WindowConfig with a single area matching the window size.
+// This is used when "area per GPU" mode is enabled (one area per window, matching all outputs on that GPU).
 func (xg *XMLGenerator) createWindowForGPU(gpuNum int, outputs map[string][]CellCoord) *WindowConfig {
 	if len(outputs) == 0 {
 		return nil
@@ -208,6 +246,8 @@ func (xg *XMLGenerator) createWindowForGPU(gpuNum int, outputs map[string][]Cell
 
 	// Calculate window size from all outputs
 	minX, minY, maxX, maxY := xg.calculateWindowBounds(outputs)
+	windowWidth := maxX - minX
+	windowHeight := maxY - minY
 
 	window := &WindowConfig{
 		Type:            "window",
@@ -218,16 +258,21 @@ func (xg *XMLGenerator) createWindowForGPU(gpuNum int, outputs map[string][]Cell
 		Location:        &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", minX, minY)},
 		Resizable:       &XMLAttr{Type: "", Value: "0"},
 		ScreenNumber:    &XMLAttr{Type: "", Value: "-1"},
-		Size:            &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", maxX-minX, maxY-minY)},
+		Size:            &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", windowWidth, windowHeight)},
 		Areas:           []AreaConfig{},
 	}
 
-	// Create areas for each output
-	for gpuOutput, cells := range outputs {
-		area := xg.createAreaForGPU(gpuOutput, cells)
-		if area != nil {
-			window.Areas = append(window.Areas, *area)
-		}
+	// Create a single area that matches the window size (all outputs on this GPU)
+	// Collect all cells from all outputs
+	allCells := []CellCoord{}
+	for _, cells := range outputs {
+		allCells = append(allCells, cells...)
+	}
+
+	// Create one area for the entire window
+	area := xg.createAreaForWindow(allCells, minX, minY, windowWidth, windowHeight)
+	if area != nil {
+		window.Areas = append(window.Areas, *area)
 	}
 
 	return window
@@ -341,6 +386,93 @@ func (xg *XMLGenerator) createAreaForGPU(gpuOutput string, cells []CellCoord) *A
 	fmt.Sscanf(parts[0], "%d", &gpuNum)
 	fmt.Sscanf(parts[1], "%d", &outputNum)
 	// Note: area type is not used in the XML structure - it's determined by the GPU output
+
+	// Create default color correction
+	colorCorr := &ColorCorrection{
+		Type:       "",
+		Brightness: &XMLAttr{Type: "", Value: "0 0 0"},
+		Contrast:  &XMLAttr{Type: "", Value: "1 1 1"},
+		Gamma:     &XMLAttr{Type: "", Value: "1 1 1"},
+		Red:       "0 0 1 1 ",
+		Green:     "0 0 1 1 ",
+		Blue:      "0 0 1 1 ",
+	}
+
+	// Create default keystone
+	keystone := &Keystone{
+		Type:      "",
+		Rotations: &XMLAttr{Type: "", Value: "0"},
+		V1:        &XMLAttr{Type: "", Value: "0 0"},
+		V2:        &XMLAttr{Type: "", Value: "1 0"},
+		V3:        &XMLAttr{Type: "", Value: "1 1"},
+		V4:        &XMLAttr{Type: "", Value: "0 1"},
+	}
+
+	// Create default RGB cube
+	rgbCube := &RgbCube{
+		Type:      "",
+		Dimension: &XMLAttr{Type: "", Value: "32"},
+		Division:  &XMLAttr{Type: "", Value: "0"},
+		RgbTable:  "",
+	}
+
+	area := &AreaConfig{
+		Type:             "area",
+		ColorCorrection:  colorCorr,
+		GraphicsLocation: &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", x, y)},
+		GraphicsSize:     &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", width, height)},
+		Keystone:         keystone,
+		Location:         &XMLAttr{Type: "", Value: "0 0"},
+		Method:           &XMLAttr{Type: "", Value: "1"},
+		RgbCube:          rgbCube,
+		Seams:            &XMLAttr{Type: "", Value: "0 0 0 0"},
+		Size:             &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", width, height)},
+	}
+
+	return area
+}
+
+// createWindowForScreen creates a WindowConfig with one area per GPU output (per screen).
+// This is used when "area per Screen" mode is enabled (each GPU output = one screen).
+func (xg *XMLGenerator) createWindowForScreen(gpuNum int, outputs map[string][]CellCoord) *WindowConfig {
+	if len(outputs) == 0 {
+		return nil
+	}
+
+	// Calculate window size from all outputs
+	minX, minY, maxX, maxY := xg.calculateWindowBounds(outputs)
+	windowWidth := maxX - minX
+	windowHeight := maxY - minY
+
+	window := &WindowConfig{
+		Type:            "window",
+		DirectRendering: &XMLAttr{Type: "", Value: "1"},
+		Frameless:       &XMLAttr{Type: "", Value: "1"},
+		FsaaSamples:     &XMLAttr{Type: "", Value: "4"},
+		Fullscreen:      &XMLAttr{Type: "", Value: "0"},
+		Location:        &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", minX, minY)},
+		Resizable:       &XMLAttr{Type: "", Value: "0"},
+		ScreenNumber:    &XMLAttr{Type: "", Value: "-1"},
+		Size:            &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", windowWidth, windowHeight)},
+		Areas:           []AreaConfig{},
+	}
+
+	// Create one area for each GPU output (each output = one screen)
+	for gpuOutput, cells := range outputs {
+		area := xg.createAreaForGPU(gpuOutput, cells)
+		if area != nil {
+			window.Areas = append(window.Areas, *area)
+		}
+	}
+
+	return window
+}
+
+// createAreaForWindow creates a single AreaConfig that matches the window size.
+func (xg *XMLGenerator) createAreaForWindow(cells []CellCoord, x, y, width, height int) *AreaConfig {
+	if len(cells) == 0 {
+		return nil
+	}
 
 	// Create default color correction
 	colorCorr := &ColorCorrection{

@@ -45,8 +45,8 @@ func NewEditor(fileService *services.FileService) (*Editor, error) {
 	// Create backup manager with temporary directory (will use file's directory when backing up)
 	backupMgr := backup.NewManager("")
 
-	// Start with empty schema - will be populated when INI file is loaded
-	schema := NewConfigSchema()
+	// Use embedded schema (manually maintained from documentation)
+	schema := GetEmbeddedSchema()
 
 	return &Editor{
 		iniParser:      config.NewINIParser(),
@@ -237,28 +237,17 @@ func (e *Editor) buildSectionFromOptions(sectionName string) *ConfigSection {
 	return section
 }
 
-// loadConfigFilesSilent loads the example INI file for schema, then overlays with live values.
+// loadConfigFilesSilent loads live file for values using embedded schema, without dialogs.
 func (e *Editor) loadConfigFilesSilent() error {
-	// First, try to load the example file for complete schema
-	examplePath := e.fileService.DetectExampleIni()
-	if examplePath != "" {
-		fileParser := NewINIFileParser(examplePath)
-		schema, err := fileParser.Parse()
-		if err == nil {
-			e.schema = schema
-		}
-	}
+	// Use embedded schema (manually maintained from documentation)
+	e.schema = GetEmbeddedSchema()
 
-	// Then, load the live config file for actual values
+	// Try to load the live config file for actual values
 	iniPath := e.fileService.DetectMtCanvusIni()
 	if iniPath == "" {
-		// No live file found, but we might have schema from example
-		if e.schema != nil && len(e.schema.Options) > 0 {
-			// Create empty INI file for editing
-			e.iniFile = ini.Empty()
-			return nil
-		}
-		return fmt.Errorf("no INI file found")
+		// No live file - use empty INI with defaults
+		e.iniFile = ini.Empty()
+		return nil
 	}
 
 	// Load the actual INI file for current values
@@ -271,33 +260,18 @@ func (e *Editor) loadConfigFilesSilent() error {
 	return nil
 }
 
-// loadConfigFile loads the example INI file for schema, then overlays with live values.
+// loadConfigFile loads the live config file and overlays values on embedded schema.
 func (e *Editor) loadConfigFile(window fyne.Window) {
-	// First, try to load the example file for complete schema
-	examplePath := e.fileService.DetectExampleIni()
-	var schema *ConfigSchema
-	if examplePath != "" {
-		fileParser := NewINIFileParser(examplePath)
-		var err error
-		schema, err = fileParser.Parse()
-		if err != nil {
-			dialog.ShowError(fmt.Errorf("failed to parse example mt-canvus.ini: %w", err), window)
-			return
-		}
-		e.schema = schema
-	}
+	// Use embedded schema (manually maintained from documentation)
+	e.schema = GetEmbeddedSchema()
 
-	// Then, load the live config file for actual values
+	// Load the live config file for actual values
 	iniPath := e.fileService.DetectMtCanvusIni()
 	if iniPath == "" {
-		if schema == nil || len(schema.Options) == 0 {
-			dialog.ShowInformation("Not Found", "mt-canvus.ini not found in standard locations", window)
-			return
-		}
-		// We have schema from example, but no live file - create empty INI
+		// No live file - create empty INI with defaults from schema
 		e.iniFile = ini.Empty()
 		e.buildUIFromSchema()
-		dialog.ShowInformation("Loaded", fmt.Sprintf("Loaded schema from example file:\n%s\n\nNo live config file found - using defaults.", examplePath), window)
+		dialog.ShowInformation("Loaded", "No live config file found - using defaults from embedded schema.", window)
 		return
 	}
 
@@ -310,23 +284,10 @@ func (e *Editor) loadConfigFile(window fyne.Window) {
 
 	e.iniFile = iniFile
 
-	// If we didn't get schema from example, try parsing the live file
-	if schema == nil || len(schema.Options) == 0 {
-		fileParser := NewINIFileParser(iniPath)
-		schema, err = fileParser.Parse()
-		if err == nil {
-			e.schema = schema
-		}
-	}
-
 	// Rebuild UI to update values from loaded file
 	e.buildUIFromSchema()
 
-	msg := fmt.Sprintf("Loaded mt-canvus.ini from:\n%s", iniPath)
-	if examplePath != "" {
-		msg += fmt.Sprintf("\n\nSchema loaded from example:\n%s", examplePath)
-	}
-	msg += "\n\nAll options updated with current values."
+	msg := fmt.Sprintf("Loaded mt-canvus.ini from:\n%s\n\nAll options updated with current values.", iniPath)
 	dialog.ShowInformation("Loaded", msg, window)
 }
 

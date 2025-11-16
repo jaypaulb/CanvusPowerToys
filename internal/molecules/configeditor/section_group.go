@@ -95,15 +95,11 @@ func (sg *SectionGroup) CreateUI() *widget.AccordionItem {
 		title = fmt.Sprintf("%s - %s", title, sg.section.Description)
 	}
 
-	// Only add scroll if there are multiple items, otherwise return compact form
-	var detailContent fyne.CanvasObject = form
-	if len(sg.section.Options) > 1 {
-		detailContent = container.NewScroll(form)
-	}
-
+	// Never use scroll - each section should be exactly the size of its items
+	// The parent accordion container will handle scrolling
 	return &widget.AccordionItem{
 		Title:  title,
-		Detail: detailContent,
+		Detail: form,
 		Open:   true,
 	}
 }

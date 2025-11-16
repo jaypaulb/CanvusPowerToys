@@ -19,6 +19,7 @@ type Creator struct {
 	iniIntegration  *INIIntegration
 	fileService     *services.FileService
 	window          fyne.Window
+	areaPerScreen   *widget.Check // Checkbox for "area per screen or per gpu"
 }
 
 // NewCreator creates a new Screen.xml Creator.
@@ -44,8 +45,21 @@ func NewCreator(fileService *services.FileService) (*Creator, error) {
 func (c *Creator) CreateUI(window fyne.Window) fyne.CanvasObject {
 	c.window = window
 
-	// Top: 3 buttons only
+	// Top row: Checkbox for area generation mode
+	// Per Screen = per GPU output (each output is one screen)
+	// Per GPU = per window (one window per GPU, matching all outputs on that GPU)
+	c.areaPerScreen = widget.NewCheck("Area per GPU (not per Screen)", func(checked bool) {
+		// Update XML generator mode
+		// checked = true means "per GPU" (per window)
+		// checked = false means "per Screen" (per GPU output)
+		c.xmlGenerator.SetAreaPerGPU(checked)
+	})
+	c.areaPerScreen.SetChecked(false) // Default: area per Screen (per GPU output)
+
+	// Top: Checkbox + 3 buttons
 	topBar := container.NewHBox(
+		c.areaPerScreen,
+		widget.NewSeparator(),
 		widget.NewButton("Generate Screen.xml", func() {
 			c.generateAndPreview(window)
 		}),

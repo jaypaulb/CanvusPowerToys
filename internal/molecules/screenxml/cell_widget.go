@@ -214,23 +214,22 @@ func (cw *CellWidget) CreateRenderer() fyne.WidgetRenderer {
 	// Col1: Labels
 	gpuLabel := widget.NewLabel("GPU.Output:")
 	resLabel := widget.NewLabel("Resolution:")
-	indexLabel := widget.NewLabel("Layout Index:")
+	indexLabel := widget.NewLabel("Layer:")
 
 	// Col2: Controls
 	col1 := container.NewVBox(gpuLabel, resLabel, indexLabel)
 	col2 := container.NewVBox(cw.gpuSelect, cw.resSelect, cw.indexSpin)
-
-	// Row 4: Auto Fill button (spans both cols)
-	row4 := container.NewBorder(nil, nil, nil, nil, cw.autoFillBtn)
 
 	// Main layout: 2 cols, 4 rows
 	// Use VBox for rows, then GridWithColumns for cols
 	row1 := container.NewGridWithColumns(2, col1, col2)
 	row2 := widget.NewLabel("") // Empty
 	row3 := widget.NewLabel("") // Empty
-	row4Container := container.NewGridWithColumns(2, row4, widget.NewLabel(""))
+	// Row 4: Auto Fill button spans full width (both columns)
+	// Put button directly in VBox - it will take full width
+	row4 := cw.autoFillBtn
 
-	content := container.NewVBox(row1, row2, row3, row4Container)
+	content := container.NewVBox(row1, row2, row3, row4)
 
 	return &cellRenderer{
 		cell:    cw,
