@@ -12,14 +12,15 @@ import (
 
 // CompoundEntryGroup represents a UI group for compound entries (e.g., [server:name], [remote-desktop:name]).
 type CompoundEntryGroup struct {
-	pattern       string
-	section       *ConfigSection
-	iniFile       *ini.File
-	window        fyne.Window
-	entries       map[string]*CompoundEntry // Map of entry name to entry
-	onValueChange func(section, key, value string)
-	onEntryAdd    func(pattern, name string)
-	onEntryRemove func(pattern, name string)
+	pattern          string
+	section          *ConfigSection
+	iniFile          *ini.File
+	window           fyne.Window
+	entries          map[string]*CompoundEntry // Map of entry name to entry
+	entriesContainer *fyne.Container           // Container for entries (stored for dynamic addition)
+	onValueChange    func(section, key, value string)
+	onEntryAdd       func(pattern, name string)
+	onEntryRemove    func(pattern, name string)
 }
 
 // CompoundEntry represents a single compound entry instance.
@@ -58,6 +59,7 @@ func (ceg *CompoundEntryGroup) CreateUI() fyne.CanvasObject {
 
 	// Container for entries
 	entriesContainer := container.NewVBox()
+	ceg.entriesContainer = entriesContainer // Store reference for dynamic addition
 
 	// Load existing entries from INI file
 	if ceg.iniFile != nil {
@@ -75,7 +77,12 @@ func (ceg *CompoundEntryGroup) CreateUI() fyne.CanvasObject {
 
 	// If no entries, add at least one empty entry
 	if len(ceg.entries) == 0 {
-		ceg.addEntry("", entriesContainer)
+		// For fixed-workspace, start with index 1
+		initialName := ""
+		if ceg.pattern == "fixed-workspace" {
+			initialName = "1"
+		}
+		ceg.addEntry(initialName, entriesContainer)
 	}
 
 	scroll := container.NewScroll(entriesContainer)
@@ -216,30 +223,86 @@ func (ceg *CompoundEntryGroup) getCurrentValue(option *ConfigOption, entryName s
 
 // showAddEntryDialog shows a dialog to add a new compound entry.
 func (ceg *CompoundEntryGroup) showAddEntryDialog() {
-	nameEntry := widget.NewEntry()
-	nameEntry.SetPlaceHolder(fmt.Sprintf("Enter %s name", ceg.pattern))
+	var entryName string
 
-	content := container.NewVBox(
-		widget.NewLabel(fmt.Sprintf("Add New %s", ceg.pattern)),
-		widget.NewLabel("Name:"),
-		nameEntry,
-	)
+	// For fixed-workspace, auto-generate the next index number
+	if ceg.pattern == "fixed-workspace" {
+		// Find the highest existing index from both entries map and INI file
+		maxIndex := 0
 
-	dialog.ShowCustomConfirm(
-		fmt.Sprintf("Add %s", ceg.pattern),
-		"Add",
-		"Cancel",
-		content,
-		func(confirmed bool) {
-			if confirmed && nameEntry.Text != "" {
-				if ceg.onEntryAdd != nil {
-					ceg.onEntryAdd(ceg.pattern, nameEntry.Text)
+		// Check entries map
+		for name := range ceg.entries {
+			var index int
+			if _, err := fmt.Sscanf(name, "%d", &index); err == nil {
+				if index > maxIndex {
+					maxIndex = index
 				}
-				// Entry will be added to UI by parent
 			}
-		},
-		ceg.window,
-	)
+		}
+
+		// Check INI file sections
+		if ceg.iniFile != nil {
+			for _, section := range ceg.iniFile.Sections() {
+				sectionName := section.Name()
+				if ceg.matchesPattern(sectionName) {
+					extractedName := ceg.extractEntryName(sectionName)
+					var index int
+					if _, err := fmt.Sscanf(extractedName, "%d", &index); err == nil {
+						if index > maxIndex {
+							maxIndex = index
+						}
+					}
+				}
+			}
+		}
+
+		// Use next index
+		entryName = fmt.Sprintf("%d", maxIndex+1)
+	} else {
+		// For other patterns, show dialog to enter name
+		nameEntry := widget.NewEntry()
+		nameEntry.SetPlaceHolder(fmt.Sprintf("Enter %s name", ceg.pattern))
+
+		content := container.NewVBox(
+			widget.NewLabel(fmt.Sprintf("Add New %s", ceg.pattern)),
+			widget.NewLabel("Name:"),
+			nameEntry,
+		)
+
+		dialog.ShowCustomConfirm(
+			fmt.Sprintf("Add %s", ceg.pattern),
+			"Add",
+			"Cancel",
+			content,
+			func(confirmed bool) {
+				if confirmed && nameEntry.Text != "" {
+					entryName = nameEntry.Text
+					// Add to INI file via callback
+					if ceg.onEntryAdd != nil {
+						ceg.onEntryAdd(ceg.pattern, entryName)
+					}
+					// Add to UI immediately
+					if ceg.entriesContainer != nil {
+						ceg.addEntry(entryName, ceg.entriesContainer)
+					}
+				}
+			},
+			ceg.window,
+		)
+		return
+	}
+
+	// For fixed-workspace, add immediately without dialog
+	if entryName != "" {
+		// Add to INI file via callback
+		if ceg.onEntryAdd != nil {
+			ceg.onEntryAdd(ceg.pattern, entryName)
+		}
+		// Add to UI immediately
+		if ceg.entriesContainer != nil {
+			ceg.addEntry(entryName, ceg.entriesContainer)
+		}
+	}
 }
 
 // GetEntries returns all compound entries.

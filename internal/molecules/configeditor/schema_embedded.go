@@ -367,6 +367,8 @@ func GetEmbeddedSchema() *ConfigSchema {
 		Default:     "",
 		Description: "The size setting must be specified for each workspace. Format: width height (e.g., 3240 1920)",
 		Type:        ValueTypeString,
+		IsCompound:  true,
+		Pattern:     "fixed-workspace",
 	})
 
 	// name
@@ -376,6 +378,8 @@ func GetEmbeddedSchema() *ConfigSchema {
 		Default:     "",
 		Description: "If specified, this name appears in the workspace label, otherwise the standard \"Workspace n\" naming is used.",
 		Type:        ValueTypeString,
+		IsCompound:  true,
+		Pattern:     "fixed-workspace",
 	})
 
 	// view-location
@@ -385,6 +389,8 @@ func GetEmbeddedSchema() *ConfigSchema {
 		Default:     "0 0",
 		Description: "The initial location of the view on the workspace. If 0 0, the default location will be used. NOTE: Values specifying an area outside the view size will be adjusted to ensure the viewport is valid. NOTE: setting either view-location or view-scale will override any other settings that influence the initial position and scale of the view.",
 		Type:        ValueTypeString,
+		IsCompound:  true,
+		Pattern:     "fixed-workspace",
 	})
 
 	// view-scale
@@ -394,6 +400,8 @@ func GetEmbeddedSchema() *ConfigSchema {
 		Default:     "0",
 		Description: "The initial scale of the view on the workspace. If zero, the default scale will be used. NOTE: The maximum scale factor value allowed is 10.",
 		Type:        ValueTypeNumber,
+		IsCompound:  true,
+		Pattern:     "fixed-workspace",
 	})
 
 	// ============================================================================
@@ -826,6 +834,8 @@ func GetEmbeddedSchema() *ConfigSchema {
 		Default:     "",
 		Description: "The Canvus Connect server host to connect to. NOTE: This value must be specified.",
 		Type:        ValueTypeString,
+		IsCompound:  true,
+		Pattern:     "server",
 	})
 
 	// protocol
@@ -836,6 +846,8 @@ func GetEmbeddedSchema() *ConfigSchema {
 		Description: "Protocol used for communication with the Canvus Connect server. Options are ssl or tcp. The default protocol is determined by the chosen port below. DEFAULT (port 443): ssl DEFAULT (port 80): tcp",
 		Type:        ValueTypeEnum,
 		EnumValues:  []string{"ssl", "tcp"},
+		IsCompound:  true,
+		Pattern:     "server",
 	})
 
 	// port
@@ -845,6 +857,8 @@ func GetEmbeddedSchema() *ConfigSchema {
 		Default:     "443",
 		Description: "Port used for communication with the Canvus Connect server. The default port is determined by the chosen protocol above. DEFAULT (ssl protocol): 443 DEFAULT (tcp protocol): 80",
 		Type:        ValueTypeNumber,
+		IsCompound:  true,
+		Pattern:     "server",
 	})
 
 	// rest-api-access
@@ -855,6 +869,8 @@ func GetEmbeddedSchema() *ConfigSchema {
 		Description: "Control REST API access to this client from this server.",
 		Type:        ValueTypeEnum,
 		EnumValues:  []string{"none", "ro", "rw"},
+		IsCompound:  true,
+		Pattern:     "server",
 	})
 
 	// connection-password
@@ -864,6 +880,8 @@ func GetEmbeddedSchema() *ConfigSchema {
 		Default:     "",
 		Description: "Set the connection password (if required) for connecting to this server. The password cannot contain semicolon, or quotation marks.",
 		Type:        ValueTypeString,
+		IsCompound:  true,
+		Pattern:     "server",
 	})
 
 	// ============================================================================
@@ -1317,6 +1335,8 @@ func GetEmbeddedSchema() *ConfigSchema {
 		Default:     "",
 		Description: "Location of the output (x y coordinates)",
 		Type:        ValueTypeString,
+		IsCompound:  true,
+		Pattern:     "output",
 	})
 
 	// size
@@ -1326,6 +1346,8 @@ func GetEmbeddedSchema() *ConfigSchema {
 		Default:     "",
 		Description: "Size of the output (width height)",
 		Type:        ValueTypeString,
+		IsCompound:  true,
+		Pattern:     "output",
 	})
 
 	// ============================================================================
