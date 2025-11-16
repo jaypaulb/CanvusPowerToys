@@ -19,6 +19,8 @@ build-linux: process-assets
 # Optional: goversioninfo for .exe version info (go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest)
 build-windows: process-assets
 	@echo "Building for Windows (requires mingw-w64 for CGO)..."
+	@echo "Auto-incrementing version..."
+	@./scripts/increment-version.sh
 	@if ! command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then \
 		echo "ERROR: x86_64-w64-mingw32-gcc not found. Install with: sudo apt-get install gcc-mingw-w64-x86-64"; \
 		exit 1; \
