@@ -1,126 +1,181 @@
 /**
  * Pages Management JavaScript
- * Handles page listing, creation, and editing
+ * Handles zone creation, subdivision, and deletion
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  loadPages();
-  initCreatePageButton();
+  const messageDiv = document.getElementById("message");
+
+  // Function to display a message
+  function displayMessage(text, type) {
+    if (!messageDiv) return;
+    messageDiv.textContent = text;
+    messageDiv.className = `message ${type}`;
+    messageDiv.style.display = "block";
+  }
+
+  // Function to clear messages
+  function clearMessage() {
+    if (!messageDiv) return;
+    messageDiv.textContent = "";
+    messageDiv.className = "message";
+    messageDiv.style.display = "none";
+  }
+
+  // Function to enable or disable all buttons
+  function toggleButtons(disabled) {
+    const buttons = document.querySelectorAll("button");
+    buttons.forEach(btn => (btn.disabled = disabled));
+  }
+
+  // Function to fetch and populate SubZones dropdown
+  async function fetchAndPopulateSubZones() {
+    console.log("Fetching zones...");
+    try {
+      const response = await fetch('/get-zones', {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache' // Prevent caching
+        }
+      });
+      const data = await response.json();
+      console.log("Data received from /get-zones:", data);
+
+      if (data.success) {
+        const subZoneSelect = document.getElementById('subZone');
+        if (!subZoneSelect) return;
+
+        subZoneSelect.innerHTML = '<option value="">-- Select Zone --</option>'; // Clear existing options
+
+        // Check if data.zones is an array
+        if (Array.isArray(data.zones)) {
+          // Sort zones by anchor_name
+          const sortedZones = [...data.zones].sort((a, b) => {
+            const nameA = (a.anchor_name || '').toLowerCase();
+            const nameB = (b.anchor_name || '').toLowerCase();
+            return nameA.localeCompare(nameB, undefined, { numeric: true });
+          });
+
+          sortedZones.forEach(zone => {
+            const option = document.createElement('option');
+            option.value = zone.id;
+            option.textContent = zone.anchor_name || `Zone ${zone.id}`;
+            subZoneSelect.appendChild(option);
+          });
+          console.log("Dropdown updated with sorted zones.");
+        } else {
+          console.error("data.zones is not an array:", data.zones);
+          displayMessage("Unexpected data format received.", "error");
+        }
+      } else {
+        displayMessage('Failed to fetch zones.', 'error');
+      }
+    } catch (error) {
+      console.error('Error fetching zones:', error);
+      displayMessage('Error fetching zones.', 'error');
+    }
+  }
+
+  // Call this function on page load to populate the SubZones dropdown
+  window.addEventListener('load', () => {
+    fetchAndPopulateSubZones();
+  });
+
+  // Function to create zones or subzones
+  async function createZones() {
+    clearMessage();
+    toggleButtons(true); // Disable buttons
+
+    const gridSize = parseInt(document.getElementById('gridSize').value);
+    const gridPattern = document.getElementById('gridPattern').value;
+    const subZoneId = document.getElementById('subZone').value;
+    const subZoneArray = document.getElementById('subZoneArray').value;
+
+    displayMessage("Creating zones, please wait...", "loading");
+
+    try {
+      const response = await fetch("/create-zones", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          gridSize,
+          gridPattern,
+          subZoneId,
+          subZoneArray
+        })
+      });
+
+      const data = await response.json();
+      console.log("Response from /create-zones:", data);
+
+      if (data.success) {
+        displayMessage(data.message, "success");
+        console.log("Calling fetchAndPopulateSubZones after successful zone creation.");
+        // Refresh the dropdown of subzones
+        await fetchAndPopulateSubZones();
+        console.log("fetchAndPopulateSubZones completed.");
+      } else {
+        displayMessage(data.error || "Failed to create zones.", "error");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      displayMessage("An error occurred while creating zones.", "error");
+    } finally {
+      toggleButtons(false); // Re-enable buttons
+    }
+  }
+
+  // Function to delete zones
+  async function deleteZones() {
+    clearMessage();
+    toggleButtons(true); // Disable buttons
+
+    displayMessage("Deleting zones, please wait...", "loading");
+
+    try {
+      const response = await fetch("/delete-zones", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+
+      const data = await response.json();
+      console.log("Response from /delete-zones:", data);
+
+      if (data.success) {
+        displayMessage(data.message, "success");
+        console.log("Calling fetchAndPopulateSubZones after successful zone deletion.");
+        // Refresh the dropdown of subzones
+        await fetchAndPopulateSubZones();
+        console.log("fetchAndPopulateSubZones completed.");
+      } else {
+        displayMessage(data.error || "Failed to delete zones.", "error");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      displayMessage("An error occurred while deleting zones.", "error");
+    } finally {
+      toggleButtons(false); // Re-enable buttons
+    }
+  }
+
+  // Attach event listeners
+  const createZonesBtn = document.getElementById("createZones");
+  const deleteZonesBtn = document.getElementById("deleteZones");
+  const createSubZonesBtn = document.getElementById("createSubZones");
+
+  if (createZonesBtn) {
+    createZonesBtn.addEventListener("click", createZones);
+  }
+
+  if (deleteZonesBtn) {
+    deleteZonesBtn.addEventListener("click", deleteZones);
+  }
+
+  if (createSubZonesBtn) {
+    createSubZonesBtn.addEventListener("click", createZones);
+  }
 });
-
-/**
- * Load pages from API
- */
-async function loadPages() {
-  const baseURL = window.location.origin;
-  const pagesList = document.getElementById('pagesList');
-
-  try {
-    const response = await fetch(`${baseURL}/api/pages`);
-    if (response.ok) {
-      const pages = await response.json();
-      renderPages(pages);
-    } else {
-      pagesList.innerHTML = '<p class="text-muted">Unable to load pages</p>';
-    }
-  } catch (error) {
-    // Only log in development
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      console.error('Error loading pages:', error);
-    }
-    pagesList.innerHTML = '<p class="text-muted">Error loading pages</p>';
-  }
-}
-
-/**
- * Render pages list
- */
-function renderPages(pages) {
-  const pagesList = document.getElementById('pagesList');
-
-  if (!pages || pages.length === 0) {
-    pagesList.innerHTML = '<p class="text-muted">No pages found. Create your first page above.</p>';
-    return;
-  }
-
-  pagesList.innerHTML = pages.map(page => `
-    <div class="card mb-md">
-      <div class="card-body">
-        <h3>${page.name || page.title || 'Untitled Page'}</h3>
-        <p class="text-muted">${page.description || ''}</p>
-        <div class="form-actions">
-          <button class="btn btn-secondary btn-sm" onclick="editPage('${page.id}')">Edit</button>
-          <button class="btn btn-outline btn-sm" onclick="viewPage('${page.id}')">View</button>
-        </div>
-      </div>
-    </div>
-  `).join('');
-}
-
-/**
- * Initialize create page button
- */
-function initCreatePageButton() {
-  const createBtn = document.getElementById('createPageBtn');
-  if (createBtn) {
-    createBtn.addEventListener('click', () => {
-      showCreatePageModal();
-    });
-  }
-}
-
-/**
- * Show create page modal
- */
-function showCreatePageModal() {
-  // This would use the modal template
-  // For now, simple prompt
-  const pageName = prompt('Enter page name:');
-  if (pageName) {
-    createPage(pageName);
-  }
-}
-
-/**
- * Create new page
- */
-async function createPage(name) {
-  const baseURL = window.location.origin;
-
-  try {
-    const response = await fetch(`${baseURL}/api/pages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name })
-    });
-
-    if (response.ok) {
-      loadPages();
-    } else {
-      alert('Failed to create page');
-    }
-  } catch (error) {
-    // Only log in development
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      console.error('Error creating page:', error);
-    }
-    alert('Error creating page');
-  }
-}
-
-/**
- * Edit page
- */
-function editPage(pageId) {
-  // Navigate to edit page or show edit modal
-  window.location.href = `/pages/${pageId}/edit`;
-}
-
-/**
- * View page
- */
-function viewPage(pageId) {
-  // Navigate to view page
-  window.location.href = `/pages/${pageId}`;
-}
-

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -163,9 +164,14 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 	leftColumn := container.NewVBox(
 		instructions,
 		widget.NewSeparator(),
+		// Form fields with labels and inputs side-by-side
 		container.NewGridWithColumns(2,
 			serverURLLabel, container.NewVBox(m.serverSelect, m.serverURL),
+		),
+		container.NewGridWithColumns(2,
 			authTokenLabel, m.authToken,
+		),
+		container.NewGridWithColumns(2,
 			serverPortLabel, m.serverPort,
 		),
 		tokenInstructions,
@@ -461,6 +467,14 @@ func (m *Manager) startServer(window fyne.Window) {
 		return
 	}
 
+	// Check if port is already in use
+	listener, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("Port %s is already in use. Please choose a different port or stop the process using it.", port), window)
+		return
+	}
+	listener.Close() // Close immediately, we'll open it again in the server
+
 	// Get server URL and auth token
 	serverURL := m.serverURL.Text
 	authToken := m.authToken.Text
@@ -480,11 +494,27 @@ func (m *Manager) startServer(window fyne.Window) {
 	apiBaseURL = strings.TrimSuffix(apiBaseURL, "/api/v1")
 	apiBaseURL = strings.TrimSuffix(apiBaseURL, "/api")
 
-	// Create canvas service
+	// Create canvas service (may fail if auto-detection doesn't work, but that's OK)
 	canvasService, err := NewCanvasService(m.fileService, apiBaseURL, authToken)
 	if err != nil {
-		dialog.ShowError(fmt.Errorf("Failed to create canvas service: %w", err), window)
-		return
+		// Show warning but continue - user can override client in WebUI
+		dialog.ShowInformation("Canvas Service Warning",
+			fmt.Sprintf("Canvas service auto-detection failed: %v\n\n"+
+				"The WebUI will still load. You can manually override the client selection in the WebUI.", err), window)
+		// Create a minimal canvas service that can be updated later
+		// Must initialize canvasTracker to avoid nil pointer panics
+		fmt.Printf("[WebUI] Creating minimal CanvasService with apiBaseURL: '%s', authToken length: %d\n", apiBaseURL, len(authToken))
+		canvasTracker := webuiatoms.NewCanvasTracker()
+		ctx, cancel := context.WithCancel(context.Background())
+		canvasService = &CanvasService{
+			apiBaseURL:       apiBaseURL,
+			authToken:        authToken,
+			installationName: "Unknown",
+			canvasTracker:    canvasTracker,
+			ctx:              ctx,
+			cancel:           cancel,
+		}
+		fmt.Printf("[WebUI] Minimal CanvasService created with apiBaseURL: '%s'\n", canvasService.apiBaseURL)
 	}
 
 	// Create API client
@@ -493,10 +523,12 @@ func (m *Manager) startServer(window fyne.Window) {
 	// Create API routes (uploadDir can be empty for now)
 	apiRoutes := NewAPIRoutes(canvasService, apiClient, "")
 
-	// Start canvas service
+	// Try to start canvas service, but don't fail if it doesn't work
+	// User can override client selection in WebUI
 	if err := canvasService.Start(); err != nil {
-		dialog.ShowError(fmt.Errorf("Failed to start canvas service: %w", err), window)
-		return
+		fmt.Printf("[WebUI] Canvas service auto-start failed: %v (user can override in WebUI)\n", err)
+		// Don't show error dialog - just log it and continue
+		// The WebUI will load and user can manually override
 	}
 
 	// Store references
@@ -562,11 +594,10 @@ func (m *Manager) startServer(window fyne.Window) {
 	go func() {
 		if err := m.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Server error: %v\n", err)
-			// Update UI on error (need to use fyne.App.QueueEvent or similar for thread safety)
-			m.serverStatus.SetText(fmt.Sprintf("Server error: %v", err))
-			m.serverStatus.Importance = widget.DangerImportance
+			// Don't update UI from goroutine - port check already happens before starting
+			// If we get here, it's an unexpected error - just log it
+			// The server will be nil and user can try starting again
 			m.server = nil
-			m.startStopBtn.SetText("Start Server")
 		}
 	}()
 
@@ -594,11 +625,23 @@ func (m *Manager) stopServer() {
 		m.canvasService = nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// Increase timeout to 15 seconds to allow SSE connections and workspace subscriptions to close gracefully
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	if err := m.server.Shutdown(ctx); err != nil {
-		fmt.Printf("Server shutdown error: %v\n", err)
+		// Log error but don't fail - server will still stop
+		if err == context.DeadlineExceeded {
+			fmt.Printf("Server shutdown: Some connections did not close within timeout, forcing close\n")
+		} else {
+			fmt.Printf("Server shutdown error: %v\n", err)
+		}
+		// Force close if graceful shutdown failed
+		if m.server != nil {
+			m.server.Close()
+		}
+	} else {
+		fmt.Printf("Server shutdown: All connections closed gracefully\n")
 	}
 
 	m.server = nil

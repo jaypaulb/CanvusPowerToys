@@ -70,3 +70,41 @@ input[type="file"]::file-selector-button:hover {
   }
 }
 
+/* Test team buttons - FIXED SIZE - prevent any stretching or resizing */
+[data-test-team] {
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  min-width: 120px !important;
+  max-width: 120px !important;
+  width: 120px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
+  box-sizing: border-box !important;
+}
+
+/* Container for test team buttons - prevent stretching */
+.form-actions[style*="flex-wrap"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* Mobile: 2-column layout for team buttons */
+@media (max-width: 767px) {
+  /* Test team buttons container - 2 columns on mobile */
+  .form-actions[style*="flex-wrap"] {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-sm);
+  }
+
+  /* User management buttons - auto-wrap on mobile */
+  .form-actions:has(#listUsersBtn),
+  .form-actions:has(#deleteUsersBtn) {
+    flex-wrap: wrap;
+  }
+}
+

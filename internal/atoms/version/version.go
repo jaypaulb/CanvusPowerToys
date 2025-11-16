@@ -4,7 +4,7 @@ import "fmt"
 
 // Version information
 var (
-	Version     = "1.0.21"
+	Version     = "1.0.22"
 	BuildDate   = "unknown"
 	GitCommit   = "unknown"
 	AppName     = "Canvus PowerToys"

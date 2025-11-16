@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RCU - Canvus PowerToys</title>
+  <title>Remote Content Upload - Canvus PowerToys</title>
 
   <!-- Design System -->
   <link rel="stylesheet" href="/css/design-system.css">
@@ -20,79 +20,125 @@
   <link rel="stylesheet" href="/molecules/css/navbar.css">
   <link rel="stylesheet" href="/molecules/css/canvas-header.css">
   <link rel="stylesheet" href="/molecules/css/form-group.css">
+
+  <!-- Page Styles -->
+  <link rel="stylesheet" href="/pages/css/rcu.css">
+
+  <!-- QR Code Library -->
+  <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
 </head>
 <body>
   <div class="page">
     <!-- Page Header -->
     <header class="page-header">
-      <!-- No navigation links on RCU page -->
-      <div class="canvas-header">
-        <div class="canvas-header-info">
-          <div class="canvas-header-title" id="canvasHeaderTitle">
-            Currently tracking <span id="installationName">...</span>
-          </div>
-          <div class="canvas-header-subtitle" id="canvasHeaderSubtitle">
-            Showing <span id="canvasName">...</span>
+      <nav class="navbar">
+        <a href="/" class="navbar-brand">Canvus PowerToys</a>
+
+        <!-- Mobile Navigation -->
+        <div class="nav-mobile">
+          <button class="nav-mobile-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <div class="nav-mobile-menu" id="mobileMenu">
+            <a href="/" class="navbar-link">Home</a>
+            <a href="/pages.html" class="navbar-link">Pages</a>
+            <a href="/macros.html" class="navbar-link">Macros</a>
+            <a href="/remote-upload.html" class="navbar-link">Remote Upload</a>
+            <a href="/rcu.html" class="navbar-link active">RCU</a>
           </div>
         </div>
-        <div class="canvas-header-status">
-          <span class="status-indicator" id="statusIndicator"></span>
-          <span class="status-text" id="statusText">Connecting...</span>
+
+        <!-- Desktop Navigation -->
+        <ul class="navbar-nav nav-desktop">
+          <li><a href="/" class="navbar-link">Home</a></li>
+          <li><a href="/pages.html" class="navbar-link">Pages</a></li>
+          <li><a href="/macros.html" class="navbar-link">Macros</a></li>
+          <li><a href="/remote-upload.html" class="navbar-link">Remote Upload</a></li>
+          <li><a href="/rcu.html" class="navbar-link active">RCU</a></li>
+        </ul>
+
+        <!-- Tracking Info (persists across all pages) -->
+        <div class="navbar-tracking">
+          <span class="navbar-tracking-label">Tracking:</span>
+          <span class="navbar-tracking-name canvas-name-clickable" id="navbarClientName" title="Double-click to override client">...</span>
+          <span class="navbar-tracking-warning" id="navbarClientWarning" style="display: none;">(Not found)</span>
+          <span class="navbar-tracking-separator">|</span>
+          <span class="navbar-tracking-label">Canvas:</span>
+          <span class="navbar-tracking-name" id="navbarCanvasName">...</span>
+          <div class="navbar-tracking-status">
+            <span class="navbar-status-indicator" id="navbarStatusIndicator"></span>
+            <span class="navbar-status-text" id="navbarStatusText">Connecting...</span>
+          </div>
         </div>
-      </div>
+      </nav>
     </header>
 
     <!-- Page Main Content -->
     <main class="page-main">
       <div class="page-content">
-        <div class="page-section">
-          <h1 class="page-section-title">RCU Management</h1>
-          <p class="page-section-description">
-            Remote Control Unit management. Configure and manage RCU settings for your Canvus installation.
-          </p>
+        <!-- User Identification Section -->
+        <div id="user-identification" class="page-section">
+          <div class="card">
+            <div class="card-header">
+              <h1 class="card-title">Remote Content Upload</h1>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="input-label" for="username">Your Name:</label>
+                <input type="text" class="input" id="username" required placeholder="Enter your name">
+              </div>
+
+              <div class="form-group">
+                <label class="input-label">Select Your Team:</label>
+                <div class="team-buttons" id="teamButtons">
+                  <button class="btn btn-secondary team-button" data-team="1">Team 1</button>
+                  <button class="btn btn-secondary team-button" data-team="2">Team 2</button>
+                  <button class="btn btn-secondary team-button" data-team="3">Team 3</button>
+                  <button class="btn btn-secondary team-button" data-team="4">Team 4</button>
+                  <button class="btn btn-secondary team-button" data-team="5">Team 5</button>
+                  <button class="btn btn-secondary team-button" data-team="6">Team 6</button>
+                  <button class="btn btn-secondary team-button" data-team="7">Team 7</button>
+                </div>
+              </div>
+
+              <div id="message" class="message"></div>
+            </div>
+          </div>
         </div>
 
-        <!-- RCU Configuration -->
-        <div class="card">
-          <div class="card-header">
-            <h2 class="card-title">RCU Configuration</h2>
-          </div>
-          <div class="card-body">
-            <form id="rcuForm">
+        <!-- User Dashboard Section (Hidden initially) -->
+        <div id="user-dashboard" class="page-section" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title" id="welcomeMessage"></h2>
+            </div>
+            <div class="card-body">
               <div class="form-group">
-                <label class="input-label" for="rcuEnabled">Enable RCU</label>
-                <input type="checkbox" class="checkbox" id="rcuEnabled" name="enabled">
-                <div class="input-help">Enable remote control unit functionality</div>
-              </div>
-
-              <div class="form-group">
-                <label class="input-label" for="rcuPort">RCU Port</label>
-                <input type="number" class="input" id="rcuPort" name="port" placeholder="8080" min="1024" max="65535">
-                <div class="input-help">Port number for RCU communication</div>
-              </div>
-
-              <div class="form-group">
-                <label class="input-label" for="rcuTimeout">Timeout (seconds)</label>
-                <input type="number" class="input" id="rcuTimeout" name="timeout" placeholder="30" min="1" max="300">
-                <div class="input-help">Connection timeout in seconds</div>
+                <label class="input-label">Your Note:</label>
+                <div id="noteSquare" class="note-square" contenteditable="true" placeholder="Enter your note here..."></div>
               </div>
 
               <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Save Configuration</button>
-                <button type="button" class="btn btn-secondary" id="testRcuBtn">Test Connection</button>
+                <button id="postNoteButton" class="btn btn-primary">Post Note</button>
+                <button id="uploadItemButton" class="btn btn-primary">Upload File</button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
 
-        <!-- RCU Status -->
-        <div class="card mt-lg">
-          <div class="card-header">
-            <h2 class="card-title">RCU Status</h2>
-          </div>
-          <div class="card-body">
-            <div id="rcuStatus">
-              <p class="text-muted">Loading RCU status...</p>
+        <!-- QR Code Section -->
+        <div id="qr-section" class="page-section">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Share This Page</h2>
+            </div>
+            <div class="card-body" style="text-align: center;">
+              <div id="qrcode"></div>
+              <p class="text-muted mt-md">Scan this QR code to access this page on another device</p>
             </div>
           </div>
         </div>
@@ -112,4 +158,3 @@
   <script src="/pages/js/common.js"></script>
 </body>
 </html>
-

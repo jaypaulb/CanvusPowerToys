@@ -33,19 +33,19 @@ func NewUploadHandler(apiClient *webuiatoms.APIClient, canvasService *CanvasServ
 // HandleUpload handles POST /api/remote-upload - Upload files.
 func (h *UploadHandler) HandleUpload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		sendErrorResponse(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	// Parse multipart form (32MB max)
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
-		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		sendErrorResponse(w, "Failed to parse form", http.StatusBadRequest)
 		return
 	}
 
 	files := r.MultipartForm.File["files"]
 	if len(files) == 0 {
-		http.Error(w, "No files provided", http.StatusBadRequest)
+		sendErrorResponse(w, "No files provided", http.StatusBadRequest)
 		return
 	}
 
@@ -56,7 +56,7 @@ func (h *UploadHandler) HandleUpload(w http.ResponseWriter, r *http.Request) {
 
 	canvasID := h.canvasService.GetCanvasID()
 	if canvasID == "" {
-		http.Error(w, "Canvas not available", http.StatusServiceUnavailable)
+		sendErrorResponse(w, "Canvas not available", http.StatusServiceUnavailable)
 		return
 	}
 
@@ -102,7 +102,7 @@ func (h *UploadHandler) HandleUpload(w http.ResponseWriter, r *http.Request) {
 // HandleHistory handles GET /api/remote-upload/history - Get upload history.
 func (h *UploadHandler) HandleHistory(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		sendErrorResponse(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 

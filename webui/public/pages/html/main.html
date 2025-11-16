@@ -7,9 +7,13 @@
 <a href=/pages.html class=navbar-link>Pages</a>
 <a href=/macros.html class=navbar-link>Macros</a>
 <a href=/remote-upload.html class=navbar-link>Remote Upload</a>
-<a href=/rcu.html class=navbar-link>RCU</a></div></div><ul class="navbar-nav nav-desktop"><li><a href=/ class="navbar-link active">Home</a><li><a href=/pages.html class=navbar-link>Pages</a><li><a href=/macros.html class=navbar-link>Macros</a><li><a href=/remote-upload.html class=navbar-link>Remote Upload</a><li><a href=/rcu.html class=navbar-link>RCU</a></ul></nav><div class=canvas-header><div class=canvas-header-info><div class=canvas-header-title id=canvasHeaderTitle>Currently tracking <span id=installationName>...</span></div><div class=canvas-header-subtitle id=canvasHeaderSubtitle>Showing <span id=canvasName class=canvas-name-clickable title="Click to manually override client">...</span>
-<button id=clientOverrideBtn class=client-override-btn style=display:none title="Manually override client to monitor">Override Client</button></div></div><div class=canvas-header-status><span class=status-indicator id=statusIndicator></span>
-<span class=status-text id=statusText>Connecting...</span></div></div></header><main class=page-main><div class=page-content><div class=page-section><h1 class=page-section-title>Welcome to Canvus PowerToys WebUI</h1><p class=page-section-description>Manage your Canvus installation remotely through this web interface.
+<a href=/rcu.html class=navbar-link>RCU</a></div></div><ul class="navbar-nav nav-desktop"><li><a href=/ class="navbar-link active">Home</a><li><a href=/pages.html class=navbar-link>Pages</a><li><a href=/macros.html class=navbar-link>Macros</a><li><a href=/remote-upload.html class=navbar-link>Remote Upload</a><li><a href=/rcu.html class=navbar-link>RCU</a></ul><div class=navbar-tracking><span class=navbar-tracking-label>Tracking:</span>
+<span class="navbar-tracking-name canvas-name-clickable" id=navbarClientName title="Double-click to override client">...</span>
+<span class=navbar-tracking-warning id=navbarClientWarning style=display:none>(Not found)</span>
+<span class=navbar-tracking-separator>|</span>
+<span class=navbar-tracking-label>Canvas:</span>
+<span class=navbar-tracking-name id=navbarCanvasName>...</span><div class=navbar-tracking-status><span class=navbar-status-indicator id=navbarStatusIndicator></span>
+<span class=navbar-status-text id=navbarStatusText>Connecting...</span></div></div></nav></header><main class=page-main><div class=page-content><div class=page-section><h1 class=page-section-title>Welcome to Canvus PowerToys WebUI</h1><p class=page-section-description>Manage your Canvus installation remotely through this web interface.
 Select a page below to get started.</div><div class=page-cards-grid><a href=/pages.html class=page-card><div class=page-card-icon><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="9" y1="3" x2="9" y2="21"></line>
@@ -30,139 +34,4 @@ Manage your macro library efficiently.<div class=page-card-footer><span class=pa
 Admin interface for content distribution.<div class=page-card-footer><span class=page-card-link>Go to Remote Upload →</span></div></a><a href=/rcu.html class=page-card><div class=page-card-icon><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"></circle>
                 <path d="M12 6v6l4 2"></path>
-              </svg></div><h2 class=page-card-title>RCU</h2><p class=page-card-description>Remote Control Unit management. Configure and manage RCU settings for your Canvus installation.<div class=page-card-footer><span class=page-card-link>Go to RCU →</span></div></a></div></div></main><footer class=page-footer><p>Canvus PowerToys WebUI &copy; 2024</footer></div><script src=/molecules/js/workspace-client.js></script><script>
-    // Mobile menu toggle
-    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
-    const mobileMenu = document.getElementById('mobileMenu');
-
-    if (mobileMenuToggle && mobileMenu) {
-      mobileMenuToggle.addEventListener('click', () => {
-        mobileMenu.classList.toggle('open');
-      });
-    }
-
-    // Initialize workspace client
-    const workspaceClient = new WorkspaceClient();
-    const baseURL = window.location.origin;
-
-    workspaceClient.on('connected', () => {
-      updateStatus('connected', 'Connected');
-    });
-
-    workspaceClient.on('disconnected', () => {
-      updateStatus('disconnected', 'Disconnected');
-    });
-
-    workspaceClient.on('reconnecting', (attempts) => {
-      updateStatus('connecting', `Reconnecting (${attempts})...`);
-    });
-
-    workspaceClient.on('canvas_update', (data) => {
-      if (data.canvas_name) {
-        document.getElementById('canvasName').textContent = data.canvas_name;
-      }
-    });
-
-    function updateStatus(status, text) {
-      const indicator = document.getElementById('statusIndicator');
-      const statusText = document.getElementById('statusText');
-
-      indicator.className = `status-indicator ${status}`;
-      statusText.textContent = text;
-    }
-
-    // Fetch installation info
-    fetch(`${baseURL}/api/installation/info`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.installation_name) {
-          document.getElementById('installationName').textContent = data.installation_name;
-        }
-      })
-      .catch(error => {
-        // Only log in development
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          console.error('Error fetching installation info:', error);
-        }
-      });
-
-    // Fetch current canvas info
-    fetch(`${baseURL}/api/canvas/info`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.canvas_name) {
-          document.getElementById('canvasName').textContent = data.canvas_name;
-        }
-      })
-      .catch(error => {
-        // Only log in development
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          console.error('Error fetching canvas info:', error);
-        }
-      });
-
-    // Connect to workspace subscription
-    workspaceClient.connect(baseURL);
-
-    // Manual client override - hidden button on canvas name click
-    const canvasName = document.getElementById('canvasName');
-    const clientOverrideBtn = document.getElementById('clientOverrideBtn');
-
-    if (canvasName && clientOverrideBtn) {
-      // Click on canvas name to show override button
-      let clickCount = 0;
-      let clickTimer = null;
-
-      canvasName.addEventListener('click', () => {
-        clickCount++;
-
-        if (clickCount === 1) {
-          // First click - start timer
-          clickTimer = setTimeout(() => {
-            clickCount = 0;
-          }, 500); // 500ms window for double click
-        } else if (clickCount === 2) {
-          // Double click - toggle override button
-          clearTimeout(clickTimer);
-          clickCount = 0;
-
-          if (clientOverrideBtn.style.display === 'none') {
-            clientOverrideBtn.style.display = 'inline-block';
-          } else {
-            clientOverrideBtn.style.display = 'none';
-          }
-        }
-      });
-
-      // Handle override button click
-      clientOverrideBtn.addEventListener('click', () => {
-        const clientName = prompt('Enter client name to monitor:', '');
-        if (clientName && clientName.trim() !== '') {
-          // Send override request to API
-          fetch(`${baseURL}/api/client/override`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ client_name: clientName.trim() })
-          })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              // Update canvas name display
-              document.getElementById('canvasName').textContent = clientName.trim();
-              clientOverrideBtn.style.display = 'none';
-            } else {
-              alert('Failed to override client: ' + (data.error || 'Unknown error'));
-            }
-          })
-          .catch(error => {
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-              console.error('Error overriding client:', error);
-            }
-            alert('Error overriding client');
-          });
-        }
-      });
-    }
-  </script>
+              </svg></div><h2 class=page-card-title>RCU</h2><p class=page-card-description>Remote Control Unit management. Configure and manage RCU settings for your Canvus installation.<div class=page-card-footer><span class=page-card-link>Go to RCU →</span></div></a></div></div></main><footer class=page-footer><p>Canvus PowerToys WebUI &copy; 2024</footer></div><script src=/molecules/js/workspace-client.js></script><script src=/pages/js/common.js></script>

@@ -78,7 +78,7 @@ func (h *MacrosHandler) HandleCopy(w http.ResponseWriter, r *http.Request) {
 // HandleGroups handles GET /api/macros/groups - List widget groups (computed from widgets).
 func (h *MacrosHandler) HandleGroups(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		sendErrorResponse(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -90,7 +90,7 @@ func (h *MacrosHandler) HandleGroups(w http.ResponseWriter, r *http.Request) {
 // HandlePinned handles GET /api/macros/pinned - List pinned widgets.
 func (h *MacrosHandler) HandlePinned(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		sendErrorResponse(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -212,9 +212,8 @@ func (h *MacrosHandler) HandleGroupColor(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	groupedCount, err := h.groupWidgetsByAttribute(canvasID, zoneID, func(w webuiatoms.Widget) string {
-		return w.Color
-	})
+	// Group by background_color - only for Note widgets that have background_color
+	groupedCount, err := h.groupWidgetsByColor(canvasID, zoneID)
 	if err != nil {
 		sendErrorResponse(w, err.Error(), http.StatusInternalServerError)
 		return

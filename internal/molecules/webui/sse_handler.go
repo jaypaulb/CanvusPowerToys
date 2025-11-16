@@ -28,30 +28,45 @@ func (h *SSEHandler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Cache-Control")
 
-	// Create a channel to track client disconnection
+	// Create a channel to track client disconnection and server shutdown
+	// r.Context() is cancelled when the server shuts down, so this will close SSE connections
 	clientGone := r.Context().Done()
 
 	// Send initial canvas state
 	h.sendCanvasUpdate(w, h.canvasService.GetCanvasID(), h.canvasService.GetCanvasName())
 
 	// Create ticker to send periodic updates
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(5 * time.Second) // Check more frequently for canvas name updates
 	defer ticker.Stop()
 
-	// Track last sent canvas_id to avoid duplicate sends
+	// Track last sent canvas_id and canvas_name to detect changes
 	lastCanvasID := h.canvasService.GetCanvasID()
+	lastCanvasName := h.canvasService.GetCanvasName()
 
 	for {
 		select {
 		case <-clientGone:
-			// Client disconnected
+			// Client disconnected or server shutting down
+			fmt.Printf("[SSEHandler] Connection closed (client disconnected or server shutdown)\n")
 			return
 		case <-ticker.C:
-			// Periodic update check
+			// Check if context is cancelled before sending (server might be shutting down)
+			select {
+			case <-clientGone:
+				fmt.Printf("[SSEHandler] Context cancelled during tick, closing connection\n")
+				return
+			default:
+				// Context still active, proceed with update
+			}
+
+			// Periodic update check - send update if canvas_id OR canvas_name changed
 			currentCanvasID := h.canvasService.GetCanvasID()
-			if currentCanvasID != lastCanvasID {
-				h.sendCanvasUpdate(w, currentCanvasID, h.canvasService.GetCanvasName())
+			currentCanvasName := h.canvasService.GetCanvasName()
+
+			if currentCanvasID != lastCanvasID || currentCanvasName != lastCanvasName {
+				h.sendCanvasUpdate(w, currentCanvasID, currentCanvasName)
 				lastCanvasID = currentCanvasID
+				lastCanvasName = currentCanvasName
 			} else {
 				// Send keepalive
 				h.sendKeepalive(w)
@@ -65,6 +80,8 @@ func (h *SSEHandler) sendCanvasUpdate(w http.ResponseWriter, canvasID, canvasNam
 	event := map[string]interface{}{
 		"canvas_id":   canvasID,
 		"canvas_name": canvasName,
+		"client_name": h.canvasService.GetClientName(),
+		"client_id":   h.canvasService.GetClientID(),
 		"timestamp":   time.Now().Unix(),
 	}
 
@@ -74,9 +91,15 @@ func (h *SSEHandler) sendCanvasUpdate(w http.ResponseWriter, canvasID, canvasNam
 		return
 	}
 
-	// Send SSE formatted event
-	fmt.Fprintf(w, "event: canvas_update\n")
-	fmt.Fprintf(w, "data: %s\n\n", string(eventJSON))
+	// Send SSE formatted event - check for write errors
+	if _, err := fmt.Fprintf(w, "event: canvas_update\n"); err != nil {
+		fmt.Printf("Error writing SSE event header: %v\n", err)
+		return
+	}
+	if _, err := fmt.Fprintf(w, "data: %s\n\n", string(eventJSON)); err != nil {
+		fmt.Printf("Error writing SSE event data: %v\n", err)
+		return
+	}
 
 	// Flush to ensure data is sent immediately
 	if flusher, ok := w.(http.Flusher); ok {
@@ -86,7 +109,10 @@ func (h *SSEHandler) sendCanvasUpdate(w http.ResponseWriter, canvasID, canvasNam
 
 // sendKeepalive sends a keepalive comment to maintain connection.
 func (h *SSEHandler) sendKeepalive(w http.ResponseWriter) {
-	fmt.Fprintf(w, ": keepalive\n\n")
+	if _, err := fmt.Fprintf(w, ": keepalive\n\n"); err != nil {
+		// Connection likely closed, will be detected by clientGone channel
+		return
+	}
 	if flusher, ok := w.(http.Flusher); ok {
 		flusher.Flush()
 	}

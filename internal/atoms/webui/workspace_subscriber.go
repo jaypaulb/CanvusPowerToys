@@ -11,7 +11,8 @@ import (
 	"time"
 )
 
-// WorkspaceSubscriber handles SSE subscription to Canvus workspace endpoint.
+// WorkspaceSubscriber handles TCP JSON streaming subscription to Canvus workspace endpoint.
+// The MTCS sends one JSON block per line, with \n as keepalive.
 type WorkspaceSubscriber struct {
 	clientID   string
 	apiBaseURL string
@@ -32,13 +33,15 @@ func NewWorkspaceSubscriber(clientID, apiBaseURL, authToken string) *WorkspaceSu
 		clientID:   clientID,
 		apiBaseURL: strings.TrimSuffix(apiBaseURL, "/"),
 		authToken:  authToken,
+		// No timeout - TCP JSON streaming connection stays open indefinitely
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 0, // No timeout for streaming connections
 		},
 	}
 }
 
-// Subscribe connects to the workspace SSE endpoint and streams canvas_id updates.
+// Subscribe connects to the workspace TCP JSON streaming endpoint and streams canvas_id updates.
+// MTCS sends one JSON block per line, with \n as keepalive.
 // Returns a channel of CanvasEvent and an error channel.
 func (ws *WorkspaceSubscriber) Subscribe(ctx context.Context) (<-chan CanvasEvent, <-chan error) {
 	eventChan := make(chan CanvasEvent, 10)
@@ -48,7 +51,12 @@ func (ws *WorkspaceSubscriber) Subscribe(ctx context.Context) (<-chan CanvasEven
 		defer close(eventChan)
 		defer close(errChan)
 
-		url := fmt.Sprintf("%s/clients/%s/workspaces/0/?subscribe", ws.apiBaseURL, ws.clientID)
+		// Ensure URL includes /api/v1 if not already present
+		baseURL := ws.apiBaseURL
+		if !strings.Contains(baseURL, "/api/v1") && !strings.Contains(baseURL, "/api") {
+			baseURL = strings.TrimSuffix(baseURL, "/") + "/api/v1"
+		}
+		url := fmt.Sprintf("%s/clients/%s/workspaces/0/?subscribe", baseURL, ws.clientID)
 
 		for {
 			select {
@@ -72,16 +80,17 @@ func (ws *WorkspaceSubscriber) Subscribe(ctx context.Context) (<-chan CanvasEven
 	return eventChan, errChan
 }
 
-// connectAndStream establishes SSE connection and streams events.
+// connectAndStream establishes TCP JSON streaming connection and streams events.
+// MTCS sends one JSON block per line, with \n as keepalive (empty lines).
 func (ws *WorkspaceSubscriber) connectAndStream(ctx context.Context, url string, eventChan chan<- CanvasEvent) error {
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", ws.authToken))
-	req.Header.Set("Accept", "text/event-stream")
-	req.Header.Set("Cache-Control", "no-cache")
+	// Use Private-Token header (same as API client)
+	req.Header.Set("Private-Token", ws.authToken)
+	// Note: Not SSE - this is TCP JSON streaming, so no SSE headers needed
 
 	resp, err := ws.httpClient.Do(req)
 	if err != nil {
@@ -93,19 +102,23 @@ func (ws *WorkspaceSubscriber) connectAndStream(ctx context.Context, url string,
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
+	// Read line by line - each line is a JSON object, empty lines are keepalive
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			line := scanner.Text()
-			if strings.HasPrefix(line, "data: ") {
-				data := strings.TrimPrefix(line, "data: ")
-				event := ws.parseEvent(data)
-				if event != nil {
-					eventChan <- *event
-				}
+			line := strings.TrimSpace(scanner.Text())
+			// Skip empty lines (keepalive - just \n)
+			if line == "" {
+				continue
+			}
+
+			// Each non-empty line is a JSON object
+			event := ws.parseEvent(line)
+			if event != nil {
+				eventChan <- *event
 			}
 		}
 	}
@@ -117,23 +130,19 @@ func (ws *WorkspaceSubscriber) connectAndStream(ctx context.Context, url string,
 	return nil
 }
 
-// parseEvent parses an SSE data line and extracts canvas_id.
-func (ws *WorkspaceSubscriber) parseEvent(data string) *CanvasEvent {
+// parseEvent parses a JSON line and extracts canvas_id.
+// Each line from MTCS is a complete JSON object.
+func (ws *WorkspaceSubscriber) parseEvent(jsonLine string) *CanvasEvent {
 	var eventData map[string]interface{}
-	if err := json.Unmarshal([]byte(data), &eventData); err != nil {
-		// Not JSON, try to extract canvas_id directly
-		if strings.Contains(data, "canvas_id") {
-			// Simple extraction - will be improved with actual API format
-			return &CanvasEvent{
-				CanvasID:  extractCanvasID(data),
-				Timestamp: time.Now(),
-			}
-		}
+	if err := json.Unmarshal([]byte(jsonLine), &eventData); err != nil {
+		// Not valid JSON - skip this line
+		fmt.Printf("[WorkspaceSubscriber] Failed to parse JSON line: %v, line: %s\n", err, jsonLine)
 		return nil
 	}
 
 	canvasID, ok := eventData["canvas_id"].(string)
-	if !ok {
+	if !ok || canvasID == "" {
+		// No canvas_id in this event - might be other workspace data
 		return nil
 	}
 

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 
@@ -139,5 +140,40 @@ func (fs *FileService) DetectExampleIni() string {
 // EnsureDirectory creates a directory if it doesn't exist.
 func (fs *FileService) EnsureDirectory(path string) error {
 	return os.MkdirAll(path, 0755)
+}
+
+// ReadJSONFile reads a JSON file and unmarshals it into the provided value.
+func (fs *FileService) ReadJSONFile(filePath string, v interface{}) error {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// File doesn't exist - return empty/default value
+			return nil
+		}
+		return err
+	}
+
+	if len(data) == 0 {
+		// Empty file - return empty/default value
+		return nil
+	}
+
+	return json.Unmarshal(data, v)
+}
+
+// WriteJSONFile writes a value to a JSON file.
+func (fs *FileService) WriteJSONFile(filePath string, v interface{}) error {
+	// Create parent directory if it doesn't exist
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	data, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filePath, data, 0644)
 }
 

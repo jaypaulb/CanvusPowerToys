@@ -1,35 +1,66 @@
-/* Macros Page Styles */
+/* Macros Page Styles - File Folder Tab Design */
 
-.tabs {
-  display: flex;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-lg);
-  border-bottom: 1px solid var(--border-color);
-  overflow-x: auto;
+.macros-tabs-container {
+  margin-top: var(--spacing-lg);
 }
 
-.tab-btn {
+/* File folder style tabs header */
+.macros-tabs-header {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border-color);
+  position: relative;
+  z-index: 1;
+  padding-top: var(--spacing-sm);
+}
+
+/* File folder tab button styling */
+.macros-tabs-header .tab-button {
   padding: var(--spacing-md) var(--spacing-lg);
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--text-secondary);
+  background: var(--mt-blue); /* Light blue for inactive tabs */
+  border: 2px solid var(--border-color);
+  border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  color: var(--text-primary);
   cursor: pointer;
   font-size: var(--font-size-base);
   font-weight: 500;
   transition: all var(--transition-fast);
-  white-space: nowrap;
-  min-height: 44px;
+  position: relative;
+  margin-right: var(--spacing-xs);
+  min-width: 120px;
+  text-align: center;
+  z-index: 1;
 }
 
-.tab-btn:hover {
+/* Tab button hover state */
+.macros-tabs-header .tab-button:hover {
+  background: var(--bg-hover);
+  border-color: var(--mt-magenta);
+  z-index: 2;
+}
+
+/* Active tab - appears on top like file folder */
+.macros-tabs-header .tab-button.active {
+  background: var(--mt-dark-blue); /* Dark blue for active tab */
   color: var(--text-primary);
-  background-color: var(--bg-hover);
+  border-color: var(--border-color);
+  border-bottom: 2px solid var(--bg-primary);
+  z-index: 3;
+  transform: translateY(-2px);
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.tab-btn.active {
-  color: var(--mt-magenta);
-  border-bottom-color: var(--mt-magenta);
+/* Tab content area - appears below tabs */
+.macros-tabs-content {
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 var(--radius-md) var(--radius-md) var(--radius-md);
+  padding: var(--spacing-lg);
+  margin-top: -2px;
+  position: relative;
+  z-index: 0;
 }
 
 .tab-content {

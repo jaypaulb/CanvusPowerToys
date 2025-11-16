@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Pages - Canvus PowerToys</title>
 
   <!-- Design System -->
@@ -50,45 +50,108 @@
           <li><a href="/remote-upload.html" class="navbar-link">Remote Upload</a></li>
           <li><a href="/rcu.html" class="navbar-link">RCU</a></li>
         </ul>
+
+        <!-- Tracking Info (persists across all pages) -->
+        <div class="navbar-tracking">
+          <span class="navbar-tracking-label">Tracking:</span>
+          <span class="navbar-tracking-name canvas-name-clickable" id="navbarClientName" title="Double-click to override client">...</span>
+          <span class="navbar-tracking-warning" id="navbarClientWarning" style="display: none;">(Not found)</span>
+          <span class="navbar-tracking-separator">|</span>
+          <span class="navbar-tracking-label">Canvas:</span>
+          <span class="navbar-tracking-name" id="navbarCanvasName">...</span>
+          <div class="navbar-tracking-status">
+            <span class="navbar-status-indicator" id="navbarStatusIndicator"></span>
+            <span class="navbar-status-text" id="navbarStatusText">Connecting...</span>
+          </div>
+        </div>
       </nav>
-      <div class="canvas-header">
-        <div class="canvas-header-info">
-          <div class="canvas-header-title" id="canvasHeaderTitle">
-            Currently tracking <span id="installationName">...</span>
-          </div>
-          <div class="canvas-header-subtitle" id="canvasHeaderSubtitle">
-            Showing <span id="canvasName">...</span>
-          </div>
-        </div>
-        <div class="canvas-header-status">
-          <span class="status-indicator" id="statusIndicator"></span>
-          <span class="status-text" id="statusText">Connecting...</span>
-        </div>
-      </div>
     </header>
 
     <!-- Page Main Content -->
     <main class="page-main">
       <div class="page-content">
         <div class="page-section">
-          <h1 class="page-section-title">Pages Management</h1>
-          <p class="page-section-description">
-            Manage and organize canvas pages. Create, edit, and configure pages for your Canvus installation.
-          </p>
+          <h1 class="page-section-title">Create Pages for Templates</h1>
         </div>
 
-        <!-- Pages List -->
+        <!-- Grid Options -->
         <div class="card">
           <div class="card-header">
-            <h2 class="card-title">Canvas Pages</h2>
-            <button class="btn btn-primary btn-sm" id="createPageBtn">Create New Page</button>
+            <h2 class="card-title">Create Zones</h2>
           </div>
           <div class="card-body">
-            <div id="pagesList">
-              <p class="text-muted">Loading pages...</p>
+            <div class="form-group">
+              <label class="input-label" for="gridSize">Select Grid Size:</label>
+              <select class="input select" id="gridSize">
+                <option value="1">1x1 - Whole Canvas</option>
+                <option value="3">3x3 - 9 Zones</option>
+                <option value="4">4x4 - 16 Zones</option>
+                <option value="5">5x5 - 25 Zones</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="input-label" for="gridPattern">Select Grid Pattern:</label>
+              <select class="input select" id="gridPattern">
+                <option value="Z">Z Pattern - Left to Right, Top to Bottom</option>
+                <option value="Snake">Snake Pattern - Alternating Rows</option>
+                <option value="Spiral">Spiral Pattern - From Center Outward</option>
+              </select>
+            </div>
+
+            <div class="form-actions">
+              <button id="createZones" class="btn btn-primary">Create Zones</button>
             </div>
           </div>
         </div>
+
+        <!-- SubZone Options -->
+        <div class="card mt-lg">
+          <div class="card-header">
+            <h2 class="card-title">Subdivide Zone</h2>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="input-label" for="subZone">Select Zone to Subdivide:</label>
+              <select class="input select" id="subZone">
+                <option value="">-- Select Zone --</option>
+                <!-- Options will be populated dynamically -->
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="input-label" for="subZoneArray">Select SubZone Array:</label>
+              <select class="input select" id="subZoneArray">
+                <option value="">-- Select SubZone Array --</option>
+                <option value="2x2">2x2</option>
+                <option value="3x3">3x3</option>
+                <option value="4x4">4x4</option>
+                <option value="3x1">3x1</option>
+                <option value="5x1">5x1</option>
+                <option value="7x1">7x1</option>
+                <option value="11x1">11x1</option>
+              </select>
+            </div>
+
+            <div class="form-actions">
+              <button id="createSubZones" class="btn btn-primary">Create SubZones</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delete Zones -->
+        <div class="card mt-lg">
+          <div class="card-header">
+            <h2 class="card-title">Delete Zones</h2>
+          </div>
+          <div class="card-body">
+            <div class="form-actions">
+              <button id="deleteZones" class="btn btn-danger">Delete Zones</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="message" class="message mt-lg"></div>
       </div>
     </main>
 
@@ -105,4 +168,3 @@
   <script src="/pages/js/common.js"></script>
 </body>
 </html>
-

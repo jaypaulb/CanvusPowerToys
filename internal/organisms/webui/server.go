@@ -91,12 +91,22 @@ func (s *Server) Stop() error {
 
 	// Shutdown HTTP server
 	if s.httpServer != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		// Increase timeout to 15 seconds to allow SSE connections and workspace subscriptions to close gracefully
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
 
 		if err := s.httpServer.Shutdown(ctx); err != nil {
-			return fmt.Errorf("failed to shutdown server: %w", err)
+			// Log error but continue - server will still stop
+			if err == context.DeadlineExceeded {
+				fmt.Printf("Server shutdown: Some connections did not close within timeout, forcing close\n")
+			} else {
+				fmt.Printf("Server shutdown error: %v\n", err)
+			}
+			// Force close if graceful shutdown failed
+			s.httpServer.Close()
+			return fmt.Errorf("failed to shutdown server gracefully: %w", err)
 		}
+		fmt.Printf("Server shutdown: All connections closed gracefully\n")
 	}
 
 	return nil

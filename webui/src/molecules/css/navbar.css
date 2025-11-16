@@ -7,6 +7,8 @@
   padding: var(--spacing-md) var(--spacing-lg);
   background-color: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
 }
 
 .navbar-brand {
@@ -80,6 +82,103 @@
 /* Desktop Navigation */
 .nav-desktop {
   display: none;
+}
+
+/* Navbar tracking info */
+.navbar-tracking {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-left: auto;
+  margin-right: var(--spacing-md);
+}
+
+.navbar-tracking-label {
+  color: var(--text-muted);
+}
+
+.navbar-tracking-separator {
+  color: var(--text-muted);
+  margin: 0 var(--spacing-xs);
+}
+
+.navbar-tracking-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.navbar-tracking-name.canvas-name-clickable {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  transition: color 0.2s ease;
+}
+
+.navbar-tracking-name.canvas-name-clickable:hover {
+  color: var(--mt-magenta);
+}
+
+.navbar-tracking-warning {
+  color: #ef4444;
+  font-size: var(--font-size-xs);
+  margin-left: var(--spacing-xs);
+}
+
+.navbar-tracking-status {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.navbar-status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--text-muted);
+}
+
+.navbar-status-indicator.connected {
+  background-color: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.navbar-status-indicator.disconnected {
+  background-color: #ef4444;
+}
+
+.navbar-status-indicator.connecting {
+  background-color: #f59e0b;
+  animation: pulse 2s infinite;
+}
+
+.navbar-status-text {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Mobile Layout */
+@media (max-width: 767px) {
+  .navbar-tracking {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
+    border-top: 1px solid var(--border-color);
+  }
 }
 
 @media (min-width: 768px) {

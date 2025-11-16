@@ -38,15 +38,32 @@ func GetAllWidgets(apiClient *APIClient, canvasID string) ([]Widget, error) {
 	}
 
 	endpoint := fmt.Sprintf("/api/v1/canvases/%s/widgets", canvasID)
+	fmt.Printf("[GetAllWidgets] Fetching widgets from %s\n", endpoint)
 	data, err := apiClient.Get(endpoint)
 	if err != nil {
+		fmt.Printf("[GetAllWidgets] ERROR: Failed to get widgets: %v\n", err)
 		return nil, fmt.Errorf("failed to get widgets: %w", err)
 	}
 
 	var widgets []Widget
 	if err := json.Unmarshal(data, &widgets); err != nil {
+		fmt.Printf("[GetAllWidgets] ERROR: Failed to parse widgets JSON: %v\n", err)
+		fmt.Printf("[GetAllWidgets] Raw response length: %d bytes\n", len(data))
 		return nil, fmt.Errorf("failed to parse widgets: %w", err)
 	}
+
+	fmt.Printf("[GetAllWidgets] Retrieved %d widgets\n", len(widgets))
+
+	// Log widget types breakdown
+	typeCounts := make(map[string]int)
+	for _, w := range widgets {
+		wt := w.WidgetType
+		if wt == "" {
+			wt = "unknown"
+		}
+		typeCounts[wt]++
+	}
+	fmt.Printf("[GetAllWidgets] Widget types: %v\n", typeCounts)
 
 	return widgets, nil
 }

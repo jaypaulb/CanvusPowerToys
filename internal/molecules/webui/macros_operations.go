@@ -43,54 +43,82 @@ func (mo *MacrosOperations) GetZoneAndWidgets(zoneID string) (*webuiatoms.ZoneBo
 
 // FilterWidgetsInZone filters widgets that are within a zone, excluding anchors and connectors.
 func FilterWidgetsInZone(widgets []webuiatoms.Widget, zoneBB *webuiatoms.ZoneBoundingBox, excludeZoneID string) []webuiatoms.Widget {
+	fmt.Printf("[FilterWidgetsInZone] Filtering %d widgets, zoneBB: X=%.2f, Y=%.2f, W=%.2f, H=%.2f\n",
+		len(widgets), zoneBB.X, zoneBB.Y, zoneBB.Width, zoneBB.Height)
+
 	var filtered []webuiatoms.Widget
+	checkedCount := 0
+	skippedCount := 0
+
 	for _, w := range widgets {
 		if w.ID == excludeZoneID {
+			skippedCount++
 			continue
 		}
 		if w.Location == nil {
+			skippedCount++
 			continue
 		}
 		wt := strings.ToLower(w.WidgetType)
 		if wt == "connector" || wt == "anchor" {
+			skippedCount++
 			continue
 		}
+		checkedCount++
 		if webuiatoms.WidgetIsInZone(&w, zoneBB) {
 			filtered = append(filtered, w)
+			fmt.Printf("[FilterWidgetsInZone] Widget %s (%s) is IN zone\n", w.ID[:8], w.WidgetType)
 		}
 	}
+
+	fmt.Printf("[FilterWidgetsInZone] Result: %d widgets in zone (checked %d, skipped %d)\n", len(filtered), checkedCount, skippedCount)
 	return filtered
 }
 
 // UpdateWidgetWithRetry updates a widget with retry logic (up to 3 attempts).
-func (mo *MacrosOperations) UpdateWidgetWithRetry(canvasID, widgetID string, payload map[string]interface{}) error {
-	endpoint := fmt.Sprintf("/api/v1/canvases/%s/widgets/%s", canvasID, widgetID)
+// Uses type-specific endpoints (not /widgets which is read-only).
+func (mo *MacrosOperations) UpdateWidgetWithRetry(canvasID, widgetID, widgetType string, payload map[string]interface{}) error {
+	// Get type-specific endpoint
+	baseEndpoint := webuiatoms.GetWidgetPatchEndpoint(widgetType)
+	endpoint := fmt.Sprintf("/api/v1/canvases/%s%s/%s", canvasID, baseEndpoint, widgetID)
+
+	fmt.Printf("[UpdateWidgetWithRetry] Updating widget %s (type: %s) via %s\n", widgetID[:8], widgetType, endpoint)
+
 	var lastErr error
 	for tries := 0; tries < 3; tries++ {
 		_, err := mo.apiClient.Patch(endpoint, payload)
 		if err == nil {
+			fmt.Printf("[UpdateWidgetWithRetry] Successfully updated widget %s\n", widgetID[:8])
 			return nil
 		}
+		fmt.Printf("[UpdateWidgetWithRetry] Attempt %d failed for widget %s: %v\n", tries+1, widgetID[:8], err)
 		lastErr = err
 	}
+	fmt.Printf("[UpdateWidgetWithRetry] ERROR: Failed to update widget %s after 3 attempts: %v\n", widgetID[:8], lastErr)
 	return fmt.Errorf("failed after 3 attempts: %w", lastErr)
 }
 
 // BatchUpdateWidgets updates multiple widgets and returns count of successful updates.
 func (mo *MacrosOperations) BatchUpdateWidgets(canvasID string, updates []WidgetUpdate) int {
+	fmt.Printf("[BatchUpdateWidgets] Updating %d widgets\n", len(updates))
 	successCount := 0
-	for _, update := range updates {
-		if err := mo.UpdateWidgetWithRetry(canvasID, update.WidgetID, update.Payload); err == nil {
+	for i, update := range updates {
+		if err := mo.UpdateWidgetWithRetry(canvasID, update.WidgetID, update.WidgetType, update.Payload); err == nil {
 			successCount++
+		} else {
+			fmt.Printf("[BatchUpdateWidgets] Failed to update widget %d/%d (ID: %s, Type: %s): %v\n",
+				i+1, len(updates), update.WidgetID[:8], update.WidgetType, err)
 		}
 	}
+	fmt.Printf("[BatchUpdateWidgets] Successfully updated %d/%d widgets\n", successCount, len(updates))
 	return successCount
 }
 
 // WidgetUpdate represents a widget update operation.
 type WidgetUpdate struct {
-	WidgetID string
-	Payload  map[string]interface{}
+	WidgetID   string
+	WidgetType string
+	Payload    map[string]interface{}
 }
 
 // CalculateOptimalGrid calculates the optimal grid dimensions for n widgets in a zone.
@@ -126,23 +154,33 @@ func CalculateCellDimensions(zoneBB *webuiatoms.ZoneBoundingBox, rows, cols int)
 
 // PositionWidgetGroups positions widget groups horizontally with vertical stacking within groups.
 func (mo *MacrosOperations) PositionWidgetGroups(groups map[string][]webuiatoms.Widget, zoneBB *webuiatoms.ZoneBoundingBox, canvasID string) int {
+	fmt.Printf("[PositionWidgetGroups] Positioning %d groups in zone\n", len(groups))
 	groupedCount := 0
 	xOffset := zoneBB.X + 100
-	for _, widgets := range groups {
+	for groupKey, widgets := range groups {
+		fmt.Printf("[PositionWidgetGroups] Group '%s': %d widgets\n", groupKey, len(widgets))
 		yOffset := zoneBB.Y + 100
 		for _, widget := range widgets {
-			endpoint := fmt.Sprintf("/api/v1/canvases/%s/widgets/%s", canvasID, widget.ID)
+			// Use type-specific endpoint (not /widgets which is read-only)
+			baseEndpoint := webuiatoms.GetWidgetPatchEndpoint(widget.WidgetType)
+			endpoint := fmt.Sprintf("/api/v1/canvases/%s%s/%s", canvasID, baseEndpoint, widget.ID)
 			payload := map[string]interface{}{
 				"location": map[string]float64{"x": xOffset, "y": yOffset},
 			}
+			fmt.Printf("[PositionWidgetGroups] Patching widget %s (%s) to (%.2f, %.2f) via %s\n",
+				widget.ID[:8], widget.WidgetType, xOffset, yOffset, endpoint)
 			_, err := mo.apiClient.Patch(endpoint, payload)
 			if err == nil {
 				groupedCount++
+				fmt.Printf("[PositionWidgetGroups] Successfully positioned widget %s\n", widget.ID[:8])
+			} else {
+				fmt.Printf("[PositionWidgetGroups] ERROR: Failed to position widget %s: %v\n", widget.ID[:8], err)
 			}
 			yOffset += 200
 		}
 		xOffset += 300
 	}
+	fmt.Printf("[PositionWidgetGroups] Completed: %d widgets positioned\n", groupedCount)
 	return groupedCount
 }
 

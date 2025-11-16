@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -11,20 +12,104 @@ import (
 // StaticHandler handles serving static frontend files.
 type StaticHandler struct {
 	fileSystem fs.FS
+	devMode    bool
+	devPath    string
 }
 
 // NewStaticHandler creates a new static file handler.
+// If WEBUI_DEV_MODE environment variable is set, serves files directly from webui/public directory.
+// Otherwise, uses embedded filesystem.
 func NewStaticHandler() *StaticHandler {
-	// Get the embedded public directory
-	// The embed is at webui/public, so we access it directly
-	// embeddedAssets already points to the public directory
-	return &StaticHandler{
-		fileSystem: embeddedAssets,
+	devMode := os.Getenv("WEBUI_DEV_MODE") == "1" || os.Getenv("WEBUI_DEV_MODE") == "true"
+
+	var handler *StaticHandler
+	if devMode {
+		// Development mode: serve from webui/public directory
+		// Try to find webui/public relative to current working directory or executable
+		devPath := findWebUIPublicDir()
+		if devPath != "" {
+			fmt.Printf("[StaticHandler] Development mode enabled - serving from: %s\n", devPath)
+			handler = &StaticHandler{
+				fileSystem: os.DirFS(devPath),
+				devMode:    true,
+				devPath:    devPath,
+			}
+		} else {
+			fmt.Printf("[StaticHandler] Development mode enabled but webui/public not found, falling back to embedded assets\n")
+			handler = &StaticHandler{
+				fileSystem: embeddedAssets,
+				devMode:    false,
+			}
+		}
+	} else {
+		// Production mode: use embedded filesystem
+		handler = &StaticHandler{
+			fileSystem: embeddedAssets,
+			devMode:    false,
+		}
 	}
+
+	return handler
+}
+
+// findWebUIPublicDir attempts to find the webui/public directory.
+// It checks relative to the current working directory and common project structures.
+func findWebUIPublicDir() string {
+	// Try current directory
+	cwd, err := os.Getwd()
+	if err == nil {
+		paths := []string{
+			filepath.Join(cwd, "webui", "public"),
+			filepath.Join(cwd, "..", "webui", "public"),
+			filepath.Join(cwd, "..", "..", "webui", "public"),
+		}
+		for _, path := range paths {
+			if info, err := os.Stat(path); err == nil && info.IsDir() {
+				absPath, _ := filepath.Abs(path)
+				return absPath
+			}
+		}
+	}
+
+	// Try relative to executable
+	if exePath, err := os.Executable(); err == nil {
+		exeDir := filepath.Dir(exePath)
+		paths := []string{
+			filepath.Join(exeDir, "webui", "public"),
+			filepath.Join(exeDir, "..", "webui", "public"),
+		}
+		for _, path := range paths {
+			if info, err := os.Stat(path); err == nil && info.IsDir() {
+				absPath, _ := filepath.Abs(path)
+				return absPath
+			}
+		}
+	}
+
+	return ""
 }
 
 // ServeFiles registers static file routes with the given mux.
 func (sh *StaticHandler) ServeFiles(mux *http.ServeMux) {
+	// Handle favicon.ico explicitly (browsers request it automatically)
+	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		// Try to serve favicon.ico from static files
+		// If not found, return 204 No Content (standard for missing favicon)
+		if _, err := fs.Stat(sh.fileSystem, "favicon.ico"); err == nil {
+			sh.serveFile(w, r, "favicon.ico")
+			return
+		}
+		// Also try with public/ prefix in production mode
+		if !sh.devMode {
+			if _, err := fs.Stat(sh.fileSystem, "public/favicon.ico"); err == nil {
+				sh.serveFile(w, r, "public/favicon.ico")
+				return
+			}
+		}
+		// Return 204 No Content instead of 404 to suppress browser errors
+		w.WriteHeader(http.StatusNoContent)
+	})
+
 	// Handle root and static files
 	// Note: This should be registered AFTER API routes so API routes take precedence
 	// In Go's http.ServeMux, more specific routes (like /api/...) take precedence over /
@@ -66,35 +151,54 @@ func (sh *StaticHandler) ServeFiles(mux *http.ServeMux) {
 		// Normalize path separators (embedded FS always uses forward slashes)
 		path = strings.ReplaceAll(path, "\\", "/")
 
-		// First try: path as-is (for requests like /atoms/css/badge.css)
-		// Since embed root is "public", we need "public/atoms/css/badge.css"
-		publicPath := "public/" + path
-		if _, err := fs.Stat(sh.fileSystem, publicPath); err == nil {
-			sh.serveFile(w, r, publicPath)
-			return
-		}
-
-		// Second try: path without public/ (in case embed structure is different)
-		if _, err := fs.Stat(sh.fileSystem, path); err == nil {
-			sh.serveFile(w, r, path)
-			return
-		}
-
-		// Try with common prefixes
-		for _, prefix := range []string{"public/pages/html/", "public/pages/js/", "public/pages/css/", "public/molecules/js/", "public/molecules/css/", "public/atoms/css/", "public/atoms/js/", "public/css/", "public/templates/css/", "public/templates/html/"} {
-			fullPath := prefix + path
-			if _, err := fs.Stat(sh.fileSystem, fullPath); err == nil {
-				sh.serveFile(w, r, fullPath)
+		// In dev mode, files are served directly from webui/public, so path is correct as-is
+		// In production mode, embed root is "public", so we need "public/" prefix
+		if sh.devMode {
+			// Dev mode: try path as-is first
+			if _, err := fs.Stat(sh.fileSystem, path); err == nil {
+				sh.serveFile(w, r, path)
+				return
+			}
+		} else {
+			// Production mode: try with public/ prefix first
+			publicPath := "public/" + path
+			if _, err := fs.Stat(sh.fileSystem, publicPath); err == nil {
+				sh.serveFile(w, r, publicPath)
+				return
+			}
+			// Fallback: try without public/ prefix
+			if _, err := fs.Stat(sh.fileSystem, path); err == nil {
+				sh.serveFile(w, r, path)
 				return
 			}
 		}
 
-		// Try without public/ prefix
-		for _, prefix := range []string{"pages/html/", "pages/js/", "pages/css/", "molecules/js/", "molecules/css/", "atoms/css/", "atoms/js/", "css/", "templates/css/", "templates/html/"} {
-			fullPath := prefix + path
-			if _, err := fs.Stat(sh.fileSystem, fullPath); err == nil {
-				sh.serveFile(w, r, fullPath)
-				return
+		// Try with common prefixes
+		if sh.devMode {
+			// Dev mode: no public/ prefix needed
+			for _, prefix := range []string{"pages/html/", "pages/js/", "pages/css/", "molecules/js/", "molecules/css/", "atoms/css/", "atoms/js/", "css/", "templates/css/", "templates/html/"} {
+				fullPath := prefix + path
+				if _, err := fs.Stat(sh.fileSystem, fullPath); err == nil {
+					sh.serveFile(w, r, fullPath)
+					return
+				}
+			}
+		} else {
+			// Production mode: try with public/ prefix
+			for _, prefix := range []string{"public/pages/html/", "public/pages/js/", "public/pages/css/", "public/molecules/js/", "public/molecules/css/", "public/atoms/css/", "public/atoms/js/", "public/css/", "public/templates/css/", "public/templates/html/"} {
+				fullPath := prefix + path
+				if _, err := fs.Stat(sh.fileSystem, fullPath); err == nil {
+					sh.serveFile(w, r, fullPath)
+					return
+				}
+			}
+			// Fallback: try without public/ prefix
+			for _, prefix := range []string{"pages/html/", "pages/js/", "pages/css/", "molecules/js/", "molecules/css/", "atoms/css/", "atoms/js/", "css/", "templates/css/", "templates/html/"} {
+				fullPath := prefix + path
+				if _, err := fs.Stat(sh.fileSystem, fullPath); err == nil {
+					sh.serveFile(w, r, fullPath)
+					return
+				}
 			}
 		}
 
@@ -128,11 +232,11 @@ func (sh *StaticHandler) mapRouteToHTML(path string) string {
 	}
 }
 
-// serveFile serves a specific file from the embedded filesystem.
+// serveFile serves a specific file from the filesystem (embedded or dev mode).
 func (sh *StaticHandler) serveFile(w http.ResponseWriter, r *http.Request, filePath string) {
-	// Since embed is "//go:embed public", the filesystem root IS "public"
-	// So we need to add "public/" prefix if not already present
-	if !strings.HasPrefix(filePath, "public/") {
+	// In production mode, embed root is "public", so add "public/" prefix if not present
+	// In dev mode, files are already in the correct path relative to webui/public
+	if !sh.devMode && !strings.HasPrefix(filePath, "public/") {
 		filePath = "public/" + filePath
 	}
 
@@ -177,6 +281,14 @@ func (sh *StaticHandler) serveFile(w http.ResponseWriter, r *http.Request, fileP
 		w.Header().Set("Content-Type", "text/css; charset=utf-8")
 	case ".js":
 		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+	case ".ico":
+		w.Header().Set("Content-Type", "image/x-icon")
+	case ".png":
+		w.Header().Set("Content-Type", "image/png")
+	case ".jpg", ".jpeg":
+		w.Header().Set("Content-Type", "image/jpeg")
+	case ".svg":
+		w.Header().Set("Content-Type", "image/svg+xml")
 	default:
 		w.Header().Set("Content-Type", "application/octet-stream")
 	}
