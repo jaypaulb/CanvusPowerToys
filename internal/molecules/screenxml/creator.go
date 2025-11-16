@@ -2,8 +2,10 @@ package screenxml
 
 import (
 	"fmt"
+	"image/color"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
@@ -118,12 +120,22 @@ func (c *Creator) generateAndPreview(window fyne.Window) {
 		return
 	}
 
-	// Show preview dialog
-	preview := widget.NewMultiLineEntry()
-	preview.SetText(string(xmlData))
-	preview.Disable()
+	// Show preview dialog with MT Blue text color (#36A9E1, RGB: 54, 169, 225)
+	// Use canvas.Text for custom color support
+	// MT Blue: #36A9E1 (RGB: 54, 169, 225)
+	mtBlue := color.RGBA{R: 54, G: 169, B: 225, A: 255}
+	
+	// Create canvas.Text with MT Blue color
+	previewText := canvas.NewText(string(xmlData), mtBlue)
+	previewText.TextSize = 12
+	previewText.Alignment = fyne.TextAlignLeading
+	previewText.Wrapping = fyne.TextWrapWord
+	
+	// Create a scrollable container for the preview
+	scrollContainer := container.NewScroll(previewText)
+	scrollContainer.SetMinSize(fyne.NewSize(800, 600))
 
-	previewDialog := dialog.NewCustom("Generated screen.xml Preview", "Close", preview, window)
+	previewDialog := dialog.NewCustom("Generated screen.xml Preview", "Close", scrollContainer, window)
 	previewDialog.Resize(fyne.NewSize(800, 600))
 	previewDialog.Show()
 }
