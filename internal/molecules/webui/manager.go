@@ -86,15 +86,13 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 	// Enabled Pages
 	pagesLabel := widget.NewLabel("Enabled Pages:")
 
-	// Common pages that might be available
+	// WebUI pages (not PowerToys tabs)
 	pageOptions := []string{
-		"Dashboard",
-		"Screen.xml Manager",
-		"Config Editor",
-		"CSS Options",
-		"Custom Menu Designer",
-		"System Status",
-		"Logs Viewer",
+		"Main",
+		"Pages",
+		"Macros",
+		"Remote Upload",
+		"RCU",
 	}
 
 	pageChecks := []fyne.CanvasObject{}
@@ -275,63 +273,9 @@ func (m *Manager) startServer(window fyne.Window) {
 
 	mux := http.NewServeMux()
 
-	// Register enabled pages
-	for page, check := range m.enabledPages {
-		if check.Checked {
-			m.registerPage(mux, page)
-		}
-	}
-
-	// Register root page
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-
-		html := `
-<!DOCTYPE html>
-<html>
-<head>
-	<title>Canvus PowerToys WebUI</title>
-	<meta charset="utf-8">
-	<style>
-		body { font-family: Arial, sans-serif; margin: 40px; }
-		.header { background: #4CAF50; color: white; padding: 20px; border-radius: 5px; }
-		.content { margin-top: 20px; }
-		.page-list { list-style: none; padding: 0; }
-		.page-list li { margin: 10px 0; }
-		.page-list a { color: #4CAF50; text-decoration: none; font-weight: bold; }
-		.page-list a:hover { text-decoration: underline; }
-	</style>
-</head>
-<body>
-	<div class="header">
-		<h1>Canvus PowerToys WebUI</h1>
-		<p>Welcome to the WebUI interface</p>
-	</div>
-	<div class="content">
-		<h2>Available Pages:</h2>
-		<ul class="page-list">
-`
-
-		// Add links to enabled pages
-		for page, check := range m.enabledPages {
-			if check.Checked {
-				path := "/" + m.pageToPath(page)
-				html += fmt.Sprintf(`			<li><a href="%s">%s</a></li>`, path, page)
-			}
-		}
-
-		html += `
-		</ul>
-		<p>Server URL: ` + m.serverURL.Text + `</p>
-		<p>Status: Active</p>
-	</div>
-</body>
-</html>
-`
-
-		w.Write([]byte(html))
-	})
+	// Use StaticHandler to serve actual WebUI pages (not placeholder pages)
+	staticHandler := NewStaticHandler()
+	staticHandler.ServeFiles(mux)
 
 	// Default health check endpoint
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
