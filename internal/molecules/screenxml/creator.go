@@ -129,7 +129,6 @@ func (c *Creator) generateAndPreview(window fyne.Window) {
 	previewText := canvas.NewText(string(xmlData), mtBlue)
 	previewText.TextSize = 12
 	previewText.Alignment = fyne.TextAlignLeading
-	previewText.Wrapping = fyne.TextWrapWord
 	
 	// Create a scrollable container for the preview
 	scrollContainer := container.NewScroll(previewText)
