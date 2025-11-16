@@ -63,7 +63,8 @@
             Currently tracking <span id="installationName">...</span>
           </div>
           <div class="canvas-header-subtitle" id="canvasHeaderSubtitle">
-            Showing <span id="canvasName">...</span>
+            Showing <span id="canvasName" class="canvas-name-clickable" title="Click to manually override client">...</span>
+            <button id="clientOverrideBtn" class="client-override-btn" style="display: none;" title="Manually override client to monitor">Override Client</button>
           </div>
         </div>
         <div class="canvas-header-status">
@@ -248,6 +249,68 @@
 
     // Connect to workspace subscription
     workspaceClient.connect(baseURL);
+
+    // Manual client override - hidden button on canvas name click
+    const canvasName = document.getElementById('canvasName');
+    const clientOverrideBtn = document.getElementById('clientOverrideBtn');
+
+    if (canvasName && clientOverrideBtn) {
+      // Click on canvas name to show override button
+      let clickCount = 0;
+      let clickTimer = null;
+
+      canvasName.addEventListener('click', () => {
+        clickCount++;
+
+        if (clickCount === 1) {
+          // First click - start timer
+          clickTimer = setTimeout(() => {
+            clickCount = 0;
+          }, 500); // 500ms window for double click
+        } else if (clickCount === 2) {
+          // Double click - toggle override button
+          clearTimeout(clickTimer);
+          clickCount = 0;
+
+          if (clientOverrideBtn.style.display === 'none') {
+            clientOverrideBtn.style.display = 'inline-block';
+          } else {
+            clientOverrideBtn.style.display = 'none';
+          }
+        }
+      });
+
+      // Handle override button click
+      clientOverrideBtn.addEventListener('click', () => {
+        const clientName = prompt('Enter client name to monitor:', '');
+        if (clientName && clientName.trim() !== '') {
+          // Send override request to API
+          fetch(`${baseURL}/api/client/override`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ client_name: clientName.trim() })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              // Update canvas name display
+              document.getElementById('canvasName').textContent = clientName.trim();
+              clientOverrideBtn.style.display = 'none';
+            } else {
+              alert('Failed to override client: ' + (data.error || 'Unknown error'));
+            }
+          })
+          .catch(error => {
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+              console.error('Error overriding client:', error);
+            }
+            alert('Error overriding client');
+          });
+        }
+      });
+    }
   </script>
 </body>
 </html>

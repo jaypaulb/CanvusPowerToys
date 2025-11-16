@@ -14,20 +14,25 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/jaypaulb/CanvusPowerToys/internal/atoms/config"
+	webuiatoms "github.com/jaypaulb/CanvusPowerToys/internal/atoms/webui"
 	"github.com/jaypaulb/CanvusPowerToys/internal/organisms/services"
 )
 
 // Manager handles WebUI integration and local server.
 type Manager struct {
-	fileService  *services.FileService
-	iniParser    *config.INIParser
-	server       *http.Server
-	serverURL    *widget.Entry
-	authToken    *widget.Entry
-	serverPort   *widget.Entry
-	serverStatus *widget.Label
-	enabledPages map[string]*widget.Check
-	startStopBtn *widget.Button
+	fileService   *services.FileService
+	iniParser     *config.INIParser
+	server        *http.Server
+	serverURL     *widget.Entry
+	serverSelect  *widget.Select
+	authToken     *widget.Entry
+	serverPort    *widget.Entry
+	serverStatus  *widget.Label
+	enabledPages  map[string]*widget.Check
+	selectAllPage *widget.Check
+	startStopBtn  *widget.Button
+	canvasService *CanvasService
+	apiRoutes     *APIRoutes
 }
 
 // NewManager creates a new WebUI Manager.
@@ -56,11 +61,28 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 - Enabled Pages: Select which WebUI pages to enable
 `)
 
-	// Server URL
+	// Server URL - Load server names from mt-canvus.ini
 	serverURLLabel := widget.NewLabel("Canvus Server URL:")
+	serverNames, serverURLs := m.loadServerNames()
+
+	// Create select dropdown with server names
+	m.serverSelect = widget.NewSelect(serverNames, func(selected string) {
+		// When a server is selected, set the URL (ensure it has https://)
+		if url, ok := serverURLs[selected]; ok {
+			m.serverURL.SetText(ensureHTTPS(url))
+		}
+	})
+	m.serverSelect.PlaceHolder = "Select server or type URL..."
+
+	// Create entry for typing custom URL
 	m.serverURL = widget.NewEntry()
-	m.serverURL.SetPlaceHolder("https://your-canvus-server.com")
+	m.serverURL.SetPlaceHolder("https://your-canvus-server.com or select from dropdown")
 	m.loadServerURL()
+
+	// If we have server names, set the first one as default
+	if len(serverNames) > 0 {
+		m.serverSelect.SetSelected(serverNames[0])
+	}
 
 	// Auth Token
 	authTokenLabel := widget.NewLabel("User Auth Token:")
@@ -104,7 +126,15 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 		"RCU",
 	}
 
-	pageChecks := []fyne.CanvasObject{}
+	// Select All checkbox
+	m.selectAllPage = widget.NewCheck("Select All", func(checked bool) {
+		// Toggle all page checkboxes
+		for _, check := range m.enabledPages {
+			check.SetChecked(checked)
+		}
+	})
+
+	pageChecks := []fyne.CanvasObject{m.selectAllPage, widget.NewSeparator()}
 	for _, page := range pageOptions {
 		check := widget.NewCheck(page, nil)
 		m.enabledPages[page] = check
@@ -121,31 +151,105 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 		m.testConnection(window)
 	})
 
-	// Layout
-	configSection := container.NewVBox(
-		title,
+	// Title bar with Start/Stop button
+	titleBar := container.NewBorder(
+		nil, nil,
+		title, // Left: Title
+		m.startStopBtn, // Right: Start/Stop button
+		nil,
+	)
+
+	// Left column: Configuration
+	leftColumn := container.NewVBox(
 		instructions,
 		widget.NewSeparator(),
 		container.NewGridWithColumns(2,
-			serverURLLabel, m.serverURL,
+			serverURLLabel, container.NewVBox(m.serverSelect, m.serverURL),
 			authTokenLabel, m.authToken,
 			serverPortLabel, m.serverPort,
 		),
 		tokenInstructions,
 		widget.NewSeparator(),
+		m.serverStatus,
+	)
+
+	// Right column: Enabled Pages with buttons
+	rightColumn := container.NewVBox(
 		pagesLabel,
 		container.NewVBox(pageChecks...),
 		widget.NewSeparator(),
-		container.NewHBox(
+		container.NewVBox(
 			saveConfigBtn,
 			testConnectionBtn,
 		),
-		widget.NewSeparator(),
-		m.serverStatus,
-		m.startStopBtn,
 	)
 
-	return container.NewScroll(configSection)
+	// Two column layout
+	twoColumnLayout := container.NewGridWithColumns(2,
+		container.NewScroll(leftColumn),
+		container.NewScroll(rightColumn),
+	)
+
+	// Main layout: Title bar on top, two columns below
+	mainLayout := container.NewVBox(
+		titleBar,
+		widget.NewSeparator(),
+		twoColumnLayout,
+	)
+
+	return container.NewScroll(mainLayout)
+}
+
+// ensureHTTPS ensures the URL has https:// prefix if it's missing a protocol.
+func ensureHTTPS(url string) string {
+	url = strings.TrimSpace(url)
+	if url == "" {
+		return url
+	}
+	// Check if URL already has a protocol
+	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
+		return url
+	}
+	// Add https:// prefix
+	return "https://" + url
+}
+
+// loadServerNames loads server names from [server:<name>] sections in mt-canvus.ini.
+func (m *Manager) loadServerNames() ([]string, map[string]string) {
+	serverNames := []string{}
+	serverURLs := make(map[string]string)
+
+	iniPath := m.fileService.DetectMtCanvusIni()
+	if iniPath == "" {
+		return serverNames, serverURLs
+	}
+
+	iniFile, err := m.iniParser.Read(iniPath)
+	if err != nil {
+		return serverNames, serverURLs
+	}
+
+	// Find all [server:<name>] sections
+	for _, section := range iniFile.Sections() {
+		sectionName := section.Name()
+		if strings.HasPrefix(sectionName, "server:") {
+			serverName := strings.TrimPrefix(sectionName, "server:")
+			if serverName != "" {
+				// Get server URL from this section
+				serverKey := section.Key("server")
+				if serverKey != nil {
+					serverURL := serverKey.String()
+					if serverURL != "" {
+						serverURL = ensureHTTPS(serverURL)
+						serverNames = append(serverNames, serverName)
+						serverURLs[serverName] = serverURL
+					}
+				}
+			}
+		}
+	}
+
+	return serverNames, serverURLs
 }
 
 // loadServerURL loads the server URL from mt-canvus.ini.
@@ -174,6 +278,8 @@ func (m *Manager) loadServerURL() {
 			if keyObj := section.Key(key); keyObj != nil {
 				url := keyObj.String()
 				if url != "" {
+					// Ensure URL has https:// prefix
+					url = ensureHTTPS(url)
 					m.serverURL.SetText(url)
 					return
 				}
@@ -354,7 +460,54 @@ func (m *Manager) startServer(window fyne.Window) {
 		return
 	}
 
+	// Get server URL and auth token
+	serverURL := m.serverURL.Text
+	authToken := m.authToken.Text
+
+	if serverURL == "" {
+		dialog.ShowError(fmt.Errorf("Server URL cannot be empty"), window)
+		return
+	}
+
+	if authToken == "" {
+		dialog.ShowError(fmt.Errorf("Auth token cannot be empty"), window)
+		return
+	}
+
+	// Normalize server URL
+	apiBaseURL := strings.TrimSuffix(serverURL, "/")
+	apiBaseURL = strings.TrimSuffix(apiBaseURL, "/api/v1")
+	apiBaseURL = strings.TrimSuffix(apiBaseURL, "/api")
+
+	// Create canvas service
+	canvasService, err := NewCanvasService(m.fileService, apiBaseURL, authToken)
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("Failed to create canvas service: %w", err), window)
+		return
+	}
+
+	// Create API client
+	apiClient := webuiatoms.NewAPIClient(apiBaseURL, authToken)
+
+	// Create API routes (uploadDir can be empty for now)
+	apiRoutes := NewAPIRoutes(canvasService, apiClient, "")
+
+	// Start canvas service
+	if err := canvasService.Start(); err != nil {
+		dialog.ShowError(fmt.Errorf("Failed to start canvas service: %w", err), window)
+		return
+	}
+
+	// Store references
+	m.canvasService = canvasService
+	m.apiRoutes = apiRoutes
+
 	mux := http.NewServeMux()
+
+	// Register API routes first (before static handler)
+	// This ensures more specific routes like /api/* take precedence over catch-all /
+	apiRoutes.RegisterRoutes(mux)
+	fmt.Printf("[WebUI] API routes registered\n")
 
 	// Use StaticHandler to serve actual WebUI pages (not placeholder pages)
 	staticHandler := NewStaticHandler()
@@ -420,18 +573,24 @@ func (m *Manager) startServer(window fyne.Window) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Update UI
-	serverURL := fmt.Sprintf("http://localhost:%s", port)
-	m.serverStatus.SetText(fmt.Sprintf("Server: Running on %s", serverURL))
+	serverURLStr := fmt.Sprintf("http://localhost:%s", port)
+	m.serverStatus.SetText(fmt.Sprintf("Server: Running on %s", serverURLStr))
 	m.serverStatus.Importance = widget.SuccessImportance
 	m.startStopBtn.SetText("Stop Server")
 
-	dialog.ShowInformation("Server Started", fmt.Sprintf("WebUI server is running on:\n%s\n\nYou can access it in your browser at:\n%s", serverURL, serverURL), window)
+	dialog.ShowInformation("Server Started", fmt.Sprintf("WebUI server is running on:\n%s\n\nYou can access it in your browser at:\n%s", serverURLStr, serverURLStr), window)
 }
 
 // stopServer stops the local web server.
 func (m *Manager) stopServer() {
 	if m.server == nil {
 		return
+	}
+
+	// Stop canvas service
+	if m.canvasService != nil {
+		m.canvasService.Stop()
+		m.canvasService = nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -442,6 +601,7 @@ func (m *Manager) stopServer() {
 	}
 
 	m.server = nil
+	m.apiRoutes = nil
 	m.serverStatus.SetText("Server: Stopped")
 	m.serverStatus.Importance = widget.LowImportance
 	m.startStopBtn.SetText("Start Server")

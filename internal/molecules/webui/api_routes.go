@@ -82,6 +82,9 @@ func (ar *APIRoutes) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/rcu/config", ar.rcuHandler.HandleConfig)
 	mux.HandleFunc("/api/rcu/status", ar.rcuHandler.HandleStatus)
 	mux.HandleFunc("/api/rcu/test", ar.rcuHandler.HandleTest)
+
+	// Client override endpoint
+	mux.HandleFunc("/api/client/override", ar.handleClientOverride)
 }
 
 // contains checks if a string contains a substring.
@@ -165,5 +168,52 @@ func (ar *APIRoutes) handleHealth(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonResponse)
+}
+
+// handleClientOverride handles manual client override requests.
+func (ar *APIRoutes) handleClientOverride(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	// Parse request body
+	var request struct {
+		ClientName string `json:"client_name"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		response := map[string]interface{}{
+			"success": false,
+			"error":   "Invalid request body",
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// Override client
+	if err := ar.canvasService.OverrideClient(request.ClientName); err != nil {
+		response := map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// Success response
+	response := map[string]interface{}{
+		"success":     true,
+		"client_name": request.ClientName,
+		"client_id":   ar.canvasService.GetClientID(),
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 

@@ -123,16 +123,22 @@ func NewMainWindow(app fyne.App) *MainWindow {
 	trayManager := tray.NewManager(window, app)
 	trayManager.Setup()
 
-	// Configure window to minimize to tray
+	// Configure window to minimize to tray (hide instead of minimizing)
 	window.SetCloseIntercept(func() {
 		window.Hide()
 	})
 
-	return &MainWindow{
+	// Store reference to window for minimize handling
+	mw := &MainWindow{
 		window: window,
 		tabs:   tabs,
 		tray:   trayManager,
 	}
+
+	// Minimize to tray is handled by the tray manager
+	// The window will hide when minimized (handled in tray.Setup)
+
+	return mw
 }
 
 // ShowAndRun displays the window and runs the application.
@@ -144,3 +150,4 @@ func (mw *MainWindow) ShowAndRun() {
 func (mw *MainWindow) GetWindow() fyne.Window {
 	return mw.window
 }
+

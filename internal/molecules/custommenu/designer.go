@@ -41,6 +41,7 @@ type Designer struct {
 	menuTree      *widget.Tree
 	menuData      []MenuItem
 	formContainer *container.Scroll
+	window        fyne.Window
 }
 
 // NewDesigner creates a new Custom Menu Designer.
@@ -56,6 +57,7 @@ func NewDesigner(fileService *services.FileService) (*Designer, error) {
 
 // CreateUI creates the UI for the Custom Menu Designer tab.
 func (d *Designer) CreateUI(window fyne.Window) fyne.CanvasObject {
+	d.window = window
 	title := widget.NewLabel("Custom Menu Designer")
 	title.TextStyle = fyne.TextStyle{Bold: true}
 
@@ -221,7 +223,7 @@ func (d *Designer) createItemForm(item *MenuItem, id widget.TreeNodeID) fyne.Can
 	iconEntry := widget.NewEntry()
 	iconEntry.SetText(item.Icon)
 	iconBrowseBtn := widget.NewButton("Browse...", func() {
-		d.browseIcon()
+		d.browseIcon(iconEntry)
 	})
 
 	actionTypeSelect := widget.NewSelect([]string{"create", "open-folder"}, nil)
@@ -284,8 +286,25 @@ func (d *Designer) addMenuItem(window fyne.Window) {
 }
 
 // browseIcon opens a file browser for icon selection.
-func (d *Designer) browseIcon() {
-	// TODO: Implement file browser dialog
+func (d *Designer) browseIcon(iconEntry *widget.Entry) {
+	if d.window == nil {
+		return
+	}
+
+	// Show file browser for icon selection
+	dialog.ShowFileOpen(func(reader fyne.URIReadCloser, err error) {
+		if err != nil || reader == nil {
+			return
+		}
+		defer reader.Close()
+
+		// Get the selected file path
+		selectedPath := reader.URI().Path()
+
+		// Try to make path relative to menu.yml location (if possible)
+		// For now, just use the full path or relative path as-is
+		iconEntry.SetText(selectedPath)
+	}, d.window)
 }
 
 // importMenu imports an existing menu.yml file.

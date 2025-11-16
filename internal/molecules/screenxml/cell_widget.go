@@ -216,7 +216,7 @@ func (cw *CellWidget) CreateRenderer() fyne.WidgetRenderer {
 
 	// Combine rows
 	content := container.NewVBox(row1, row2)
-	
+
 	// Apply padding so content doesn't overlap the border
 	paddedContent := container.NewPadded(content)
 

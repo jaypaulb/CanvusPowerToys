@@ -69,6 +69,41 @@
   color: var(--text-secondary);
 }
 
+/* Canvas name clickable for manual override */
+.canvas-name-clickable {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  color: var(--text-primary);
+  transition: color 0.2s ease;
+}
+
+.canvas-name-clickable:hover {
+  color: var(--primary-color, #4CAF50);
+}
+
+/* Client override button */
+.client-override-btn {
+  margin-left: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  background-color: var(--primary-color, #4CAF50);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.client-override-btn:hover {
+  background-color: var(--primary-color-dark, #45a049);
+}
+
+.client-override-btn:active {
+  background-color: var(--primary-color-darker, #3d8b40);
+}
+
 /* Mobile Layout */
 @media (max-width: 767px) {
   .canvas-header {

@@ -4,8 +4,12 @@
 package tray
 
 import (
+	"bytes"
+	"image/png"
+
 	"fyne.io/fyne/v2"
 	"github.com/getlantern/systray"
+	"github.com/jaypaulb/CanvusPowerToys/assets"
 )
 
 // Manager handles system tray integration.
@@ -24,10 +28,19 @@ func NewManager(window fyne.Window, app fyne.App) *Manager {
 
 // Setup initializes the system tray.
 func (m *Manager) Setup() {
+	// Hide window when close button is clicked (minimize to tray)
 	m.window.SetCloseIntercept(func() {
 		m.window.Hide()
 	})
 
+	// Setup minimize-to-tray hook (Windows-specific)
+	// This intercepts the minimize button to hide window instead
+	if err := setupMinimizeToTray(m); err != nil {
+		// If hook setup fails, continue without it
+		// Close button will still work to hide to tray
+	}
+
+	// Start systray in background
 	go func() {
 		systray.Run(m.onReady, m.onExit)
 	}()
@@ -36,6 +49,15 @@ func (m *Manager) Setup() {
 func (m *Manager) onReady() {
 	systray.SetTitle("Canvus PowerToys")
 	systray.SetTooltip("Canvus PowerToys")
+
+	// Load and set tray icon from embedded assets
+	// systray.SetIcon expects PNG image data as []byte
+	if iconData, err := assets.Icons.ReadFile("icons/CanvusPowerToysIcon.png"); err == nil {
+		// Verify it's valid PNG by attempting to decode
+		if _, err := png.Decode(bytes.NewReader(iconData)); err == nil {
+			systray.SetIcon(iconData)
+		}
+	}
 
 	showItem := systray.AddMenuItem("Show", "Show window")
 	systray.AddSeparator()

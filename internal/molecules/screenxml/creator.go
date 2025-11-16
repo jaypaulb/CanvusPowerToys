@@ -124,12 +124,12 @@ func (c *Creator) generateAndPreview(window fyne.Window) {
 	// Use canvas.Text for custom color support
 	// MT Blue: #36A9E1 (RGB: 54, 169, 225)
 	mtBlue := color.RGBA{R: 54, G: 169, B: 225, A: 255}
-	
+
 	// Create canvas.Text with MT Blue color
 	previewText := canvas.NewText(string(xmlData), mtBlue)
 	previewText.TextSize = 12
 	previewText.Alignment = fyne.TextAlignLeading
-	
+
 	// Create a scrollable container for the preview
 	scrollContainer := container.NewScroll(previewText)
 	scrollContainer.SetMinSize(fyne.NewSize(800, 600))

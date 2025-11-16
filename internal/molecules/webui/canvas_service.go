@@ -19,6 +19,7 @@ type CanvasService struct {
 	authToken           string
 	clientID            string
 	installationName    string
+	overrideClientName  string // Manual override for client name to monitor
 }
 
 // NewCanvasService creates a new canvas service.
@@ -125,5 +126,53 @@ func (cs *CanvasService) GetClientID() string {
 // IsConnected returns whether the service is connected and tracking.
 func (cs *CanvasService) IsConnected() bool {
 	return cs.clientID != "" && cs.workspaceSubscriber != nil
+}
+
+// OverrideClient manually sets a client name to monitor instead of using installation name.
+func (cs *CanvasService) OverrideClient(clientName string) error {
+	if clientName == "" {
+		// Clear override - use installation name again
+		cs.overrideClientName = ""
+		// Restart with installation name
+		return cs.restartWithClientName(cs.installationName)
+	}
+
+	cs.overrideClientName = clientName
+	// Restart subscription with new client name
+	return cs.restartWithClientName(clientName)
+}
+
+// restartWithClientName restarts the workspace subscription with a specific client name.
+func (cs *CanvasService) restartWithClientName(clientName string) error {
+	// Stop current subscription
+	if cs.workspaceSubscriber != nil {
+		cs.Stop()
+	}
+
+	// Create new context
+	cs.ctx, cs.cancel = context.WithCancel(context.Background())
+
+	// Resolve client_id from client name
+	clientID, err := cs.clientResolver.ResolveClientID(cs.apiBaseURL, cs.authToken, clientName)
+	if err != nil {
+		return fmt.Errorf("failed to resolve client_id for %s: %w", clientName, err)
+	}
+
+	cs.clientID = clientID
+
+	// Create new workspace subscriber
+	cs.workspaceSubscriber = webuiatoms.NewWorkspaceSubscriber(
+		cs.clientID,
+		cs.apiBaseURL,
+		cs.authToken,
+	)
+
+	// Start subscription
+	eventChan, errChan := cs.workspaceSubscriber.Subscribe(cs.ctx)
+
+	// Process events in background
+	go cs.processEvents(eventChan, errChan)
+
+	return nil
 }
 

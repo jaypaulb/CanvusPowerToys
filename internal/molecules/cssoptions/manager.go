@@ -35,6 +35,7 @@ type Manager struct {
 	movingEnabled        *widget.Check
 	scalingEnabled       *widget.Check
 	rotationEnabled      *widget.Check
+	videoLoopEnabled     *widget.Check
 	kioskModeEnabled     *widget.Check
 	kioskPlusEnabled     *widget.Check
 	hideTitleBarsEnabled *widget.Check
@@ -88,6 +89,14 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 	rotationTooltip := widget.NewLabel("Enable rotating canvas items (default: disabled in Canvus)")
 	m.rotationEnabled = widget.NewCheck("", nil)
 	m.rotationEnabled.SetChecked(false) // Default: unchecked (rotation is disabled by default in Canvus)
+
+	// Video Loop option
+	videoLoopLabel := widget.NewLabel("Enable Video Looping")
+	videoLoopTooltip := widget.NewLabel("Enable automatic looping for videos (warning: may consume significant memory)")
+	videoLoopWarning := widget.NewLabel("⚠ Memory Warning: Large videos may consume significant resources")
+	videoLoopWarning.Importance = widget.WarningImportance
+	m.videoLoopEnabled = widget.NewCheck("", nil)
+	m.videoLoopEnabled.SetChecked(false) // Default: unchecked
 
 	// UI Visibility Options
 	uiVisibilityLabel := widget.NewLabel("UI Visibility Options")
@@ -169,35 +178,22 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 		widget.NewSeparator(),
 		widgetOptionsLabel,
 		widgetOptionsTooltip,
-		container.NewGridWithColumns(2,
-			movingLabel, m.movingEnabled,
-			movingTooltip, widget.NewLabel(""),
-			scalingLabel, m.scalingEnabled,
-			scalingTooltip, widget.NewLabel(""),
-			rotationLabel, m.rotationEnabled,
-			rotationTooltip, widget.NewLabel(""),
-		),
+		container.NewHBox(movingLabel, movingTooltip, m.movingEnabled),
+		container.NewHBox(scalingLabel, scalingTooltip, m.scalingEnabled),
+		container.NewHBox(rotationLabel, rotationTooltip, m.rotationEnabled),
+		widget.NewSeparator(),
+		container.NewHBox(videoLoopLabel, videoLoopTooltip, m.videoLoopEnabled),
+		videoLoopWarning,
 		widget.NewSeparator(),
 		uiVisibilityLabel,
-	container.NewGridWithColumns(2,
-		hideTitleBarsLabel, m.hideTitleBarsEnabled,
-		hideTitleBarsTooltip, widget.NewLabel(""),
-		hideResizeHandlesLabel, m.hideResizeHandlesEnabled,
-		hideResizeHandlesTooltip, widget.NewLabel(""),
-		hideSidebarLabel, m.hideSidebarEnabled,
-		hideSidebarTooltip, widget.NewLabel(""),
-		hideMainMenuLabel, m.hideMainMenuEnabled,
-		hideMainMenuTooltip, widget.NewLabel(""),
-		hideFingerMenuLabel, m.hideFingerMenuEnabled,
-		hideFingerMenuTooltip, widget.NewLabel(""),
-	),
+		container.NewHBox(hideTitleBarsLabel, hideTitleBarsTooltip, m.hideTitleBarsEnabled),
+		container.NewHBox(hideResizeHandlesLabel, hideResizeHandlesTooltip, m.hideResizeHandlesEnabled),
+		container.NewHBox(hideSidebarLabel, hideSidebarTooltip, m.hideSidebarEnabled),
+		container.NewHBox(hideMainMenuLabel, hideMainMenuTooltip, m.hideMainMenuEnabled),
+		container.NewHBox(hideFingerMenuLabel, hideFingerMenuTooltip, m.hideFingerMenuEnabled),
 		widget.NewSeparator(),
-		container.NewGridWithColumns(2,
-			kioskModeLabel, m.kioskModeEnabled,
-			kioskModeTooltip, widget.NewLabel(""),
-			kioskPlusLabel, m.kioskPlusEnabled,
-			kioskPlusTooltip, widget.NewLabel(""),
-		),
+		container.NewHBox(kioskModeLabel, kioskModeTooltip, m.kioskModeEnabled),
+		container.NewHBox(kioskPlusLabel, kioskPlusTooltip, m.kioskPlusEnabled),
 		widget.NewSeparator(),
 		m.statusLabel,
 		container.NewHBox(
@@ -389,6 +385,15 @@ func (m *Manager) generateCSS() string {
 		css.WriteString("}\n\n")
 	}
 
+	// Video Looping: Enable looping for video widgets
+	if m.videoLoopEnabled.Checked {
+		css.WriteString("/* Video Looping CSS - Enables automatic looping for videos */\n")
+		css.WriteString("/* Warning: May consume significant memory with large videos */\n")
+		css.WriteString("CanvusCanvasVideo {\n")
+		css.WriteString("  loop: true !important;\n")
+		css.WriteString("}\n\n")
+	}
+
 	// UI Visibility Options - Individual controls
 	if m.hideTitleBarsEnabled.Checked {
 		css.WriteString("/* Hide Title Bars CSS - Hides title bars on canvas items */\n")
@@ -480,12 +485,13 @@ func (m *Manager) updatePluginFolders(iniFile *ini.File, iniPath, pluginDir stri
 
 // launchCanvusWithConfig launches Canvus with the current CSS configuration.
 func (m *Manager) launchCanvusWithConfig(window fyne.Window) {
-	// Check if any options are enabled (widget options or UI visibility)
+	// Check if any options are enabled (widget options, video looping, or UI visibility)
 	hasWidgetOptions := m.movingEnabled.Checked || m.scalingEnabled.Checked || m.rotationEnabled.Checked
+	hasVideoOptions := m.videoLoopEnabled.Checked
 	hasUIOptions := m.hideTitleBarsEnabled.Checked || m.hideResizeHandlesEnabled.Checked ||
 		m.hideSidebarEnabled.Checked || m.hideMainMenuEnabled.Checked || m.hideFingerMenuEnabled.Checked
 
-	if !hasWidgetOptions && !hasUIOptions {
+	if !hasWidgetOptions && !hasVideoOptions && !hasUIOptions {
 		dialog.ShowError(fmt.Errorf("please enable at least one CSS option before launching"), window)
 		return
 	}
@@ -601,6 +607,9 @@ func (m *Manager) generateCSSFileName() string {
 	if m.rotationEnabled.Checked {
 		parts = append(parts, "rotate")
 	}
+	if m.videoLoopEnabled.Checked {
+		parts = append(parts, "loop")
+	}
 	if m.kioskModeEnabled.Checked {
 		parts = append(parts, "kiosk")
 	}
@@ -643,6 +652,9 @@ func (m *Manager) generateShortcutName() string {
 	}
 	if m.rotationEnabled.Checked {
 		parts = append(parts, "Rotate")
+	}
+	if m.videoLoopEnabled.Checked {
+		parts = append(parts, "Loop")
 	}
 	if m.kioskModeEnabled.Checked {
 		parts = append(parts, "Kiosk")
