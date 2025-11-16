@@ -2,10 +2,12 @@ package screenxml
 
 import (
 	"fmt"
+	"image/color"
 	"strconv"
 	"strings"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 )
@@ -231,9 +233,16 @@ func (cw *CellWidget) CreateRenderer() fyne.WidgetRenderer {
 
 	content := container.NewVBox(row1, row2, row3, row4)
 
+	// MT Blue border: #36A9E1 (RGB: 54, 169, 225)
+	border := canvas.NewRectangle(color.RGBA{})
+	border.StrokeColor = color.RGBA{R: 54, G: 169, B: 225, A: 255} // MT Blue
+	border.StrokeWidth = 2
+	border.FillColor = color.RGBA{R: 255, G: 255, B: 255, A: 0} // Transparent fill
+
 	return &cellRenderer{
 		cell:    cw,
 		content: content,
+		border:  border,
 	}
 }
 
@@ -241,10 +250,16 @@ func (cw *CellWidget) CreateRenderer() fyne.WidgetRenderer {
 type cellRenderer struct {
 	cell    *CellWidget
 	content *fyne.Container
+	border *canvas.Rectangle
 }
 
 func (r *cellRenderer) Layout(size fyne.Size) {
 	r.content.Resize(size)
+	r.content.Move(fyne.NewPos(0, 0))
+	
+	// Border fills the entire cell
+	r.border.Resize(size)
+	r.border.Move(fyne.NewPos(0, 0))
 }
 
 func (r *cellRenderer) MinSize() fyne.Size {
@@ -252,7 +267,7 @@ func (r *cellRenderer) MinSize() fyne.Size {
 }
 
 func (r *cellRenderer) Objects() []fyne.CanvasObject {
-	return []fyne.CanvasObject{r.content}
+	return []fyne.CanvasObject{r.border, r.content}
 }
 
 func (r *cellRenderer) Refresh() {
