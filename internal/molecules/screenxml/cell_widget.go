@@ -207,10 +207,18 @@ func (cw *CellWidget) CreateRenderer() fyne.WidgetRenderer {
 	// Row 1: Labels and controls
 	row1 := container.NewGridWithColumns(2, col1, col2)
 
-	// Auto Fill button immediately below Layer (spans both columns)
-	row2 := cw.autoFillBtn
+	// Auto Fill button immediately below Layer - centered and sized to text
+	// Use Border container to center the button horizontally
+	row2 := container.NewBorder(
+		nil, nil, nil, nil, // No borders, button in center
+		cw.autoFillBtn,
+	)
 
+	// Combine rows
 	content := container.NewVBox(row1, row2)
+	
+	// Apply padding so content doesn't overlap the border
+	paddedContent := container.NewPadded(content)
 
 	// MT Blue border: #36A9E1 (RGB: 54, 169, 225)
 	border := canvas.NewRectangle(color.RGBA{})
@@ -219,9 +227,9 @@ func (cw *CellWidget) CreateRenderer() fyne.WidgetRenderer {
 	border.FillColor = color.RGBA{R: 255, G: 255, B: 255, A: 0} // Transparent fill
 
 	return &cellRenderer{
-		cell:    cw,
-		content: content,
-		border:  border,
+		cell:         cw,
+		content:      paddedContent,
+		border:       border,
 	}
 }
 
