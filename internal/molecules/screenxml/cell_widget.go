@@ -206,7 +206,7 @@ func (cw *CellWidget) CreateRenderer() fyne.WidgetRenderer {
 
 	// Row 1: Labels and controls
 	row1 := container.NewGridWithColumns(2, col1, col2)
-	
+
 	// Auto Fill button immediately below Layer (spans both columns)
 	row2 := cw.autoFillBtn
 

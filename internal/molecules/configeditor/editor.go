@@ -292,41 +292,203 @@ func (e *Editor) loadConfigFile(window fyne.Window) {
 }
 
 // filterSections filters sections based on search text.
+// It searches through all text in each setting (key, description, default, value, enum values)
+// and rebuilds the accordion to show only matching sections, opening them automatically.
 func (e *Editor) filterSections(searchText string) {
-	if e.accordion == nil {
+	if e.accordion == nil || e.schema == nil {
 		return
 	}
 
-	searchLower := strings.ToLower(searchText)
+	// If search is empty, rebuild with all sections
+	if searchText == "" {
+		e.buildUIFromSchema()
+		return
+	}
 
-	// Show/hide accordion items based on search
-	for _, item := range e.accordion.Items {
-		title := strings.ToLower(item.Title)
-		shouldShow := searchText == "" || strings.Contains(title, searchLower)
+	searchLower := strings.ToLower(strings.TrimSpace(searchText))
+	if searchLower == "" {
+		e.buildUIFromSchema()
+		return
+	}
 
-		// Also check if any option in the section matches
-		if !shouldShow && searchText != "" {
-			// Check section groups
-			for sectionName, sectionGroup := range e.sectionGroups {
-				if strings.Contains(strings.ToLower(sectionName), searchLower) {
-					for key := range sectionGroup.formControls {
-						if strings.Contains(strings.ToLower(key), searchLower) {
-							shouldShow = true
-							break
-						}
-					}
-				}
+	// Clear accordion
+	e.accordion.Items = nil
+	e.sectionGroups = make(map[string]*SectionGroup)
+	e.compoundGroups = make(map[string]*CompoundEntryGroup)
+
+	// Track which sections have matches
+	matchedSections := make(map[string]bool)
+
+	// Process all sections and check for matches
+	processedSections := make(map[string]bool)
+
+	// First, handle root level options (empty section)
+	if section := e.schema.GetSection(""); section != nil || e.hasRootOptions() {
+		sectionName := ""
+		section := e.buildSectionFromOptions("")
+		if len(section.Options) > 0 {
+			// Check if any option in this section matches
+			hasMatch := e.sectionMatches(section, searchLower)
+			if hasMatch {
+				matchedSections[""] = true
+				sectionGroup := NewSectionGroup(section, e.iniFile, e.window, e.onValueChange)
+				e.sectionGroups["General"] = sectionGroup
+				item := sectionGroup.CreateUI()
+				item.Open = true // Open matching sections
+				e.accordion.Append(item)
+			}
+			processedSections[""] = true
+		}
+	}
+
+	// Process all other sections
+	for _, option := range e.schema.Options {
+		sectionName := option.Section
+		if sectionName == "" || processedSections[sectionName] {
+			continue
+		}
+
+		section := e.schema.GetSection(sectionName)
+		if section == nil {
+			section = e.buildSectionFromOptions(sectionName)
+		}
+
+		if len(section.Options) == 0 {
+			continue
+		}
+
+		// Check if this section matches the search
+		hasMatch := e.sectionMatches(section, searchLower)
+		if !hasMatch {
+			processedSections[sectionName] = true
+			continue
+		}
+
+		matchedSections[sectionName] = true
+
+		// Check if this section has compound entries
+		hasCompound := false
+		var compoundPattern string
+		for _, opt := range section.Options {
+			if opt.IsCompound {
+				hasCompound = true
+				compoundPattern = opt.Pattern
+				break
 			}
 		}
 
-		// Note: Fyne Accordion doesn't have a direct way to hide items
-		// We'll need to rebuild the accordion with filtered items
+		if hasCompound {
+			// Create compound entry group
+			compoundGroup := NewCompoundEntryGroup(
+				compoundPattern,
+				section,
+				e.iniFile,
+				e.window,
+				e.onValueChange,
+				e.onCompoundEntryAdd,
+				e.onCompoundEntryRemove,
+			)
+			e.compoundGroups[compoundPattern] = compoundGroup
+
+			item := &widget.AccordionItem{
+				Title:  sectionName,
+				Detail: compoundGroup.CreateUI(),
+				Open:   true, // Open matching sections
+			}
+			e.accordion.Append(item)
+		} else {
+			// Create regular section group
+			sectionGroup := NewSectionGroup(section, e.iniFile, e.window, e.onValueChange)
+			e.sectionGroups[sectionName] = sectionGroup
+
+			item := sectionGroup.CreateUI()
+			item.Open = true // Open matching sections
+			e.accordion.Append(item)
+		}
+
+		processedSections[sectionName] = true
+	}
+}
+
+// sectionMatches checks if a section matches the search text.
+// It searches through all text in each option: key, description, default, value, enum values.
+func (e *Editor) sectionMatches(section *ConfigSection, searchLower string) bool {
+	// Check section name
+	if strings.Contains(strings.ToLower(section.Name), searchLower) {
+		return true
 	}
 
-	// For now, just expand all when searching
-	if searchText != "" {
-		e.accordion.OpenAll()
+	// Check section description
+	if strings.Contains(strings.ToLower(section.Description), searchLower) {
+		return true
 	}
+
+	// Check each option in the section
+	for _, option := range section.Options {
+		if e.optionMatches(option, searchLower) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// optionMatches checks if an option matches the search text.
+// Searches through key, description, default value, current value, and enum values.
+func (e *Editor) optionMatches(option *ConfigOption, searchLower string) bool {
+	// Check key name
+	if strings.Contains(strings.ToLower(option.Key), searchLower) {
+		return true
+	}
+
+	// Check description
+	if strings.Contains(strings.ToLower(option.Description), searchLower) {
+		return true
+	}
+
+	// Check default value
+	if strings.Contains(strings.ToLower(option.Default), searchLower) {
+		return true
+	}
+
+	// Check enum values
+	for _, enumValue := range option.EnumValues {
+		if strings.Contains(strings.ToLower(enumValue), searchLower) {
+			return true
+		}
+	}
+
+	// Check current value from INI file or form controls
+	currentValue := e.getCurrentValueForOption(option)
+	if strings.Contains(strings.ToLower(currentValue), searchLower) {
+		return true
+	}
+
+	// Check section name
+	if strings.Contains(strings.ToLower(option.Section), searchLower) {
+		return true
+	}
+
+	return false
+}
+
+// getCurrentValueForOption gets the current value for an option.
+func (e *Editor) getCurrentValueForOption(option *ConfigOption) string {
+	if e.iniFile == nil {
+		return option.Default
+	}
+
+	section := e.iniFile.Section(option.Section)
+	if section == nil {
+		return option.Default
+	}
+
+	key := section.Key(option.Key)
+	if key == nil || key.String() == "" {
+		return option.Default
+	}
+
+	return key.String()
 }
 
 // onValueChange handles value changes from form controls.

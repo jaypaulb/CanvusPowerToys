@@ -74,20 +74,20 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 	widgetOptionsLabel.TextStyle = fyne.TextStyle{Bold: true}
 	widgetOptionsTooltip := widget.NewLabel("Control widget interaction capabilities (temporary, reverts on canvas close)")
 
-	movingLabel := widget.NewLabel("Enable Moving")
-	movingTooltip := widget.NewLabel("Allow users to move canvas items (default: enabled)")
+	movingLabel := widget.NewLabel("Disable Moving")
+	movingTooltip := widget.NewLabel("Disable moving canvas items (default: enabled in Canvus)")
 	m.movingEnabled = widget.NewCheck("", nil)
-	m.movingEnabled.SetChecked(true) // Default: enabled
+	m.movingEnabled.SetChecked(false) // Default: unchecked (moving is enabled by default in Canvus)
 
-	scalingLabel := widget.NewLabel("Enable Scaling")
-	scalingTooltip := widget.NewLabel("Allow users to resize canvas items (default: enabled)")
+	scalingLabel := widget.NewLabel("Disable Scaling")
+	scalingTooltip := widget.NewLabel("Disable resizing canvas items (default: enabled in Canvus)")
 	m.scalingEnabled = widget.NewCheck("", nil)
-	m.scalingEnabled.SetChecked(true) // Default: enabled
+	m.scalingEnabled.SetChecked(false) // Default: unchecked (scaling is enabled by default in Canvus)
 
 	rotationLabel := widget.NewLabel("Enable Rotation")
-	rotationTooltip := widget.NewLabel("Allow users to rotate canvas items (default: disabled)")
+	rotationTooltip := widget.NewLabel("Enable rotating canvas items (default: disabled in Canvus)")
 	m.rotationEnabled = widget.NewCheck("", nil)
-	m.rotationEnabled.SetChecked(false) // Default: disabled
+	m.rotationEnabled.SetChecked(false) // Default: unchecked (rotation is disabled by default in Canvus)
 
 	// UI Visibility Options
 	uiVisibilityLabel := widget.NewLabel("UI Visibility Options")
@@ -357,31 +357,31 @@ func (m *Manager) generateCSS() string {
 	var css strings.Builder
 
 	// Widget Options: Control moving, scaling, and rotation
-	// Defaults: moving=true, scaling=true, rotation=false
-	// Only generate CSS if it differs from defaults
+	// Canvus defaults: moving=enabled, scaling=enabled, rotation=disabled
+	// Only generate CSS if user wants to override defaults
 	needsWidgetCSS := false
 	var widgetRules []string
 
-	if !m.movingEnabled.Checked {
-		// Default is enabled, so we need to disable it
+	if m.movingEnabled.Checked {
+		// User wants to disable moving (default is enabled)
 		widgetRules = append(widgetRules, "input-translate: false !important;")
 		needsWidgetCSS = true
 	}
-	if !m.scalingEnabled.Checked {
-		// Default is enabled, so we need to disable it
+	if m.scalingEnabled.Checked {
+		// User wants to disable scaling (default is enabled)
 		widgetRules = append(widgetRules, "input-scale: false !important;")
 		needsWidgetCSS = true
 	}
 	if m.rotationEnabled.Checked {
-		// Default is disabled, so we need to enable it
+		// User wants to enable rotation (default is disabled)
 		widgetRules = append(widgetRules, "input-rotation: true !important;")
 		needsWidgetCSS = true
 	}
 
 	if needsWidgetCSS {
-		css.WriteString("/* Widget Options CSS - Control widget interaction capabilities */\n")
+		css.WriteString("/* Widget Options CSS - Override Canvus defaults */\n")
 		css.WriteString("/* Note: These are temporary and revert when canvas is closed */\n")
-		css.WriteString("/* Defaults: moving=enabled, scaling=enabled, rotation=disabled */\n")
+		css.WriteString("/* Canvus defaults: moving=enabled, scaling=enabled, rotation=disabled */\n")
 		css.WriteString("CanvusCanvasWidget > * {\n")
 		for _, rule := range widgetRules {
 			css.WriteString("  " + rule + "\n")
@@ -481,7 +481,7 @@ func (m *Manager) updatePluginFolders(iniFile *ini.File, iniPath, pluginDir stri
 // launchCanvusWithConfig launches Canvus with the current CSS configuration.
 func (m *Manager) launchCanvusWithConfig(window fyne.Window) {
 	// Check if any options are enabled (widget options or UI visibility)
-	hasWidgetOptions := !m.movingEnabled.Checked || !m.scalingEnabled.Checked || m.rotationEnabled.Checked
+	hasWidgetOptions := m.movingEnabled.Checked || m.scalingEnabled.Checked || m.rotationEnabled.Checked
 	hasUIOptions := m.hideTitleBarsEnabled.Checked || m.hideResizeHandlesEnabled.Checked ||
 		m.hideSidebarEnabled.Checked || m.hideMainMenuEnabled.Checked || m.hideFingerMenuEnabled.Checked
 
@@ -592,10 +592,10 @@ func (m *Manager) getCSSDirectory() string {
 func (m *Manager) generateCSSFileName() string {
 	var parts []string
 
-	if !m.movingEnabled.Checked {
+	if m.movingEnabled.Checked {
 		parts = append(parts, "nomove")
 	}
-	if !m.scalingEnabled.Checked {
+	if m.scalingEnabled.Checked {
 		parts = append(parts, "noscale")
 	}
 	if m.rotationEnabled.Checked {
@@ -635,10 +635,10 @@ func (m *Manager) generateCSSFileName() string {
 func (m *Manager) generateShortcutName() string {
 	var parts []string
 
-	if !m.movingEnabled.Checked {
+	if m.movingEnabled.Checked {
 		parts = append(parts, "NoMove")
 	}
-	if !m.scalingEnabled.Checked {
+	if m.scalingEnabled.Checked {
 		parts = append(parts, "NoScale")
 	}
 	if m.rotationEnabled.Checked {

@@ -9,60 +9,26 @@ func GetEmbeddedSchema() *ConfigSchema {
 	// ============================================================================
 	// ROOT SECTION (no section header)
 	// ============================================================================
+	// Note: Some settings that appear in root in older documentation are actually
+	// in [system] section in the example file. They are placed in [system] below.
 
-	// lock-config
-	schema.AddOption(&ConfigOption{
-		Section:     "",
-		Key:         "lock-config",
-		Default:     "false",
-		Description: "Prevent Canvus client from making any changes to this configuration file. This option is primarily meant for public installations.",
-		Type:        ValueTypeBoolean,
-		EnumValues:  []string{"true", "false"},
-	})
 
-	// multi-user-mode-enabled
-	schema.AddOption(&ConfigOption{
-		Section:     "",
-		Key:         "multi-user-mode-enabled",
-		Default:     "auto",
-		Description: "Enabling multi-user mode optimizes the application user experience for large, multi-user installations. Disable it for a single user experience on personal devices like laptops.",
-		Type:        ValueTypeEnum,
-		EnumValues:  []string{"true", "false", "auto"},
-	})
+	// ============================================================================
+	// [system] SECTION
+	// ============================================================================
 
-	// virtual-keyboard-enabled
+	// canvus-folder
 	schema.AddOption(&ConfigOption{
-		Section:     "",
-		Key:         "virtual-keyboard-enabled",
-		Default:     "auto",
-		Description: "Should Canvus use a built-in virtual keyboard. Virtual keyboard is opened automatically if true, not opened automatically if false, or used if multi-user mode is enabled or when Windows 10 Tablet mode is enabled if auto.",
-		Type:        ValueTypeEnum,
-		EnumValues:  []string{"true", "false", "auto"},
-	})
-
-	// virtual-keyboard-layouts
-	schema.AddOption(&ConfigOption{
-		Section:     "",
-		Key:         "virtual-keyboard-layouts",
-		Default:     "en",
-		Description: "A comma separated list of enabled virtual keyboard layouts. The first item in the list is the default layout.",
-		Type:        ValueTypeCommaList,
-		EnumValues:  []string{"en", "fr", "ru"},
-	})
-
-	// virtual-keyboard-layout
-	schema.AddOption(&ConfigOption{
-		Section:     "",
-		Key:         "virtual-keyboard-layout",
-		Default:     "en",
-		Description: "Virtual keyboard layout / language.",
-		Type:        ValueTypeEnum,
-		EnumValues:  []string{"en", "fr"},
+		Section:     "system",
+		Key:         "canvus-folder",
+		Default:     "",
+		Description: "The directory that is opened from the finger menu. DEFAULT: Home directory of the active user in single user mode or folder stored inside content/root in multi-user mode.",
+		Type:        ValueTypeFilePath,
 	})
 
 	// inactive-timeout
 	schema.AddOption(&ConfigOption{
-		Section:     "",
+		Section:     "system",
 		Key:         "inactive-timeout",
 		Default:     "14400",
 		Description: "Timeout (in seconds) after which workspace is closed and returned to the welcome screen if the workspace hasn't been interacted with. Setting inactive-timeout=0 disables this feature.",
@@ -71,34 +37,61 @@ func GetEmbeddedSchema() *ConfigSchema {
 
 	// menu-timeout
 	schema.AddOption(&ConfigOption{
-		Section:     "",
+		Section:     "system",
 		Key:         "menu-timeout",
-		Default:     "10",
-		Description: "Timeout (in seconds) for expanded menus on the side or bottom of the canvas. Set to zero for no timeout.",
+		Default:     "15",
+		Description: "Timeout (in seconds) for expanded main menus. Set to zero for no timeout.",
 		Type:        ValueTypeNumber,
 	})
 
-	// canvus-folder
+	// virtual-keyboard-enabled
 	schema.AddOption(&ConfigOption{
-		Section:     "",
-		Key:         "canvus-folder",
-		Default:     "",
-		Description: "The directory that is opened from the finger menu. DEFAULT: Home directory of the active user in single user mode or folder stored inside content/root in multi-user mode.",
-		Type:        ValueTypeFilePath,
+		Section:     "system",
+		Key:         "virtual-keyboard-enabled",
+		Default:     "auto",
+		Description: "Should Canvus use a built-in virtual keyboard. Available options: true - Virtual keyboard is opened automatically, false - Virtual keyboard is not opened automatically, the system is expected to have a physical keyboard, auto - Virtual keyboard is used in multi-user mode or when running in Windows 10 Tablet mode.",
+		Type:        ValueTypeEnum,
+		EnumValues:  []string{"true", "false", "auto"},
+	})
+
+	// multi-user-mode-enabled
+	schema.AddOption(&ConfigOption{
+		Section:     "system",
+		Key:         "multi-user-mode-enabled",
+		Default:     "auto",
+		Description: "Enabling multi-user mode optimizes the application user experience for large, multi-user installations. Disable it for a single user experience on personal devices like laptops. Available options: true - Multi-user mode is enabled. QR code login is preferred, the user interface is optimized for multiple users. false - Multi-user mode is disabled. All local and network disk drives are shown in the volume list instead of just removable USB drives. auto - The system is considered to be in multi-user mode if the application display configuration (screen.xml) contains multiple windows, or if the touch configuration (config.txt) uses MultiTaction displays.",
+		Type:        ValueTypeEnum,
+		EnumValues:  []string{"true", "false", "auto"},
+	})
+
+	// virtual-keyboard-layouts
+	schema.AddOption(&ConfigOption{
+		Section:     "system",
+		Key:         "virtual-keyboard-layouts",
+		Default:     "en",
+		Description: "A comma separated list of enabled virtual keyboard layouts. The first item in the list is the default layout. Available choices are: en (English), fr (French), ru (Russian)",
+		Type:        ValueTypeCommaList,
+		EnumValues:  []string{"en", "fr", "ru"},
 	})
 
 	// default-canvas
 	schema.AddOption(&ConfigOption{
-		Section:     "",
+		Section:     "system",
 		Key:         "default-canvas",
 		Default:     "",
 		Description: "URL of the default canvas that can be quickly opened from the welcome screen.",
 		Type:        ValueTypeString,
 	})
 
-	// ============================================================================
-	// [system] SECTION
-	// ============================================================================
+	// lock-config
+	schema.AddOption(&ConfigOption{
+		Section:     "system",
+		Key:         "lock-config",
+		Default:     "false",
+		Description: "Prevent Canvus client from making any changes to this configuration file. This option is primarily meant for public installations.",
+		Type:        ValueTypeBoolean,
+		EnumValues:  []string{"true", "false"},
+	})
 
 	// show-volumes
 	schema.AddOption(&ConfigOption{
@@ -126,6 +119,107 @@ func GetEmbeddedSchema() *ConfigSchema {
 		Description: "Enables personal folder -feature that is triggered with Codice markers. See also server/codice-server setting in this file.",
 		Type:        ValueTypeBoolean,
 		EnumValues:  []string{"true", "false"},
+	})
+
+	// enable-codice-folders
+	schema.AddOption(&ConfigOption{
+		Section:     "system",
+		Key:         "enable-codice-folders",
+		Default:     "true",
+		Description: "Enables Codice folder -feature that is triggered with Codice markers. Also configure system/codice-server to use this feature.",
+		Type:        ValueTypeBoolean,
+		EnumValues:  []string{"true", "false"},
+	})
+
+	// enforce-canvas-password
+	schema.AddOption(&ConfigOption{
+		Section:     "system",
+		Key:         "enforce-canvas-password",
+		Default:     "false",
+		Description: "Specify if all newly-created local canvases must be protected by a password. This won't affect canvases on a remote server.",
+		Type:        ValueTypeBoolean,
+		EnumValues:  []string{"true", "false"},
+	})
+
+	// admin-info
+	schema.AddOption(&ConfigOption{
+		Section:     "system",
+		Key:         "admin-info",
+		Default:     "",
+		Description:  "Contact information for someone who can provide assistance when passwords have been lost. New lines can be created using \\n syntax.",
+		Type:        ValueTypeString,
+	})
+
+	// presentation-control-timeout-seconds
+	schema.AddOption(&ConfigOption{
+		Section:     "system",
+		Key:         "presentation-control-timeout-seconds",
+		Default:     "30",
+		Description: "Timeout (in seconds) for menu controls in full screen presentation mode.",
+		Type:        ValueTypeNumber,
+	})
+
+	// max-snapshot-resolution
+	schema.AddOption(&ConfigOption{
+		Section:     "system",
+		Key:         "max-snapshot-resolution",
+		Default:     "8192",
+		Description: "Max resolution (in pixels) for snapshot images created in MT Canvus.",
+		Type:        ValueTypeNumber,
+	})
+
+	// snapshot-scale
+	schema.AddOption(&ConfigOption{
+		Section:     "system",
+		Key:         "snapshot-scale",
+		Default:     "1.0",
+		Description: "When taking snapshots, scale images using this factor. Value 1.0 means that the snapshot is taken in native resolution. Values smaller than 1 make the snapshot smaller and more blurry, while bigger values increase the resolution and makes the picture sharper. Almost always 1.0 is good choice, but 2.0 could also be used for \"hi-dpi\" content. Notice that the snapshot resolution will still be limited by max-snapshot-resolution -setting.",
+		Type:        ValueTypeNumber,
+	})
+
+	// password-char-display-time
+	schema.AddOption(&ConfigOption{
+		Section:     "system",
+		Key:         "password-char-display-time",
+		Default:     "0.5",
+		Description: "The time in seconds to display a typed character in a password field before it is obscured.",
+		Type:        ValueTypeNumber,
+	})
+
+	// min-workspace-width-for-info-panel
+	schema.AddOption(&ConfigOption{
+		Section:     "system",
+		Key:         "min-workspace-width-for-info-panel",
+		Default:     "860",
+		Description: "The minimum width of a split workspace, below which the information panel is hidden. If 0, the information panel is never hidden.",
+		Type:        ValueTypeNumber,
+	})
+
+	// minimum-window-size
+	schema.AddOption(&ConfigOption{
+		Section:     "system",
+		Key:         "minimum-window-size",
+		Default:     "1024 768",
+		Description: "The minimum size the user can set the window to when single user mode is enabled. Set minimum-window-size=0 0 to remove the limit.",
+		Type:        ValueTypeString,
+	})
+
+	// max-open-files
+	schema.AddOption(&ConfigOption{
+		Section:     "system",
+		Key:         "max-open-files",
+		Default:     "4096",
+		Description: "The maximum number of files that can be opened by MT Canvus (Linux only).",
+		Type:        ValueTypeNumber,
+	})
+
+	// max-concurrent-tasks
+	schema.AddOption(&ConfigOption{
+		Section:     "system",
+		Key:         "max-concurrent-tasks",
+		Default:     "0",
+		Description: "The maximum number of background tasks that can be performed at the same time. DEFAULT: 0 (automatically chosen based on available CPU cores and other factors)",
+		Type:        ValueTypeNumber,
 	})
 
 	// ============================================================================
@@ -325,9 +419,152 @@ func GetEmbeddedSchema() *ConfigSchema {
 		EnumValues:  []string{"true", "false"},
 	})
 
+	// eraser-size
+	schema.AddOption(&ConfigOption{
+		Section:     "annotation",
+		Key:         "eraser-size",
+		Default:     "60 100",
+		Description: "Eraser size used by the rectangular shaped eraser.",
+		Type:        ValueTypeString,
+	})
+
+	// ============================================================================
+	// [welcome-screen] SECTION
+	// ============================================================================
+
+	// allow-exit
+	schema.AddOption(&ConfigOption{
+		Section:     "welcome-screen",
+		Key:         "allow-exit",
+		Default:     "true",
+		Description: "Should the exit button be visible in the welcome screen",
+		Type:        ValueTypeBoolean,
+		EnumValues:  []string{"true", "false"},
+	})
+
+	// ============================================================================
+	// [remote-touch] SECTION
+	// ============================================================================
+
+	// interface
+	schema.AddOption(&ConfigOption{
+		Section:     "remote-touch",
+		Key:         "interface",
+		Default:     "",
+		Description: "Network interface for remote touch. This is the interface remote devices will connect to. DEFAULT: em1 (Linux (if server-ip is not specified, otherwise empty)), empty (other OS)",
+		Type:        ValueTypeString,
+	})
+
+	// port
+	schema.AddOption(&ConfigOption{
+		Section:     "remote-touch",
+		Key:         "port",
+		Default:     "5010",
+		Description: "First port to use for remote touch. Each source uses a different port starting from the specified port.",
+		Type:        ValueTypeNumber,
+	})
+
+	// server-ip
+	schema.AddOption(&ConfigOption{
+		Section:     "remote-touch",
+		Key:         "server-ip",
+		Default:     "",
+		Description: "IP address of the remote touch server (if no interface is specified). This is useful for Windows platform where the interface cannot be relied on to remain constant.",
+		Type:        ValueTypeString,
+	})
+
+	// ============================================================================
+	// [password-security] SECTION
+	// ============================================================================
+
+	// min-length
+	schema.AddOption(&ConfigOption{
+		Section:     "password-security",
+		Key:         "min-length",
+		Default:     "4",
+		Description: "Canvas password must be at least n characters. Set to 0 or empty for no restriction.",
+		Type:        ValueTypeNumber,
+	})
+
+	// min-lowercase
+	schema.AddOption(&ConfigOption{
+		Section:     "password-security",
+		Key:         "min-lowercase",
+		Default:     "0",
+		Description: "Canvas password must contain at least n lowercase characters. Set to 0 or empty for no restriction.",
+		Type:        ValueTypeNumber,
+	})
+
+	// min-uppercase
+	schema.AddOption(&ConfigOption{
+		Section:     "password-security",
+		Key:         "min-uppercase",
+		Default:     "0",
+		Description: "Canvas password must contain at least n uppercase characters. Set to 0 or empty for no restriction.",
+		Type:        ValueTypeNumber,
+	})
+
+	// min-numeric
+	schema.AddOption(&ConfigOption{
+		Section:     "password-security",
+		Key:         "min-numeric",
+		Default:     "0",
+		Description: "Canvas password must contain at least n numeric characters. Set to 0 or empty for no restriction.",
+		Type:        ValueTypeNumber,
+	})
+
+	// min-symbol
+	schema.AddOption(&ConfigOption{
+		Section:     "password-security",
+		Key:         "min-symbol",
+		Default:     "0",
+		Description: "Canvas password must contain at least n symbol characters. Set to 0 or empty for no restriction.",
+		Type:        ValueTypeNumber,
+	})
+
+	// max-repeats
+	schema.AddOption(&ConfigOption{
+		Section:     "password-security",
+		Key:         "max-repeats",
+		Default:     "0",
+		Description: "Canvas password cannot contain any string of more than n repeating characters. Set to 0 or empty for no restriction.",
+		Type:        ValueTypeNumber,
+	})
+
+	// max-sequence
+	schema.AddOption(&ConfigOption{
+		Section:     "password-security",
+		Key:         "max-sequence",
+		Default:     "0",
+		Description: "Canvas password cannot contain any ascending or descending sequence of more than n alphanumeric characters. Set to 0 or empty for no restriction.",
+		Type:        ValueTypeNumber,
+	})
+
+	// ============================================================================
+	// [content] SECTION
+	// ============================================================================
+
+	// root
+	schema.AddOption(&ConfigOption{
+		Section:     "content",
+		Key:         "root",
+		Default:     "",
+		Description: "Root folder for the application. DEFAULT: ~/MultiTaction/canvus-data (Linux) or C:\\Users\\username\\AppData\\Roaming\\MultiTaction/canvus-data (Windows). NOTE: Backslashes in paths need special handling on Windows computers. Replace each \\ with \\\\ or /.",
+		Type:        ValueTypeFilePath,
+	})
+
 	// ============================================================================
 	// [canvas] SECTION
 	// ============================================================================
+
+	// size
+	schema.AddOption(&ConfigOption{
+		Section:     "canvas",
+		Key:         "size",
+		Default:     "9600",
+		Description: "Size of the canvas area. This can be specified with either one or two values. Two values (separated by space) can be used to define the width and height of the canvas. If only one value is specified, it represents the length of the longer edge of the canvas area. The shorter edge is calculated automatically when a new canvas is created so that the canvas will have the same aspect ratio as the the installation it is created on.",
+		Type:        ValueTypeString,
+	})
 
 	// pin-canvas
 	schema.AddOption(&ConfigOption{
@@ -388,6 +625,125 @@ func GetEmbeddedSchema() *ConfigSchema {
 		Default:     "0",
 		Description: "This setting only applies to local canvases. If set, an unpinned widget is pinned after it has not been scaled or moved for the specified number of seconds. If zero, the widget is never auto-pinned.",
 		Type:        ValueTypeNumber,
+	})
+
+	// activation-gestures
+	schema.AddOption(&ConfigOption{
+		Section:     "widget",
+		Key:         "activation-gestures",
+		Default:     "all",
+		Description: "Comma separated list of gestures that activate the unpinned item. When item is activated, its border menus are displayed. Possible gestures are: all - Any interaction with the item will activate it, tap - Item is tapped or clicked, tap-and-delay - Item is tapped and no interaction occurs for short duration, hold - Item has finger(s) held on top of it for a short duration.",
+		Type:        ValueTypeCommaList,
+		EnumValues:  []string{"all", "tap", "tap-and-delay", "hold"},
+	})
+
+	// ============================================================================
+	// [pdf] SECTION
+	// ============================================================================
+
+	// raster-resolution
+	schema.AddOption(&ConfigOption{
+		Section:     "pdf",
+		Key:         "raster-resolution",
+		Default:     "2048",
+		Description: "Resolution in pixels for PDFs to be rasterized. The longer edge of a PDF page will match the specified resolution.",
+		Type:        ValueTypeNumber,
+	})
+
+	// ============================================================================
+	// [video] SECTION
+	// ============================================================================
+
+	// tap-to-play
+	schema.AddOption(&ConfigOption{
+		Section:     "video",
+		Key:         "tap-to-play",
+		Default:     "false",
+		Description: "If true, tapping a video will play or pause the video. If false, the play button must be tapped explicitly.",
+		Type:        ValueTypeBoolean,
+		EnumValues:  []string{"true", "false"},
+	})
+
+	// screenshare-audio
+	schema.AddOption(&ConfigOption{
+		Section:     "video",
+		Key:         "screenshare-audio",
+		Default:     "false",
+		Description: "If false, audio will be initially muted when a screenshare widget is opened. DEFAULT: false (videos are muted)",
+		Type:        ValueTypeBoolean,
+		EnumValues:  []string{"true", "false"},
+	})
+
+	// ============================================================================
+	// [video-stream] SECTION
+	// ============================================================================
+
+	// min-fps
+	schema.AddOption(&ConfigOption{
+		Section:     "video-stream",
+		Key:         "min-fps",
+		Default:     "14",
+		Description: "Set the minimum preferred frame rate",
+		Type:        ValueTypeNumber,
+	})
+
+	// max-fps
+	schema.AddOption(&ConfigOption{
+		Section:     "video-stream",
+		Key:         "max-fps",
+		Default:     "31",
+		Description: "Set the maximum preferred frame rate",
+		Type:        ValueTypeNumber,
+	})
+
+	// min-resolution
+	schema.AddOption(&ConfigOption{
+		Section:     "video-stream",
+		Key:         "min-resolution",
+		Default:     "800 600",
+		Description: "Set the minimum preferred pixel resolution",
+		Type:        ValueTypeString,
+	})
+
+	// max-resolution
+	schema.AddOption(&ConfigOption{
+		Section:     "video-stream",
+		Key:         "max-resolution",
+		Default:     "3840 2160",
+		Description: "Set the maximum preferred pixel resolution",
+		Type:        ValueTypeString,
+	})
+
+	// prefer-uncompressed
+	schema.AddOption(&ConfigOption{
+		Section:     "video-stream",
+		Key:         "prefer-uncompressed",
+		Default:     "true",
+		Description: "Indicate preference for using full-frame (uncompressed) video streams",
+		Type:        ValueTypeBoolean,
+		EnumValues:  []string{"true", "false"},
+	})
+
+	// ============================================================================
+	// [image-search] SECTION
+	// ============================================================================
+
+	// api-key
+	schema.AddOption(&ConfigOption{
+		Section:     "image-search",
+		Key:         "api-key",
+		Default:     "",
+		Description: "Google Custom Search API key. See Image search documentation for details. DEFAULT: <Multitaction API key - private data>",
+		Type:        ValueTypeString,
+	})
+
+	// engine-id
+	schema.AddOption(&ConfigOption{
+		Section:     "image-search",
+		Key:         "engine-id",
+		Default:     "",
+		Description: "Google Custom Search Engine id. DEFAULT: <Multitaction Engine Id - private data>",
+		Type:        ValueTypeString,
 	})
 
 	// ============================================================================
@@ -542,10 +898,10 @@ func GetEmbeddedSchema() *ConfigSchema {
 	remoteDesktopSection.IsCompound = true
 	remoteDesktopSection.Pattern = "remote-desktop"
 
-	// hostname
+	// host (note: example file uses "host" not "hostname")
 	schema.AddOption(&ConfigOption{
 		Section:     "remote-desktop",
-		Key:         "hostname",
+		Key:         "host",
 		Default:     "",
 		Description: "Hostname or IP address of the RDP server with an optional port number. If this parameter is empty, the whole configuration block is disabled. Examples: localhost, rdp.example.com, 10.0.0.1:1234",
 		Type:        ValueTypeString,
@@ -738,6 +1094,277 @@ func GetEmbeddedSchema() *ConfigSchema {
 		Key:         "mouse-emulation",
 		Default:     "false",
 		Description: "Browsers can handle touches by either passing all touches to the browser or converting the first touch to mouse clicks and drags. Different web apps work better with the two alternative behaviors. The user can pick the best behavior on the browser. This setting determines the default state for new browsers. If true, then, by default, touches are converted to mouse clicks.",
+		Type:        ValueTypeBoolean,
+		EnumValues:  []string{"true", "false"},
+	})
+
+	// ============================================================================
+	// [backup] SECTION
+	// ============================================================================
+
+	// root
+	schema.AddOption(&ConfigOption{
+		Section:     "backup",
+		Key:         "root",
+		Default:     "",
+		Description: "Default path to store automatic client backups. Set to empty to disable automatic backup on software update. DEFAULT (Linux): ~/MultiTaction/canvus/backups DEFAULT (Windows): <LOCAL APP DATA>\\MultiTaction\\canvus\\backups",
+		Type:        ValueTypeFilePath,
+	})
+
+	// ============================================================================
+	// [auxiliary-pc] SECTION
+	// ============================================================================
+
+	// host
+	schema.AddOption(&ConfigOption{
+		Section:     "auxiliary-pc",
+		Key:         "host",
+		Default:     "",
+		Description: "IP address of the auxiliary PC - leave blank to disable auxiliary PC functionality.",
+		Type:        ValueTypeString,
+	})
+
+	// port
+	schema.AddOption(&ConfigOption{
+		Section:     "auxiliary-pc",
+		Key:         "port",
+		Default:     "",
+		Description: "Port to use for communicating with the MTCanvusAgent on the auxiliary PC.",
+		Type:        ValueTypeString,
+	})
+
+	// primary
+	schema.AddOption(&ConfigOption{
+		Section:     "auxiliary-pc",
+		Key:         "primary",
+		Default:     "USB",
+		Description: "Mount folder name under the location specified by mount-folder (see below) for remote unencrypted USB drive.",
+		Type:        ValueTypeString,
+	})
+
+	// secondary
+	schema.AddOption(&ConfigOption{
+		Section:     "auxiliary-pc",
+		Key:         "secondary",
+		Default:     "Encrypted",
+		Description: "Mount folder name under the location specified by mount-folder (see below) for remote encrypted USB drive.",
+		Type:        ValueTypeString,
+	})
+
+	// aux
+	schema.AddOption(&ConfigOption{
+		Section:     "auxiliary-pc",
+		Key:         "aux",
+		Default:     "Auxpc",
+		Description: "Mount folder name under the location specified by mount-folder (see below) for sharing files to be opened on the auxiliary PC.",
+		Type:        ValueTypeString,
+	})
+
+	// primary-share
+	schema.AddOption(&ConfigOption{
+		Section:     "auxiliary-pc",
+		Key:         "primary-share",
+		Default:     "",
+		Description: "Auxiliary PC share name for unencrypted USB drive, e.g. CanvusUSB. This value is configured on the Auxiliary PC but can be overridden here.",
+		Type:        ValueTypeString,
+	})
+
+	// secondary-share
+	schema.AddOption(&ConfigOption{
+		Section:     "auxiliary-pc",
+		Key:         "secondary-share",
+		Default:     "",
+		Description: "Auxiliary PC share name for encrypted USB drive, e.g. CanvusEncrypted. This value is configured on the Auxiliary PC but can be overridden here.",
+		Type:        ValueTypeString,
+	})
+
+	// aux-share
+	schema.AddOption(&ConfigOption{
+		Section:     "auxiliary-pc",
+		Key:         "aux-share",
+		Default:     "Desktop",
+		Description: "Auxiliary PC share name for shared files to be opened on the auxiliary PC.",
+		Type:        ValueTypeString,
+	})
+
+	// username
+	schema.AddOption(&ConfigOption{
+		Section:     "auxiliary-pc",
+		Key:         "username",
+		Default:     "multi",
+		Description: "Windows user for auxiliary PC.",
+		Type:        ValueTypeString,
+	})
+
+	// password
+	schema.AddOption(&ConfigOption{
+		Section:     "auxiliary-pc",
+		Key:         "password",
+		Default:     "",
+		Description: "Windows user password for auxiliary PC.",
+		Type:        ValueTypeString,
+	})
+
+	// remote-source
+	schema.AddOption(&ConfigOption{
+		Section:     "auxiliary-pc",
+		Key:         "remote-source",
+		Default:     "/dev/video0",
+		Description: "Video source being used for the auxiliary PC desktop. Example strings for Linux and Windows are suggested in the example file.",
+		Type:        ValueTypeString,
+	})
+
+	// desktop-mode-exts
+	schema.AddOption(&ConfigOption{
+		Section:     "auxiliary-pc",
+		Key:         "desktop-mode-exts",
+		Default:     "doc,docx,ppt,pptx,xls,xlsx",
+		Description: "Comma-separated list of file extensions supported.",
+		Type:        ValueTypeCommaList,
+	})
+
+	// log-messages
+	schema.AddOption(&ConfigOption{
+		Section:     "auxiliary-pc",
+		Key:         "log-messages",
+		Default:     "true",
+		Description: "Set to true to log TCP messages to/from the auxiliary PC.",
+		Type:        ValueTypeBoolean,
+		EnumValues:  []string{"true", "false"},
+	})
+
+	// canvus-mapped-drive
+	schema.AddOption(&ConfigOption{
+		Section:     "auxiliary-pc",
+		Key:         "canvus-mapped-drive",
+		Default:     "",
+		Description: "The drive letter assigned on the AuxPC to the network share on the CanvusPC (as configured in the 'local-share' section below).",
+		Type:        ValueTypeString,
+	})
+
+	// remote-touch-interface
+	schema.AddOption(&ConfigOption{
+		Section:     "auxiliary-pc",
+		Key:         "remote-touch-interface",
+		Default:     "",
+		Description: "Network interface for remote touch on the auxiliary PC. This is the interface remote devices will connect to. If empty, the following values are used: * Linux: em2 (if remote-touch-server-ip is not specified, otherwise empty) * Windows: empty",
+		Type:        ValueTypeString,
+	})
+
+	// remote-touch-port
+	schema.AddOption(&ConfigOption{
+		Section:     "auxiliary-pc",
+		Key:         "remote-touch-port",
+		Default:     "5020",
+		Description: "The port number to use for remote touch on any auxiliary PC widgets (this should differ from the port value used in the [remote touch] section above).",
+		Type:        ValueTypeNumber,
+	})
+
+	// remote-touch-server-ip
+	schema.AddOption(&ConfigOption{
+		Section:     "auxiliary-pc",
+		Key:         "remote-touch-server-ip",
+		Default:     "",
+		Description: "IP address of the auxiliary PC remote touch server (if no interface is specified). This is useful for Windows platform where the interface cannot be relied on to remain constant.",
+		Type:        ValueTypeString,
+	})
+
+	// ============================================================================
+	// [local-share] SECTION
+	// ============================================================================
+
+	// shared-folder
+	schema.AddOption(&ConfigOption{
+		Section:     "local-share",
+		Key:         "shared-folder",
+		Default:     "",
+		Description: "The folder on the local Canvus PC which has been exposed as an SMB share for the AuxPC to connect to. NOTE: Backslashes in paths need special handling on Windows computers. Replace each \\ with \\\\ or /.",
+		Type:        ValueTypeFilePath,
+	})
+
+	// share-name
+	schema.AddOption(&ConfigOption{
+		Section:     "local-share",
+		Key:         "share-name",
+		Default:     "",
+		Description: "The name of the share given to the folder above (i.e. as it appears on the network).",
+		Type:        ValueTypeString,
+	})
+
+	// ============================================================================
+	// [output:<name>] SECTION (Compound)
+	// ============================================================================
+	// Mark as compound section
+	if section := schema.GetSection("output"); section == nil {
+		section = &ConfigSection{
+			Name:            "output",
+			Description:     "Video output settings. Configure an output block with [output:name] for each output. You can have multiple outputs, each output name must be unique. The output name will be visible in Canvus.",
+			Options:         []*ConfigOption{},
+			IsCompound:      true,
+			Pattern:         "output",
+			CompoundEntries: make(map[string][]*ConfigOption),
+		}
+		schema.Sections["output"] = section
+	}
+	outputSection := schema.GetSection("output")
+	outputSection.IsCompound = true
+	outputSection.Pattern = "output"
+
+	// location
+	schema.AddOption(&ConfigOption{
+		Section:     "output",
+		Key:         "location",
+		Default:     "",
+		Description: "Location of the output (x y coordinates)",
+		Type:        ValueTypeString,
+	})
+
+	// size
+	schema.AddOption(&ConfigOption{
+		Section:     "output",
+		Key:         "size",
+		Default:     "",
+		Description: "Size of the output (width height)",
+		Type:        ValueTypeString,
+	})
+
+	// ============================================================================
+	// [remote-mount] SECTION
+	// ============================================================================
+
+	// daemon-port
+	schema.AddOption(&ConfigOption{
+		Section:     "remote-mount",
+		Key:         "daemon-port",
+		Default:     "8081",
+		Description: "Port to use for communicating with the local mt-canvus-daemon.",
+		Type:        ValueTypeNumber,
+	})
+
+	// mount-options
+	schema.AddOption(&ConfigOption{
+		Section:     "remote-mount",
+		Key:         "mount-options",
+		Default:     "",
+		Description: "Comma separated list of additional options to pass to the mount command, e.g. vers=2.0 to set the SMB version. Note that this setting is ignored on Windows installations.",
+		Type:        ValueTypeCommaList,
+	})
+
+	// mount-folder
+	schema.AddOption(&ConfigOption{
+		Section:     "remote-mount",
+		Key:         "mount-folder",
+		Default:     "/mnt",
+		Description: "Linux: The root folder on this PC for mounting shares into. Windows: The local folder to hold links to remote shares. NOTE: Backslashes in paths need special handling on Windows computers. Replace each \\ with \\\\ or /.",
+		Type:        ValueTypeFilePath,
+	})
+
+	// log-messages
+	schema.AddOption(&ConfigOption{
+		Section:     "remote-mount",
+		Key:         "log-messages",
+		Default:     "true",
+		Description: "Set to true to log TCP messages to/from the mt-canvus-daemon.",
 		Type:        ValueTypeBoolean,
 		EnumValues:  []string{"true", "false"},
 	})
