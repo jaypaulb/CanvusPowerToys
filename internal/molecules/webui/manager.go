@@ -23,6 +23,7 @@ type Manager struct {
 	server       *http.Server
 	serverURL    *widget.Entry
 	authToken    *widget.Entry
+	serverPort   *widget.Entry
 	serverStatus *widget.Label
 	enabledPages map[string]*widget.Check
 	startStopBtn *widget.Button
@@ -50,6 +51,7 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 **Configuration:**
 - Canvus Server URL: Your Canvus server address
 - User Auth Token: Access token from Canvus server profile
+- WebUI Server Port: Port number for the local WebUI server (default: 8080)
 - Enabled Pages: Select which WebUI pages to enable
 `)
 
@@ -64,6 +66,12 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 	m.authToken = widget.NewEntry()
 	m.authToken.SetPlaceHolder("Paste your access token here")
 	m.authToken.Password = true // Hide token input
+
+	// Server Port
+	serverPortLabel := widget.NewLabel("WebUI Server Port:")
+	m.serverPort = widget.NewEntry()
+	m.serverPort.SetPlaceHolder("8080")
+	m.serverPort.SetText("8080")
 
 	// Token instructions
 	tokenInstructions := widget.NewRichTextFromMarkdown(`
@@ -120,6 +128,7 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 		container.NewGridWithColumns(2,
 			serverURLLabel, m.serverURL,
 			authTokenLabel, m.authToken,
+			serverPortLabel, m.serverPort,
 		),
 		tokenInstructions,
 		widget.NewSeparator(),
@@ -191,13 +200,24 @@ func (m *Manager) saveConfiguration(window fyne.Window) {
 	dialog.ShowInformation("Saved", "Configuration saved successfully", window)
 }
 
-// testConnection tests the connection to the Canvus server.
+// testConnection tests both the local WebUI server and the remote Canvus server connection.
 func (m *Manager) testConnection(window fyne.Window) {
+	port := m.serverPort.Text
+	if port == "" {
+		port = "8080"
+	}
+
 	serverURL := m.serverURL.Text
 	authToken := m.authToken.Text
 
+	// Validate inputs
+	if port == "" {
+		dialog.ShowError(fmt.Errorf("Port cannot be empty"), window)
+		return
+	}
+
 	if serverURL == "" {
-		dialog.ShowError(fmt.Errorf("Server URL cannot be empty"), window)
+		dialog.ShowError(fmt.Errorf("Canvus Server URL cannot be empty"), window)
 		return
 	}
 
@@ -206,53 +226,100 @@ func (m *Manager) testConnection(window fyne.Window) {
 		return
 	}
 
-	// Test connection
-	m.serverStatus.SetText("Testing connection...")
-	m.serverStatus.Importance = widget.MediumImportance
-
 	// Create HTTP client with timeout
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 
-	// Test endpoint (adjust based on actual API)
-	testURL := fmt.Sprintf("%s/api/health", serverURL)
-	req, err := http.NewRequest("GET", testURL, nil)
-	if err != nil {
-		m.serverStatus.SetText("Connection failed: Invalid URL")
-		m.serverStatus.Importance = widget.DangerImportance
-		dialog.ShowError(fmt.Errorf("Failed to create request: %w", err), window)
-		return
-	}
+	var localTestResult, remoteTestResult string
+	var localTestSuccess, remoteTestSuccess bool
 
-	// Add auth token
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
+	// Test 1: Local WebUI Server
+	m.serverStatus.SetText("Testing local WebUI server...")
+	m.serverStatus.Importance = widget.MediumImportance
 
-	// Make request
-	resp, err := client.Do(req)
-	if err != nil {
-		m.serverStatus.SetText("Connection failed: Network error")
-		m.serverStatus.Importance = widget.DangerImportance
-		dialog.ShowError(fmt.Errorf("Connection failed: %w", err), window)
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusUnauthorized {
-		// StatusUnauthorized might mean server is reachable but token is invalid
-		if resp.StatusCode == http.StatusUnauthorized {
-			m.serverStatus.SetText("Connection successful, but token may be invalid")
-			m.serverStatus.Importance = widget.WarningImportance
-			dialog.ShowInformation("Connection Test", "Server is reachable, but authentication failed. Please check your token.", window)
-		} else {
-			m.serverStatus.SetText("Connection successful")
-			m.serverStatus.Importance = widget.SuccessImportance
-			dialog.ShowInformation("Connection Test", "Successfully connected to Canvus server!", window)
-		}
+	if m.server == nil {
+		localTestResult = fmt.Sprintf("❌ Local WebUI server is not running\n   Please start the server first.")
+		localTestSuccess = false
 	} else {
-		m.serverStatus.SetText(fmt.Sprintf("Connection failed: HTTP %d", resp.StatusCode))
+		localTestURL := fmt.Sprintf("http://localhost:%s/health", port)
+		req, err := http.NewRequest("GET", localTestURL, nil)
+		if err != nil {
+			localTestResult = fmt.Sprintf("❌ Failed to create request: %v\n   URL: %s", err, localTestURL)
+			localTestSuccess = false
+		} else {
+			resp, err := client.Do(req)
+			if err != nil {
+				localTestResult = fmt.Sprintf("❌ Cannot connect to local server on port %s\n   Error: %v\n   URL: %s\n   Make sure the server is running and the port is correct.", port, err, localTestURL)
+				localTestSuccess = false
+			} else {
+				resp.Body.Close()
+				if resp.StatusCode == http.StatusOK {
+					localTestResult = fmt.Sprintf("✅ Local WebUI server responding\n   URL: %s\n   Status: OK", localTestURL)
+					localTestSuccess = true
+				} else {
+					localTestResult = fmt.Sprintf("❌ Server returned HTTP %d\n   URL: %s\n   Server may be running but not responding correctly.", resp.StatusCode, localTestURL)
+					localTestSuccess = false
+				}
+			}
+		}
+	}
+
+	// Test 2: Remote Canvus Server
+	m.serverStatus.SetText("Testing connection to Canvus server...")
+	m.serverStatus.Importance = widget.MediumImportance
+
+	// Normalize server URL (remove trailing slash, ensure it doesn't have /api/v1)
+	baseURL := strings.TrimSuffix(serverURL, "/")
+	baseURL = strings.TrimSuffix(baseURL, "/api/v1")
+	baseURL = strings.TrimSuffix(baseURL, "/api")
+
+	remoteTestURL := fmt.Sprintf("%s/api/v1/clients", baseURL)
+	req, err := http.NewRequest("GET", remoteTestURL, nil)
+	if err != nil {
+		remoteTestResult = fmt.Sprintf("❌ Failed to create request: %v\n   URL: %s", err, remoteTestURL)
+		remoteTestSuccess = false
+	} else {
+		// Use Private-Token header for Canvus API
+		req.Header.Set("Private-Token", authToken)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			remoteTestResult = fmt.Sprintf("❌ Cannot connect to Canvus server\n   Error: %v\n   URL: %s\n   Check your server URL and network connection.", err, remoteTestURL)
+			remoteTestSuccess = false
+		} else {
+			resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				remoteTestResult = fmt.Sprintf("✅ Canvus server connection successful\n   URL: %s\n   Status: OK", remoteTestURL)
+				remoteTestSuccess = true
+			} else if resp.StatusCode == http.StatusUnauthorized {
+				remoteTestResult = fmt.Sprintf("⚠️  Server reachable but authentication failed\n   URL: %s\n   HTTP Status: %d\n   Please check your auth token.", remoteTestURL, resp.StatusCode)
+				remoteTestSuccess = false
+			} else {
+				remoteTestResult = fmt.Sprintf("❌ Server returned HTTP %d\n   URL: %s\n   Server may be reachable but endpoint not available.", resp.StatusCode, remoteTestURL)
+				remoteTestSuccess = false
+			}
+		}
+	}
+
+	// Update status and show results
+	if localTestSuccess && remoteTestSuccess {
+		m.serverStatus.SetText("All tests passed")
+		m.serverStatus.Importance = widget.SuccessImportance
+		dialog.ShowInformation("Connection Test Results",
+			fmt.Sprintf("✅ All tests passed!\n\n%s\n\n%s", localTestResult, remoteTestResult),
+			window)
+	} else if localTestSuccess || remoteTestSuccess {
+		m.serverStatus.SetText("Partial success - see details")
+		m.serverStatus.Importance = widget.WarningImportance
+		dialog.ShowInformation("Connection Test Results",
+			fmt.Sprintf("⚠️  Partial success\n\n%s\n\n%s", localTestResult, remoteTestResult),
+			window)
+	} else {
+		m.serverStatus.SetText("All tests failed")
 		m.serverStatus.Importance = widget.DangerImportance
-		dialog.ShowError(fmt.Errorf("Connection failed: HTTP %d", resp.StatusCode), window)
+		dialog.ShowError(fmt.Errorf("❌ All tests failed\n\n%s\n\n%s", localTestResult, remoteTestResult), window)
 	}
 }
 
@@ -269,7 +336,22 @@ func (m *Manager) toggleServer(window fyne.Window) {
 
 // startServer starts the local web server.
 func (m *Manager) startServer(window fyne.Window) {
-	port := "8080" // Default port, could be configurable
+	port := m.serverPort.Text
+	if port == "" {
+		port = "8080"
+	}
+
+	// Validate port
+	if port == "" {
+		dialog.ShowError(fmt.Errorf("Port cannot be empty. Please enter a valid port number (e.g., 8080)"), window)
+		return
+	}
+
+	// Check if port is already in use by checking if server is already running
+	if m.server != nil {
+		dialog.ShowError(fmt.Errorf("Server is already running. Please stop it first."), window)
+		return
+	}
 
 	mux := http.NewServeMux()
 
@@ -277,8 +359,9 @@ func (m *Manager) startServer(window fyne.Window) {
 	staticHandler := NewStaticHandler()
 	staticHandler.ServeFiles(mux)
 
-	// Default health check endpoint
+	// Health check endpoint
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
@@ -292,17 +375,24 @@ func (m *Manager) startServer(window fyne.Window) {
 	go func() {
 		if err := m.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Server error: %v\n", err)
+			// Update UI on error (need to use fyne.App.QueueEvent or similar for thread safety)
 			m.serverStatus.SetText(fmt.Sprintf("Server error: %v", err))
 			m.serverStatus.Importance = widget.DangerImportance
+			m.server = nil
+			m.startStopBtn.SetText("Start Server")
 		}
 	}()
 
+	// Give server a moment to start
+	time.Sleep(100 * time.Millisecond)
+
 	// Update UI
-	m.serverStatus.SetText(fmt.Sprintf("Server: Running on http://localhost:%s", port))
+	serverURL := fmt.Sprintf("http://localhost:%s", port)
+	m.serverStatus.SetText(fmt.Sprintf("Server: Running on %s", serverURL))
 	m.serverStatus.Importance = widget.SuccessImportance
 	m.startStopBtn.SetText("Stop Server")
 
-	dialog.ShowInformation("Server Started", fmt.Sprintf("WebUI server is running on:\nhttp://localhost:%s", port), window)
+	dialog.ShowInformation("Server Started", fmt.Sprintf("WebUI server is running on:\n%s\n\nYou can access it in your browser at:\n%s", serverURL, serverURL), window)
 }
 
 // stopServer stops the local web server.
