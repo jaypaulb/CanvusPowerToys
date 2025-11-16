@@ -130,6 +130,10 @@ func (xg *XMLGenerator) Generate() ([]byte, error) {
 	// Group cells by GPU output to create windows
 	gpuGroups := xg.groupCellsByGPU()
 
+	// Counters for unique window and area names
+	windowCounter := 1
+	areaCounter := 1
+
 	if xg.areaPerGPU {
 		// Area per GPU (window) mode: Create one area per window matching all outputs on that GPU
 		// Group by GPU number to create windows
@@ -137,7 +141,7 @@ func (xg *XMLGenerator) Generate() ([]byte, error) {
 
 		// Create windows for each GPU
 		for gpuNum, outputs := range windowsByGPU {
-			window := xg.createWindowForGPU(gpuNum, outputs)
+			window := xg.createWindowForGPU(gpuNum, outputs, &windowCounter, &areaCounter)
 			if window != nil {
 				screenXML.Windows = append(screenXML.Windows, *window)
 			}
@@ -149,7 +153,7 @@ func (xg *XMLGenerator) Generate() ([]byte, error) {
 
 		// Create windows for each GPU, with one area per output
 		for gpuNum, outputs := range windowsByGPU {
-			window := xg.createWindowForScreen(gpuNum, outputs)
+			window := xg.createWindowForScreen(gpuNum, outputs, &windowCounter, &areaCounter)
 			if window != nil {
 				screenXML.Windows = append(screenXML.Windows, *window)
 			}
@@ -239,7 +243,7 @@ func (xg *XMLGenerator) groupByGPU(gpuGroups map[string][]CellCoord) map[int]map
 
 // createWindowForGPU creates a WindowConfig with a single area matching the window size.
 // This is used when "area per GPU" mode is enabled (one area per window, matching all outputs on that GPU).
-func (xg *XMLGenerator) createWindowForGPU(gpuNum int, outputs map[string][]CellCoord) *WindowConfig {
+func (xg *XMLGenerator) createWindowForGPU(gpuNum int, outputs map[string][]CellCoord, windowCounter *int, areaCounter *int) *WindowConfig {
 	if len(outputs) == 0 {
 		return nil
 	}
@@ -249,8 +253,11 @@ func (xg *XMLGenerator) createWindowForGPU(gpuNum int, outputs map[string][]Cell
 	windowWidth := maxX - minX
 	windowHeight := maxY - minY
 
+	windowName := fmt.Sprintf("window%d", *windowCounter)
+	*windowCounter++
+
 	window := &WindowConfig{
-		Type:            "window",
+		Type:            windowName,
 		DirectRendering: &XMLAttr{Type: "", Value: "1"},
 		Frameless:       &XMLAttr{Type: "", Value: "1"},
 		FsaaSamples:     &XMLAttr{Type: "", Value: "4"},
@@ -270,9 +277,10 @@ func (xg *XMLGenerator) createWindowForGPU(gpuNum int, outputs map[string][]Cell
 	}
 
 	// Create one area for the entire window
-	area := xg.createAreaForWindow(allCells, minX, minY, windowWidth, windowHeight)
+	area := xg.createAreaForWindow(allCells, minX, minY, windowWidth, windowHeight, areaCounter)
 	if area != nil {
 		window.Areas = append(window.Areas, *area)
+		*areaCounter++
 	}
 
 	return window
@@ -337,7 +345,7 @@ type CellCoord struct {
 }
 
 // createAreaForGPU creates an AreaConfig for a GPU output group.
-func (xg *XMLGenerator) createAreaForGPU(gpuOutput string, cells []CellCoord) *AreaConfig {
+func (xg *XMLGenerator) createAreaForGPU(gpuOutput string, cells []CellCoord, areaCounter *int) *AreaConfig {
 	if len(cells) == 0 {
 		return nil
 	}
@@ -434,7 +442,7 @@ func (xg *XMLGenerator) createAreaForGPU(gpuOutput string, cells []CellCoord) *A
 
 // createWindowForScreen creates a WindowConfig with one area per GPU output (per screen).
 // This is used when "area per Screen" mode is enabled (each GPU output = one screen).
-func (xg *XMLGenerator) createWindowForScreen(gpuNum int, outputs map[string][]CellCoord) *WindowConfig {
+func (xg *XMLGenerator) createWindowForScreen(gpuNum int, outputs map[string][]CellCoord, windowCounter *int, areaCounter *int) *WindowConfig {
 	if len(outputs) == 0 {
 		return nil
 	}
@@ -444,8 +452,11 @@ func (xg *XMLGenerator) createWindowForScreen(gpuNum int, outputs map[string][]C
 	windowWidth := maxX - minX
 	windowHeight := maxY - minY
 
+	windowName := fmt.Sprintf("window%d", *windowCounter)
+	*windowCounter++
+
 	window := &WindowConfig{
-		Type:            "window",
+		Type:            windowName,
 		DirectRendering: &XMLAttr{Type: "", Value: "1"},
 		Frameless:       &XMLAttr{Type: "", Value: "1"},
 		FsaaSamples:     &XMLAttr{Type: "", Value: "4"},
@@ -459,9 +470,10 @@ func (xg *XMLGenerator) createWindowForScreen(gpuNum int, outputs map[string][]C
 
 	// Create one area for each GPU output (each output = one screen)
 	for gpuOutput, cells := range outputs {
-		area := xg.createAreaForGPU(gpuOutput, cells)
+		area := xg.createAreaForGPU(gpuOutput, cells, areaCounter)
 		if area != nil {
 			window.Areas = append(window.Areas, *area)
+			*areaCounter++
 		}
 	}
 
@@ -469,7 +481,7 @@ func (xg *XMLGenerator) createWindowForScreen(gpuNum int, outputs map[string][]C
 }
 
 // createAreaForWindow creates a single AreaConfig that matches the window size.
-func (xg *XMLGenerator) createAreaForWindow(cells []CellCoord, x, y, width, height int) *AreaConfig {
+func (xg *XMLGenerator) createAreaForWindow(cells []CellCoord, x, y, width, height int, areaCounter *int) *AreaConfig {
 	if len(cells) == 0 {
 		return nil
 	}
