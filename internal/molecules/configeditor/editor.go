@@ -323,8 +323,7 @@ func (e *Editor) filterSections(searchText string) {
 	processedSections := make(map[string]bool)
 
 	// First, handle root level options (empty section)
-	if section := e.schema.GetSection(""); section != nil || e.hasRootOptions() {
-		sectionName := ""
+	if e.schema.GetSection("") != nil || e.hasRootOptions() {
 		section := e.buildSectionFromOptions("")
 		if len(section.Options) > 0 {
 			// Check if any option in this section matches
