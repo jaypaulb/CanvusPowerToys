@@ -19,7 +19,7 @@ type CellWidget struct {
 	row, col    int
 	gpuSelect   *widget.Select
 	resSelect   *widget.Select
-	indexSpin   fyne.CanvasObject // Container with entry and up/down buttons
+	layerCheck  *widget.Check // Checkbox for layer (in layer or not)
 	autoFillBtn *widget.Button
 	onChanged   func()
 }
@@ -85,56 +85,20 @@ func (cw *CellWidget) buildUI() {
 	}
 	cw.resSelect.SetSelected(currentResName)
 
-	// Layout Index: number input with up/down buttons (0-3, step 1)
-	indexEntry := widget.NewEntry()
-	indexEntry.SetText(cell.Index)
-	indexEntry.Validator = func(text string) error {
-		if text == "" {
-			return nil
+	// Layer: checkbox (in layer or not)
+	cw.layerCheck = widget.NewCheck("", func(checked bool) {
+		if checked {
+			// Assign to lowest available layout index
+			lowestIndex := cw.findLowestAvailableIndex()
+			cw.grid.SetCellIndex(cw.row, cw.col, strconv.Itoa(lowestIndex))
+		} else {
+			// Remove from layer
+			cw.grid.SetCellIndex(cw.row, cw.col, "")
 		}
-		val, err := strconv.Atoi(text)
-		if err != nil {
-			return fmt.Errorf("must be a number")
-		}
-		if val < 0 || val > 3 {
-			return fmt.Errorf("must be between 0 and 3")
-		}
-		return nil
-	}
-	indexEntry.OnChanged = func(text string) {
-		if text != "" {
-			cw.grid.SetCellIndex(cw.row, cw.col, text)
-			cw.grid.Refresh()
-		}
-	}
-
-	// Up/Down buttons for index
-	upBtn := widget.NewButton("▲", func() {
-		current := 0
-		if cell.Index != "" {
-			if idx, err := strconv.Atoi(cell.Index); err == nil {
-				current = idx
-			}
-		}
-		if current < 3 {
-			current++
-			indexEntry.SetText(strconv.Itoa(current))
-		}
+		cw.grid.Refresh()
 	})
-	downBtn := widget.NewButton("▼", func() {
-		current := 0
-		if cell.Index != "" {
-			if idx, err := strconv.Atoi(cell.Index); err == nil {
-				current = idx
-			}
-		}
-		if current > 0 {
-			current--
-			indexEntry.SetText(strconv.Itoa(current))
-		}
-	})
-	indexContainer := container.NewBorder(nil, nil, nil, container.NewVBox(upBtn, downBtn), indexEntry)
-	cw.indexSpin = indexContainer
+	// Set checked if cell has an index (is in a layer)
+	cw.layerCheck.SetChecked(cell.Index != "")
 
 	// Auto Fill button (spans both cols in row 4)
 	cw.autoFillBtn = widget.NewButton("Auto Fill", func() {
@@ -160,17 +124,9 @@ func (cw *CellWidget) handleAutoFill() {
 		}
 	}
 
-	// Set index to 1
+	// Set index to 1 (check the layer checkbox)
 	cw.grid.SetCellIndex(cw.row, cw.col, "1")
-	// Update index entry if it exists
-	if indexContainer, ok := cw.indexSpin.(*fyne.Container); ok {
-		for _, obj := range indexContainer.Objects {
-			if entry, ok := obj.(*widget.Entry); ok {
-				entry.SetText("1")
-				break
-			}
-		}
-	}
+	cw.layerCheck.SetChecked(true)
 
 	cw.grid.Refresh()
 }
@@ -211,27 +167,50 @@ func (cw *CellWidget) findNextGPUOutput() string {
 	return fmt.Sprintf("%d:1", maxGpu+1)
 }
 
+// findLowestAvailableIndex finds the lowest available layout index (0-3).
+func (cw *CellWidget) findLowestAvailableIndex() int {
+	usedIndices := make(map[int]bool)
+	for row := 0; row < GridRows; row++ {
+		for col := 0; col < GridCols; col++ {
+			cell := cw.grid.GetCell(row, col)
+			if cell != nil && cell.Index != "" {
+				if idx, err := strconv.Atoi(cell.Index); err == nil {
+					if idx >= 0 && idx <= 3 {
+						usedIndices[idx] = true
+					}
+				}
+			}
+		}
+	}
+
+	// Find lowest available index (0-3)
+	for i := 0; i <= 3; i++ {
+		if !usedIndices[i] {
+			return i
+		}
+	}
+	// If all indices are used, return 0
+	return 0
+}
+
 // CreateRenderer creates the renderer for the cell widget.
 func (cw *CellWidget) CreateRenderer() fyne.WidgetRenderer {
 	// Col1: Labels
 	gpuLabel := widget.NewLabel("GPU.Output:")
 	resLabel := widget.NewLabel("Resolution:")
-	indexLabel := widget.NewLabel("Layer:")
+	layerLabel := widget.NewLabel("Layer:")
 
 	// Col2: Controls
-	col1 := container.NewVBox(gpuLabel, resLabel, indexLabel)
-	col2 := container.NewVBox(cw.gpuSelect, cw.resSelect, cw.indexSpin)
+	col1 := container.NewVBox(gpuLabel, resLabel, layerLabel)
+	col2 := container.NewVBox(cw.gpuSelect, cw.resSelect, cw.layerCheck)
 
-	// Main layout: 2 cols, 4 rows
-	// Use VBox for rows, then GridWithColumns for cols
+	// Row 1: Labels and controls
 	row1 := container.NewGridWithColumns(2, col1, col2)
-	row2 := widget.NewLabel("") // Empty
-	row3 := widget.NewLabel("") // Empty
-	// Row 4: Auto Fill button spans full width (both columns)
-	// Put button directly in VBox - it will take full width
-	row4 := cw.autoFillBtn
+	
+	// Auto Fill button immediately below Layer (spans both columns)
+	row2 := cw.autoFillBtn
 
-	content := container.NewVBox(row1, row2, row3, row4)
+	content := container.NewVBox(row1, row2)
 
 	// MT Blue border: #36A9E1 (RGB: 54, 169, 225)
 	border := canvas.NewRectangle(color.RGBA{})
@@ -256,7 +235,7 @@ type cellRenderer struct {
 func (r *cellRenderer) Layout(size fyne.Size) {
 	r.content.Resize(size)
 	r.content.Move(fyne.NewPos(0, 0))
-	
+
 	// Border fills the entire cell
 	r.border.Resize(size)
 	r.border.Move(fyne.NewPos(0, 0))
@@ -280,17 +259,10 @@ func (r *cellRenderer) Refresh() {
 		if cell.Resolution.Name != "" && r.cell.resSelect.Selected != cell.Resolution.Name {
 			r.cell.resSelect.SetSelected(cell.Resolution.Name)
 		}
-		if cell.Index != "" {
-			if indexContainer, ok := r.cell.indexSpin.(*fyne.Container); ok {
-				for _, obj := range indexContainer.Objects {
-					if entry, ok := obj.(*widget.Entry); ok {
-						if entry.Text != cell.Index {
-							entry.SetText(cell.Index)
-						}
-						break
-					}
-				}
-			}
+		// Update layer checkbox based on cell index
+		isInLayer := cell.Index != ""
+		if r.cell.layerCheck.Checked != isInLayer {
+			r.cell.layerCheck.SetChecked(isInLayer)
 		}
 	}
 }

@@ -189,7 +189,7 @@ func (gc *GridContainer) assignSelectedCellsToIndex() {
 		fmt.Sscanf(key, "%d:%d", &row, &col)
 		if row >= 0 && row < GridRows && col >= 0 && col < GridCols {
 			gc.grid.SetCellIndex(row, col, strconv.Itoa(lowestIndex))
-			// Update cell widget's index display
+			// Update cell widget's layer checkbox
 			if gc.cellWidgets[row][col] != nil {
 				gc.cellWidgets[row][col].Refresh()
 			}
