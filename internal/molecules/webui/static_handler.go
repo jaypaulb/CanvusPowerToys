@@ -1,6 +1,7 @@
 package webui
 
 import (
+	"fmt"
 	"io/fs"
 	"net/http"
 	"path/filepath"
@@ -31,7 +32,7 @@ func (sh *StaticHandler) ServeFiles(mux *http.ServeMux) {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" || r.URL.Path == "" {
 			// Serve main.html for root
-			sh.serveFile(w, r, "pages/html/main.html")
+			sh.serveFile(w, r, "public/pages/html/main.html")
 			return
 		}
 
@@ -43,11 +44,18 @@ func (sh *StaticHandler) ServeFiles(mux *http.ServeMux) {
 			return
 		}
 
-		// For all other paths, serve from embedded filesystem
-		// Remove leading slash and serve
+		// For all other paths, try with public/ prefix first
 		path := strings.TrimPrefix(r.URL.Path, "/")
 		if path == "" {
-			path = "pages/html/main.html"
+			path = "public/pages/html/main.html"
+		} else {
+			// Try with public/ prefix
+			publicPath := "public/" + path
+			if _, err := fs.Stat(sh.fileSystem, publicPath); err == nil {
+				r.URL.Path = "/" + publicPath
+				fileServer.ServeHTTP(w, r)
+				return
+			}
 		}
 
 		// Check if file exists
@@ -56,8 +64,8 @@ func (sh *StaticHandler) ServeFiles(mux *http.ServeMux) {
 			return
 		}
 
-		// Try with common prefixes
-		for _, prefix := range []string{"pages/html/", "pages/js/", "pages/css/", "molecules/js/", "molecules/css/", "atoms/css/", "css/", "templates/css/", "templates/html/"} {
+		// Try with common prefixes (with public/ prefix)
+		for _, prefix := range []string{"public/pages/html/", "public/pages/js/", "public/pages/css/", "public/molecules/js/", "public/molecules/css/", "public/atoms/css/", "public/css/", "public/templates/css/", "public/templates/html/", "pages/html/", "pages/js/", "pages/css/", "molecules/js/", "molecules/css/", "atoms/css/", "css/", "templates/css/", "templates/html/"} {
 			fullPath := prefix + path
 			if _, err := fs.Stat(sh.fileSystem, fullPath); err == nil {
 				r.URL.Path = "/" + fullPath
@@ -77,21 +85,21 @@ func (sh *StaticHandler) mapRouteToHTML(path string) string {
 	path = strings.TrimPrefix(path, "/")
 	path = strings.TrimSuffix(path, ".html")
 
-	// Map common routes
+	// Map common routes (with public/ prefix since embed includes public directory)
 	switch path {
 	case "", "index", "main":
-		return "pages/html/main.html"
+		return "public/pages/html/main.html"
 	case "pages":
-		return "pages/html/pages.html"
+		return "public/pages/html/pages.html"
 	case "macros":
-		return "pages/html/macros.html"
+		return "public/pages/html/macros.html"
 	case "remote-upload", "upload":
-		return "pages/html/remote-upload.html"
+		return "public/pages/html/remote-upload.html"
 	case "rcu":
-		return "pages/html/rcu.html"
+		return "public/pages/html/rcu.html"
 	default:
-		// Try pages/html/{path}.html
-		return "pages/html/" + path + ".html"
+		// Try public/pages/html/{path}.html
+		return "public/pages/html/" + path + ".html"
 	}
 }
 
@@ -100,12 +108,32 @@ func (sh *StaticHandler) serveFile(w http.ResponseWriter, r *http.Request, fileP
 	// Clean the path
 	filePath = filepath.Clean(filePath)
 
-	// Read file from embedded filesystem
-	data, err := fs.ReadFile(sh.fileSystem, filePath)
-	if err != nil {
+	// Debug: Log what we're trying to access
+	fmt.Printf("[StaticHandler] Attempting to serve file: %s\n", filePath)
+
+	// Check if file exists first
+	if _, err := fs.Stat(sh.fileSystem, filePath); err != nil {
+		fmt.Printf("[StaticHandler] File not found: %s, error: %v\n", filePath, err)
+		// Try to list what's in the filesystem root for debugging
+		if entries, listErr := fs.ReadDir(sh.fileSystem, "."); listErr == nil {
+			fmt.Printf("[StaticHandler] Filesystem root contents:\n")
+			for _, entry := range entries {
+				fmt.Printf("  - %s (dir: %v)\n", entry.Name(), entry.IsDir())
+			}
+		}
 		http.NotFound(w, r)
 		return
 	}
+
+	// Read file from embedded filesystem
+	data, err := fs.ReadFile(sh.fileSystem, filePath)
+	if err != nil {
+		fmt.Printf("[StaticHandler] Error reading file %s: %v\n", filePath, err)
+		http.NotFound(w, r)
+		return
+	}
+
+	fmt.Printf("[StaticHandler] Successfully serving file: %s (size: %d bytes)\n", filePath, len(data))
 
 	// Set content type based on file extension
 	ext := filepath.Ext(filePath)

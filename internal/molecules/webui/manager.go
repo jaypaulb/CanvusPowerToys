@@ -3,6 +3,7 @@ package webui
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"strings"
 	"time"
@@ -364,6 +365,38 @@ func (m *Manager) startServer(window fyne.Window) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
+	})
+
+	// Debug endpoint to list embedded files
+	mux.HandleFunc("/debug/files", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		staticHandler := NewStaticHandler()
+
+		var listFiles func(fs.FS, string, int) string
+		listFiles = func(fsys fs.FS, path string, depth int) string {
+			if depth > 5 {
+				return ""
+			}
+			result := ""
+			entries, err := fs.ReadDir(fsys, path)
+			if err != nil {
+				return fmt.Sprintf("Error reading %s: %v\n", path, err)
+			}
+			for _, entry := range entries {
+				indent := strings.Repeat("  ", depth)
+				result += fmt.Sprintf("%s%s\n", indent, entry.Name())
+				if entry.IsDir() {
+					subFS, _ := fs.Sub(fsys, path)
+					result += listFiles(subFS, entry.Name(), depth+1)
+				}
+			}
+			return result
+		}
+
+		fileList := "Embedded filesystem contents:\n"
+		fileList += listFiles(staticHandler.fileSystem, ".", 0)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(fileList))
 	})
 
 	m.server = &http.Server{
