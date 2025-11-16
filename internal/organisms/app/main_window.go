@@ -6,7 +6,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/jaypaulb/CanvusPowerToys/assets"
@@ -34,7 +33,7 @@ func NewMainWindow(app fyne.App) *MainWindow {
 
 	// Set window icon from embedded assets
 	if iconData, err := assets.Icons.ReadFile("CanvusPowerToysIcon.png"); err == nil {
-		if img, err := png.Decode(bytes.NewReader(iconData)); err == nil {
+		if _, err := png.Decode(bytes.NewReader(iconData)); err == nil {
 			icon := fyne.NewStaticResource("CanvusPowerToysIcon.png", iconData)
 			window.SetIcon(icon)
 		}
