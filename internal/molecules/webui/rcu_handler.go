@@ -334,10 +334,16 @@ func (h *RCUHandler) HandleCreateNote(w http.ResponseWriter, r *http.Request) {
 		noteColor = "#FFFFFF00" // White/transparent default
 	}
 
+	// Format title as "Name @ Date - Time" (no team number - color indicates team)
+	now := time.Now()
+	dateStr := now.Format("06/01/02") // yy/mm/dd
+	timeStr := now.Format("15:04")     // HH:MM
+	title := fmt.Sprintf("%s @ %s - %s", req.Name, dateStr, timeStr)
+
 	// Create note widget
 	// Note: Use /notes endpoint, not /widgets (widgets is read-only)
 	payload := map[string]interface{}{
-		"title":            fmt.Sprintf("%s - Team %d", req.Name, req.Team),
+		"title":            title,
 		"text":             req.Text,
 		"background_color": noteColor,
 		"location":         noteLocation,
