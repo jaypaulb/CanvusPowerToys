@@ -45,17 +45,22 @@ func setupMinimizeToTray(m *Manager) error {
 	// Get current window procedure
 	// GWL_WNDPROC is -4, use local variable to handle negative value conversion
 	gwlWndProc := int32(GWL_WNDPROC)
-	ret, _, _ := procGetWindowLongPtr.Call(uintptr(hwnd), uintptr(gwlWndProc))
-	if ret == 0 {
-		return syscall.GetLastError()
+	ret, _, lastErr := procGetWindowLongPtr.Call(uintptr(hwnd), uintptr(gwlWndProc))
+	if ret == 0 && lastErr != 0 {
+		// Only error if GetLastError indicates failure (0 might be valid return)
+		if err := syscall.GetLastError(); err != nil && err != syscall.Errno(0) {
+			return err
+		}
 	}
 	originalWndProc = ret
 
 	// Set our custom window procedure
 	newWndProc := syscall.NewCallback(windowProc)
-	ret, _, _ = procSetWindowLongPtr.Call(uintptr(hwnd), uintptr(gwlWndProc), newWndProc)
-	if ret == 0 {
-		return syscall.GetLastError()
+	ret, _, lastErr = procSetWindowLongPtr.Call(uintptr(hwnd), uintptr(gwlWndProc), newWndProc)
+	if ret == 0 && lastErr != 0 {
+		if err := syscall.GetLastError(); err != nil && err != syscall.Errno(0) {
+			return err
+		}
 	}
 
 	return nil

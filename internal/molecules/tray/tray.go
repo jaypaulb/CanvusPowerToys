@@ -52,10 +52,19 @@ func (m *Manager) onReady() {
 
 	// Load and set tray icon from embedded assets
 	// systray.SetIcon expects PNG image data as []byte
-	if iconData, err := assets.Icons.ReadFile("icons/CanvusPowerToysIcon.png"); err == nil {
+	// Since embed is "//go:embed icons", path is relative to icons directory
+	if iconData, err := assets.Icons.ReadFile("CanvusPowerToysIcon.png"); err == nil {
 		// Verify it's valid PNG by attempting to decode
 		if _, err := png.Decode(bytes.NewReader(iconData)); err == nil {
 			systray.SetIcon(iconData)
+		}
+	} else {
+		// Log error for debugging (only in development)
+		// Try alternative path in case embed structure is different
+		if iconData, err := assets.Icons.ReadFile("icons/CanvusPowerToysIcon.png"); err == nil {
+			if _, err := png.Decode(bytes.NewReader(iconData)); err == nil {
+				systray.SetIcon(iconData)
+			}
 		}
 	}
 

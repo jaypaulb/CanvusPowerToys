@@ -184,10 +184,10 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 		),
 	)
 
-	// Two column layout
+	// Two column layout (no individual scrolling - they scroll together)
 	twoColumnLayout := container.NewGridWithColumns(2,
-		container.NewScroll(leftColumn),
-		container.NewScroll(rightColumn),
+		leftColumn,
+		rightColumn,
 	)
 
 	// Main layout: Title bar on top, two columns below
@@ -197,6 +197,7 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 		twoColumnLayout,
 	)
 
+	// Single scroll container for the entire layout
 	return container.NewScroll(mainLayout)
 }
 

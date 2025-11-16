@@ -1,10 +1,15 @@
 package app
 
 import (
+	"bytes"
+	"image/png"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 
+	"github.com/jaypaulb/CanvusPowerToys/assets"
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/configeditor"
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/custommenu"
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/cssoptions"
@@ -26,6 +31,14 @@ func NewMainWindow(app fyne.App) *MainWindow {
 	window := app.NewWindow("Canvus PowerToys")
 	window.Resize(fyne.NewSize(1024, 768))
 	window.CenterOnScreen()
+
+	// Set window icon from embedded assets
+	if iconData, err := assets.Icons.ReadFile("CanvusPowerToysIcon.png"); err == nil {
+		if img, err := png.Decode(bytes.NewReader(iconData)); err == nil {
+			icon := fyne.NewStaticResource("CanvusPowerToysIcon.png", iconData)
+			window.SetIcon(icon)
+		}
+	}
 
 	// Create tabs
 	// Initialize Screen.xml Creator
@@ -119,14 +132,9 @@ func NewMainWindow(app fyne.App) *MainWindow {
 
 	window.SetContent(tabs)
 
-	// Setup system tray
+	// Setup system tray (this also sets up close intercept)
 	trayManager := tray.NewManager(window, app)
 	trayManager.Setup()
-
-	// Configure window to minimize to tray (hide instead of minimizing)
-	window.SetCloseIntercept(func() {
-		window.Hide()
-	})
 
 	// Store reference to window for minimize handling
 	mw := &MainWindow{
