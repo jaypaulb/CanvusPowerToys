@@ -424,8 +424,10 @@ func (xg *XMLGenerator) createAreaForGPU(gpuOutput string, cells []CellCoord, ar
 		RgbTable:  "",
 	}
 
+	areaName := fmt.Sprintf("area%d", *areaCounter)
+	
 	area := &AreaConfig{
-		Type:             "area",
+		Type:             areaName,
 		ColorCorrection:  colorCorr,
 		GraphicsLocation: &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", x, y)},
 		GraphicsSize:     &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", width, height)},
