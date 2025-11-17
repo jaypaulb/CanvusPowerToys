@@ -13,13 +13,13 @@ import (
 
 // Creator is the main Screen.xml Creator component.
 type Creator struct {
-	grid            *GridWidget
-	gridContainer   *GridContainer
-	xmlGenerator    *XMLGenerator
-	iniIntegration  *INIIntegration
-	fileService     *services.FileService
-	window          fyne.Window
-	areaPerScreen   *widget.Check // Checkbox for "area per screen or per gpu"
+	grid           *GridWidget
+	gridContainer  *GridContainer
+	xmlGenerator   *XMLGenerator
+	iniIntegration *INIIntegration
+	fileService    *services.FileService
+	window         fyne.Window
+	areaPerScreen  *widget.Check // Checkbox for "area per screen or per gpu"
 }
 
 // NewCreator creates a new Screen.xml Creator.
@@ -28,10 +28,10 @@ func NewCreator(fileService *services.FileService) (*Creator, error) {
 	gridContainer := NewGridContainer(grid)
 
 	creator := &Creator{
-		grid:            grid,
-		gridContainer:      gridContainer,
-		iniIntegration:   NewINIIntegration(),
-		fileService:      fileService,
+		grid:           grid,
+		gridContainer:  gridContainer,
+		iniIntegration: NewINIIntegration(),
+		fileService:    fileService,
 	}
 
 	// Initialize XML generator (simplified - no longer need separate handlers)
@@ -122,13 +122,17 @@ func (c *Creator) generateAndPreview(window fyne.Window) {
 	// MultiLineEntry handles large content much better than canvas.Text
 	// which was causing the freezing issue
 	previewEntry := widget.NewMultiLineEntry()
-	previewEntry.SetText(string(xmlData))
-	// Keep enabled to allow text selection, but prevent editing by clearing on focus
+	xmlText := string(xmlData)
+	previewEntry.SetText(xmlText)
+	// Keep enabled to allow text selection, but prevent editing.
+	isResetting := false
 	previewEntry.OnChanged = func(text string) {
-		// Restore original text if user tries to edit
-		if text != string(xmlData) {
-			previewEntry.SetText(string(xmlData))
+		if isResetting || text == xmlText {
+			return
 		}
+		isResetting = true
+		previewEntry.SetText(xmlText)
+		isResetting = false
 	}
 	previewEntry.Wrapping = fyne.TextWrapOff // Don't wrap XML
 
@@ -181,5 +185,3 @@ func (c *Creator) saveScreenXML(window fyne.Window) {
 		dialog.ShowInformation("Success", "screen.xml saved successfully", window)
 	}, window)
 }
-
-
