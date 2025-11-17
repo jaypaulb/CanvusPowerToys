@@ -33,10 +33,14 @@ build-windows: process-assets
 	BUILD_DATE=$$(date -u +"%Y-%m-%dT%H:%M:%SZ"); \
 	GIT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
 	OUTPUT_FILE="canvus-powertoys.$$VERSION.exe"; \
-	CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc go build \
+	if CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc go build \
 		-ldflags="-s -w -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.Version=$$VERSION -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.BuildDate=$$BUILD_DATE -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.GitCommit=$$GIT_COMMIT" \
-		-o $$OUTPUT_FILE ./cmd/powertoys; \
-	echo "Built: $$OUTPUT_FILE"
+		-o $$OUTPUT_FILE ./cmd/powertoys; then \
+		echo "Built: $$OUTPUT_FILE"; \
+	else \
+		echo "ERROR: Build failed! Version was incremented to $$VERSION but build did not complete."; \
+		exit 1; \
+	fi
 
 # Run tests
 test:
