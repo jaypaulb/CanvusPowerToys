@@ -1,6 +1,7 @@
 package webui
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -28,15 +29,15 @@ func (h *SSEHandler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Cache-Control")
 
-	// Create a channel to track client disconnection and server shutdown
-	// r.Context() is cancelled when the server shuts down, so this will close SSE connections
-	clientGone := r.Context().Done()
+	// Get request context - this will be cancelled when server shuts down
+	ctx := r.Context()
 
 	// Send initial canvas state
 	h.sendCanvasUpdate(w, h.canvasService.GetCanvasID(), h.canvasService.GetCanvasName())
 
-	// Create ticker to send periodic updates
-	ticker := time.NewTicker(5 * time.Second) // Check more frequently for canvas name updates
+	// Use a shorter ticker interval (1 second) for more responsive shutdown detection
+	// This ensures we check for context cancellation more frequently
+	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
 	// Track last sent canvas_id and canvas_name to detect changes
@@ -44,19 +45,18 @@ func (h *SSEHandler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 	lastCanvasName := h.canvasService.GetCanvasName()
 
 	for {
+		// Use a context-aware select that prioritizes context cancellation
+		// Context cancellation has highest priority - will exit immediately when server shuts down
 		select {
-		case <-clientGone:
+		case <-ctx.Done():
 			// Client disconnected or server shutting down
 			fmt.Printf("[SSEHandler] Connection closed (client disconnected or server shutdown)\n")
 			return
 		case <-ticker.C:
-			// Check if context is cancelled before sending (server might be shutting down)
-			select {
-			case <-clientGone:
+			// Check context before processing (server might have shut down during tick)
+			if ctx.Err() != nil {
 				fmt.Printf("[SSEHandler] Context cancelled during tick, closing connection\n")
 				return
-			default:
-				// Context still active, proceed with update
 			}
 
 			// Periodic update check - send update if canvas_id OR canvas_name changed
@@ -64,10 +64,20 @@ func (h *SSEHandler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 			currentCanvasName := h.canvasService.GetCanvasName()
 
 			if currentCanvasID != lastCanvasID || currentCanvasName != lastCanvasName {
+				// Check context again before sending (write might block)
+				if ctx.Err() != nil {
+					fmt.Printf("[SSEHandler] Context cancelled before sending update, closing connection\n")
+					return
+				}
 				h.sendCanvasUpdate(w, currentCanvasID, currentCanvasName)
 				lastCanvasID = currentCanvasID
 				lastCanvasName = currentCanvasName
 			} else {
+				// Check context before sending keepalive
+				if ctx.Err() != nil {
+					fmt.Printf("[SSEHandler] Context cancelled before sending keepalive, closing connection\n")
+					return
+				}
 				// Send keepalive
 				h.sendKeepalive(w)
 			}

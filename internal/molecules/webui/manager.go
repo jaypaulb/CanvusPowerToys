@@ -543,8 +543,11 @@ func (m *Manager) startServer(window fyne.Window) {
 	})
 
 	m.server = &http.Server{
-		Addr:    ":" + port,
-		Handler: mux,
+		Addr:         ":" + port,
+		Handler:      mux,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	// Start server in goroutine
@@ -578,14 +581,15 @@ func (m *Manager) stopServer() {
 		return
 	}
 
-	// Stop canvas service
+	// Stop canvas service first to stop workspace subscriptions
 	if m.canvasService != nil {
 		m.canvasService.Stop()
 		m.canvasService = nil
 	}
 
-	// Increase timeout to 15 seconds to allow SSE connections and workspace subscriptions to close gracefully
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	// Reduced timeout to 5 seconds since SSE handler now checks context every 1 second
+	// This should be sufficient for graceful shutdown of all connections
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := m.server.Shutdown(ctx); err != nil {

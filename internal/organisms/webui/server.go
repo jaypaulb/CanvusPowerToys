@@ -91,8 +91,9 @@ func (s *Server) Stop() error {
 
 	// Shutdown HTTP server
 	if s.httpServer != nil {
-		// Increase timeout to 15 seconds to allow SSE connections and workspace subscriptions to close gracefully
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		// Reduced timeout to 5 seconds since SSE handler now checks context every 1 second
+		// This should be sufficient for graceful shutdown of all connections
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		if err := s.httpServer.Shutdown(ctx); err != nil {
