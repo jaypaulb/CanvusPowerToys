@@ -96,14 +96,16 @@ func (cw *CellWidget) buildUI() {
 			cw.grid.SetCellIndex(cw.row, cw.col, "")
 		}
 		cw.grid.Refresh()
+		cw.updateAutoFillButton()
 	})
 	// Set checked if cell has an index (is in a layer)
 	cw.layerCheck.SetChecked(cell.Index != "")
 
-	// Auto Fill button (spans both cols in row 4)
+	// Auto Fill button (toggles Auto/Clear)
 	cw.autoFillBtn = widget.NewButton("Auto Fill", func() {
-		cw.handleAutoFill()
+		cw.toggleAutoFill()
 	})
+	cw.updateAutoFillButton()
 }
 
 // handleAutoFill applies next GPU index, sets res to 1080p, sets index 1.
@@ -125,10 +127,62 @@ func (cw *CellWidget) handleAutoFill() {
 	}
 
 	// Set index to 1 (check the layer checkbox)
-	cw.grid.SetCellIndex(cw.row, cw.col, "1")
 	cw.layerCheck.SetChecked(true)
+	cw.grid.SetCellIndex(cw.row, cw.col, "1")
 
 	cw.grid.Refresh()
+	cw.updateAutoFillButton()
+}
+
+// toggleAutoFill switches between Auto (apply) and Clear.
+func (cw *CellWidget) toggleAutoFill() {
+	if cw.isAutoFilled() {
+		cw.clearAutoFill()
+	} else {
+		cw.handleAutoFill()
+	}
+}
+
+// clearAutoFill removes cell assignments and resets defaults.
+func (cw *CellWidget) clearAutoFill() {
+	// Clear GPU output
+	cw.grid.ClearCellGPUOutput(cw.row, cw.col)
+	cw.gpuSelect.SetSelected("")
+
+	// Reset resolution to default (1920x1080)
+	if len(CommonResolutions) > 0 {
+		defaultRes := CommonResolutions[0]
+		cw.grid.SetCellResolution(cw.row, cw.col, defaultRes)
+		cw.resSelect.SetSelected(defaultRes.Name)
+	}
+
+	// Clear index/layer
+	cw.grid.SetCellIndex(cw.row, cw.col, "")
+	cw.layerCheck.SetChecked(false)
+
+	cw.grid.Refresh()
+	cw.updateAutoFillButton()
+}
+
+// isAutoFilled returns true if the cell currently has assignments.
+func (cw *CellWidget) isAutoFilled() bool {
+	cell := cw.grid.GetCell(cw.row, cw.col)
+	if cell == nil {
+		return false
+	}
+	return cell.GPUOutput != "" || cell.Index != ""
+}
+
+// updateAutoFillButton updates the toggle button text.
+func (cw *CellWidget) updateAutoFillButton() {
+	if cw.autoFillBtn == nil {
+		return
+	}
+	if cw.isAutoFilled() {
+		cw.autoFillBtn.SetText("Clear")
+	} else {
+		cw.autoFillBtn.SetText("Auto Fill")
+	}
 }
 
 // findNextGPUOutput finds the next available GPU output.
@@ -208,16 +262,10 @@ func (cw *CellWidget) CreateRenderer() fyne.WidgetRenderer {
 	row1 := container.NewGridWithColumns(2, col1, col2)
 
 	// Auto Fill button immediately below Layer - centered and sized to text
-	// Use Border container to center the button horizontally
-	row2 := container.NewBorder(
-		nil, nil, nil, nil, // No borders, button in center
-		cw.autoFillBtn,
-	)
+	row2 := container.NewCenter(cw.autoFillBtn)
 
-	// Combine rows
+	// Combine rows and add padding
 	content := container.NewVBox(row1, row2)
-
-	// Apply padding so content doesn't overlap the border
 	paddedContent := container.NewPadded(content)
 
 	// MT Blue border: #36A9E1 (RGB: 54, 169, 225)
@@ -227,9 +275,9 @@ func (cw *CellWidget) CreateRenderer() fyne.WidgetRenderer {
 	border.FillColor = color.RGBA{R: 255, G: 255, B: 255, A: 0} // Transparent fill
 
 	return &cellRenderer{
-		cell:         cw,
-		content:      paddedContent,
-		border:       border,
+		cell:    cw,
+		content: paddedContent,
+		border:  border,
 	}
 }
 
@@ -237,7 +285,7 @@ func (cw *CellWidget) CreateRenderer() fyne.WidgetRenderer {
 type cellRenderer struct {
 	cell    *CellWidget
 	content *fyne.Container
-	border *canvas.Rectangle
+	border  *canvas.Rectangle
 }
 
 func (r *cellRenderer) Layout(size fyne.Size) {
@@ -277,4 +325,3 @@ func (r *cellRenderer) Refresh() {
 
 func (r *cellRenderer) Destroy() {
 }
-
