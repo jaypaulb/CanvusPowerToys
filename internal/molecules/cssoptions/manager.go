@@ -43,6 +43,8 @@ type Manager struct {
 	hideSidebarEnabled   *widget.Check
 	hideMainMenuEnabled  *widget.Check
 	hideFingerMenuEnabled *widget.Check
+	standbyImagePath     string
+	standbyImageLabel    *widget.Label
 	statusLabel          *widget.Label
 }
 
@@ -122,6 +124,19 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 	hideFingerMenuTooltip := widget.NewLabel("Hide finger menu (CanvusCanvasMenu)")
 	m.hideFingerMenuEnabled = widget.NewCheck("", nil)
 
+	// Standby Image for Video Outputs
+	standbyImageSectionLabel := widget.NewLabel("Video Output Standby Image")
+	standbyImageSectionLabel.TextStyle = fyne.TextStyle{Bold: true}
+	standbyImageDescription := widget.NewLabel("Set a custom standby image for video outputs (PNG with transparency supported)")
+	m.standbyImageLabel = widget.NewLabel("No image selected")
+	uploadImageBtn := widget.NewButton("Upload PNG Image", func() {
+		m.uploadStandbyImage(window)
+	})
+	clearImageBtn := widget.NewButton("Clear", func() {
+		m.standbyImagePath = ""
+		m.standbyImageLabel.SetText("No image selected")
+	})
+
 	// Kiosk Mode option - mutually exclusive with Kiosk Plus
 	kioskModeLabel := widget.NewLabel("Enable Kiosk Mode")
 	kioskModeTooltip := widget.NewLabel("Requires: default-canvas set, auto-pin=0. Hides all UI elements including finger menu")
@@ -191,6 +206,10 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 		container.NewHBox(hideSidebarLabel, hideSidebarTooltip, m.hideSidebarEnabled),
 		container.NewHBox(hideMainMenuLabel, hideMainMenuTooltip, m.hideMainMenuEnabled),
 		container.NewHBox(hideFingerMenuLabel, hideFingerMenuTooltip, m.hideFingerMenuEnabled),
+		widget.NewSeparator(),
+		standbyImageSectionLabel,
+		standbyImageDescription,
+		container.NewHBox(m.standbyImageLabel, uploadImageBtn, clearImageBtn),
 		widget.NewSeparator(),
 		container.NewHBox(kioskModeLabel, kioskModeTooltip, m.kioskModeEnabled),
 		container.NewHBox(kioskPlusLabel, kioskPlusTooltip, m.kioskPlusEnabled),
@@ -432,6 +451,22 @@ func (m *Manager) generateCSS() string {
 
 	// Note: Third-party touch menus are not affected by these rules
 	css.WriteString("/* Note: Third-party touch menus are not affected by these rules */\n\n")
+
+	// Standby Image for Video Outputs
+	if m.standbyImagePath != "" {
+		css.WriteString("/* Standby Image CSS - Sets custom standby image for video outputs */\n")
+		css.WriteString("OutputWidget > .output-info {\n")
+		css.WriteString("  display: none;\n")
+		css.WriteString("  background: transparent;\n")
+		css.WriteString("  input-flags: none;\n")
+		css.WriteString("  size: 100% !important;\n")
+		css.WriteString("  origin: 0.5 0.5;\n")
+		css.WriteString("  location: 50% 50%;\n")
+		// Use relative path from CSS file location, or absolute path
+		imagePath := m.getStandbyImagePathForCSS()
+		css.WriteString(fmt.Sprintf("  source: \"%s\" !important;\n", imagePath))
+		css.WriteString("}\n\n")
+	}
 
 	return css.String()
 }
@@ -683,4 +718,83 @@ func (m *Manager) generateShortcutName() string {
 	}
 
 	return "Canvus " + strings.Join(parts, " ")
+}
+
+// uploadStandbyImage handles uploading a PNG image for video output standby.
+func (m *Manager) uploadStandbyImage(window fyne.Window) {
+	dialog.ShowFileOpen(func(reader fyne.URIReadCloser, err error) {
+		if err != nil || reader == nil {
+			return
+		}
+		defer reader.Close()
+
+		uri := reader.URI()
+		var sourcePath string
+		if uri.Scheme() == "file" {
+			sourcePath = uri.Path()
+		} else {
+			sourcePath = uri.String()
+		}
+
+		// Validate it's a PNG file
+		if !strings.HasSuffix(strings.ToLower(sourcePath), ".png") {
+			dialog.ShowError(fmt.Errorf("only PNG files are supported for standby images"), window)
+			return
+		}
+
+		// Copy image to CSS directory
+		imagesDir := m.getImagesDirectory()
+		if err := os.MkdirAll(imagesDir, 0755); err != nil {
+			dialog.ShowError(fmt.Errorf("failed to create images directory: %w", err), window)
+			return
+		}
+
+		// Get filename from source path
+		filename := filepath.Base(sourcePath)
+		destPath := filepath.Join(imagesDir, filename)
+
+		// Read source file
+		sourceData, err := os.ReadFile(sourcePath)
+		if err != nil {
+			dialog.ShowError(fmt.Errorf("failed to read image file: %w", err), window)
+			return
+		}
+
+		// Write to destination
+		if err := os.WriteFile(destPath, sourceData, 0644); err != nil {
+			dialog.ShowError(fmt.Errorf("failed to save image: %w", err), window)
+			return
+		}
+
+		// Store path and update label
+		m.standbyImagePath = destPath
+		m.standbyImageLabel.SetText(fmt.Sprintf("Image: %s", filename))
+		m.statusLabel.SetText(fmt.Sprintf("Standby image uploaded: %s", filename))
+	}, window)
+}
+
+// getImagesDirectory returns the directory for storing standby images.
+func (m *Manager) getImagesDirectory() string {
+	configDir := m.fileService.GetUserConfigPath()
+	return filepath.Join(configDir, "css", "images")
+}
+
+// getStandbyImagePathForCSS returns the path to use in CSS (relative to CSS file location).
+func (m *Manager) getStandbyImagePathForCSS() string {
+	if m.standbyImagePath == "" {
+		return ""
+	}
+
+	// Get CSS directory
+	cssDir := m.getCSSDirectory()
+
+	// Make path relative to CSS directory
+	relPath, err := filepath.Rel(cssDir, m.standbyImagePath)
+	if err != nil {
+		// If relative path fails, use just the filename
+		return filepath.Base(m.standbyImagePath)
+	}
+
+	// Normalize path separators for CSS (use forward slashes)
+	return strings.ReplaceAll(relPath, "\\", "/")
 }

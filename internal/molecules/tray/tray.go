@@ -28,17 +28,11 @@ func NewManager(window fyne.Window, app fyne.App) *Manager {
 
 // Setup initializes the system tray.
 func (m *Manager) Setup() {
-	// Hide window when close button is clicked (minimize to tray)
+	// Hide window when close button (X) is clicked - this hides to tray
+	// Note: Minimize button minimizes to taskbar (standard Windows behavior)
 	m.window.SetCloseIntercept(func() {
 		m.window.Hide()
 	})
-
-	// Setup minimize-to-tray hook (Windows-specific)
-	// This intercepts the minimize button to hide window instead
-	if err := setupMinimizeToTray(m); err != nil {
-		// If hook setup fails, continue without it
-		// Close button will still work to hide to tray
-	}
 
 	// Start systray in background
 	go func() {

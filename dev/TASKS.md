@@ -35,6 +35,7 @@ Tasks are organized by development phases, following the feature priority order:
 - [✅] Validation engine framework - Status: Completed
 - [✅] Configuration file parser (INI, XML, YAML) - Status: Completed
 - [✅] Error handling and user feedback system - Status: Completed
+- [✅] System tray integration - Status: Completed (icon, menu, close-to-tray via X button)
 
 ### 1.3 Development Environment
 - [✅] Set up cross-compilation (Linux → Windows) - Status: Completed
@@ -384,11 +385,11 @@ Tasks are organized by development phases, following the feature priority order:
 - [ ] Production mode (simpler logging)
 
 ### 7.3 System Tray
-- [ ] Minimize to system tray only
-- [ ] System tray icon
-- [ ] Restore from tray
-- [ ] Exit from tray
-- [ ] Tray menu (if needed)
+- [✅] System tray icon - Status: Completed
+- [✅] Restore from tray - Status: Completed
+- [✅] Exit from tray - Status: Completed
+- [✅] Tray menu - Status: Completed
+- [🚫] Minimize to system tray - Status: Deprecated (minimize button minimizes to taskbar, close button hides to tray)
 
 ### 7.4 Documentation
 - [ ] User guide for each feature
