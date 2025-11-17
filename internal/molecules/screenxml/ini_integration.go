@@ -19,65 +19,94 @@ func NewINIIntegration() *INIIntegration {
 	}
 }
 
-// DetectVideoOutputs detects video outputs (areas not in layout).
-func (ii *INIIntegration) DetectVideoOutputs(grid *GridWidget) []string {
-	var videoOutputs []string
+// OutputCell represents a cell that needs an output section in the INI file.
+type OutputCell struct {
+	Row        int
+	Col        int
+	GPUOutput  string
+	Resolution Resolution
+}
+
+// DetectVideoOutputs detects cells without layout that need output sections.
+func (ii *INIIntegration) DetectVideoOutputs(grid *GridWidget) []OutputCell {
+	var outputCells []OutputCell
 
 	for row := 0; row < GridRows; row++ {
 		for col := 0; col < GridCols; col++ {
 			cell := grid.GetCell(row, col)
-			if cell != nil && cell.GPUOutput != "" && !cell.IsLayoutArea {
-				// This is a video output (has GPU but not in layout area)
-				videoOutputs = append(videoOutputs, cell.GPUOutput)
+			// Cell needs output section if it has GPU output but no layout (Index is empty)
+			if cell != nil && cell.GPUOutput != "" && cell.Index == "" {
+				outputCells = append(outputCells, OutputCell{
+					Row:        row,
+					Col:        col,
+					GPUOutput:  cell.GPUOutput,
+					Resolution: cell.Resolution,
+				})
 			}
 		}
 	}
 
-	return videoOutputs
+	return outputCells
 }
 
-// GenerateVideoOutputConfig generates video-output configuration for mt-canvus.ini.
-func (ii *INIIntegration) GenerateVideoOutputConfig(videoOutputs []string) string {
-	if len(videoOutputs) == 0 {
-		return ""
+// generateOutputName generates an auto-generated output name from GPU output.
+func (ii *INIIntegration) generateOutputName(gpuOutput string, index int) string {
+	// Convert from UI format (1:1, 1:2, etc.) to output name (gpu1output1, gpu1output2, etc.)
+	parts := strings.Split(gpuOutput, ":")
+	if len(parts) == 2 {
+		return fmt.Sprintf("gpu%so%s", parts[0], parts[1])
 	}
-
-	// Convert from UI format (1:1, 1:2, etc.) to INI format (gpu0.output1, gpu0.output2, etc.)
-	var converted []string
-	for _, output := range videoOutputs {
-		parts := strings.Split(output, ":")
-		if len(parts) == 2 {
-			var gpu, out int
-			fmt.Sscanf(parts[0], "%d", &gpu)
-			fmt.Sscanf(parts[1], "%d", &out)
-			// Convert from 1-based to 0-based for INI
-			converted = append(converted, fmt.Sprintf("gpu%d.output%d", gpu-1, out-1))
-		}
-	}
-	return strings.Join(converted, ",")
+	// Fallback to indexed name
+	return fmt.Sprintf("output%d", index+1)
 }
 
-// UpdateMtCanvusIni updates mt-canvus.ini with video-output configuration.
-func (ii *INIIntegration) UpdateMtCanvusIni(filePath string, videoOutputs []string) error {
+// UpdateMtCanvusIni updates mt-canvus.ini with output sections for cells without layout.
+func (ii *INIIntegration) UpdateMtCanvusIni(filePath string, outputCells []OutputCell) error {
 	// Read existing INI file
 	cfg, err := ii.iniParser.Read(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to read mt-canvus.ini: %w", err)
 	}
 
-	// Get or create [MultiHead] section
-	section, err := cfg.GetSection("MultiHead")
-	if err != nil {
-		section, err = cfg.NewSection("MultiHead")
-		if err != nil {
-			return fmt.Errorf("failed to create MultiHead section: %w", err)
+	// Remove existing [output:*] sections to avoid duplicates
+	sectionsToDelete := []string{}
+	for _, section := range cfg.Sections() {
+		if strings.HasPrefix(section.Name(), "output:") {
+			sectionsToDelete = append(sectionsToDelete, section.Name())
 		}
 	}
+	for _, sectionName := range sectionsToDelete {
+		cfg.DeleteSection(sectionName)
+	}
 
-	// Set video-output
-	videoOutputValue := ii.GenerateVideoOutputConfig(videoOutputs)
-	if videoOutputValue != "" {
-		ii.iniParser.SetValue(section, "video-output", videoOutputValue)
+	// Create [output:...] sections for each cell without layout
+	for i, cell := range outputCells {
+		// Generate output name
+		outputName := ii.generateOutputName(cell.GPUOutput, i)
+		sectionName := fmt.Sprintf("output:%s", outputName)
+
+		// Create or get section (delete if exists to recreate fresh)
+		existingSection := cfg.Section(sectionName)
+		if existingSection != nil {
+			cfg.DeleteSection(sectionName)
+		}
+		section, err := cfg.NewSection(sectionName)
+		if err != nil {
+			return fmt.Errorf("failed to create section %s: %w", sectionName, err)
+		}
+
+		// Calculate location in pixels from top-left (0,0)
+		// Location = (col * resolution.width, row * resolution.height)
+		locationX := cell.Col * cell.Resolution.Width
+		locationY := cell.Row * cell.Resolution.Height
+		location := fmt.Sprintf("%d %d", locationX, locationY)
+
+		// Size = resolution (width x height)
+		size := fmt.Sprintf("%d %d", cell.Resolution.Width, cell.Resolution.Height)
+
+		// Set location and size
+		section.Key("location").SetValue(location)
+		section.Key("size").SetValue(size)
 	}
 
 	// Write back to file
@@ -88,9 +117,10 @@ func (ii *INIIntegration) UpdateMtCanvusIni(filePath string, videoOutputs []stri
 	return nil
 }
 
-// ShouldUpdateIni checks if video-output should be updated in mt-canvus.ini.
+// ShouldUpdateIni checks if output sections should be updated in mt-canvus.ini.
 func (ii *INIIntegration) ShouldUpdateIni(grid *GridWidget) bool {
-	videoOutputs := ii.DetectVideoOutputs(grid)
-	return len(videoOutputs) > 0
+	outputCells := ii.DetectVideoOutputs(grid)
+	return len(outputCells) > 0
 }
+
 

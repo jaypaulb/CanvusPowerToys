@@ -89,19 +89,18 @@ func (c *Creator) updateMtCanvusIni(window fyne.Window) {
 		return
 	}
 
-	videoOutputs := c.iniIntegration.DetectVideoOutputs(c.grid)
-	if len(videoOutputs) == 0 {
-		dialog.ShowInformation("No Outputs", "No video outputs detected. Assign GPU outputs to cells first.", window)
+	outputCells := c.iniIntegration.DetectVideoOutputs(c.grid)
+	if len(outputCells) == 0 {
+		dialog.ShowInformation("No Outputs", "No cells without layout detected. Assign GPU outputs to cells (without layer) first.", window)
 		return
 	}
 
-	if err := c.iniIntegration.UpdateMtCanvusIni(iniPath, videoOutputs); err != nil {
+	if err := c.iniIntegration.UpdateMtCanvusIni(iniPath, outputCells); err != nil {
 		dialog.ShowError(err, window)
 		return
 	}
 
-	config := c.iniIntegration.GenerateVideoOutputConfig(videoOutputs)
-	dialog.ShowInformation("Success", fmt.Sprintf("mt-canvus.ini updated successfully.\n\nvideo-output=%s", config), window)
+	dialog.ShowInformation("Success", fmt.Sprintf("mt-canvus.ini updated successfully.\n\nCreated %d output section(s) for cells without layout.", len(outputCells)), window)
 }
 
 // generateAndPreview generates screen.xml and shows preview.
