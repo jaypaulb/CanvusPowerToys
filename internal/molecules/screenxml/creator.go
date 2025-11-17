@@ -106,51 +106,33 @@ func (c *Creator) updateMtCanvusIni(window fyne.Window) {
 
 // generateAndPreview generates screen.xml and shows preview.
 func (c *Creator) generateAndPreview(window fyne.Window) {
-	// Show loading indicator to prevent UI freeze
-	loadingDialog := dialog.NewInformation("Generating", "Generating screen.xml...", window)
-	loadingDialog.Show()
+	xmlData, err := c.xmlGenerator.Generate()
+	if err != nil {
+		dialog.ShowError(err, window)
+		return
+	}
 
-	// Generate XML in a goroutine to avoid blocking UI
-	go func() {
-		xmlData, err := c.xmlGenerator.Generate()
-		if err != nil {
-			// UI operations must be on main thread
-			window.Canvas().RunOnMainThread(func() {
-				loadingDialog.Hide()
-				dialog.ShowError(err, window)
-			})
-			return
-		}
+	// Validate
+	if err := c.xmlGenerator.Validate(xmlData); err != nil {
+		dialog.ShowError(fmt.Errorf("validation failed: %w", err), window)
+		return
+	}
 
-		// Validate
-		if err := c.xmlGenerator.Validate(xmlData); err != nil {
-			window.Canvas().RunOnMainThread(func() {
-				loadingDialog.Hide()
-				dialog.ShowError(fmt.Errorf("validation failed: %w", err), window)
-			})
-			return
-		}
+	// Use MultiLineEntry for better performance with large XML content
+	// MultiLineEntry handles large content much better than canvas.Text
+	// which was causing the freezing issue
+	previewEntry := widget.NewMultiLineEntry()
+	previewEntry.SetText(string(xmlData))
+	previewEntry.Disable() // Make it read-only
+	previewEntry.Wrapping = fyne.TextWrapOff // Don't wrap XML
 
-		// Hide loading dialog and show preview on main thread
-		window.Canvas().RunOnMainThread(func() {
-			loadingDialog.Hide()
+	// Create a scrollable container for the preview
+	scrollContainer := container.NewScroll(previewEntry)
+	scrollContainer.SetMinSize(fyne.NewSize(800, 600))
 
-			// Use MultiLineEntry for better performance with large XML content
-			// MultiLineEntry handles large content much better than canvas.Text
-			previewEntry := widget.NewMultiLineEntry()
-			previewEntry.SetText(string(xmlData))
-			previewEntry.Disable() // Make it read-only
-			previewEntry.Wrapping = fyne.TextWrapOff // Don't wrap XML
-
-			// Create a scrollable container for the preview
-			scrollContainer := container.NewScroll(previewEntry)
-			scrollContainer.SetMinSize(fyne.NewSize(800, 600))
-
-			previewDialog := dialog.NewCustom("Generated screen.xml Preview", "Close", scrollContainer, window)
-			previewDialog.Resize(fyne.NewSize(800, 600))
-			previewDialog.Show()
-		})
-	}()
+	previewDialog := dialog.NewCustom("Generated screen.xml Preview", "Close", scrollContainer, window)
+	previewDialog.Resize(fyne.NewSize(800, 600))
+	previewDialog.Show()
 }
 
 // saveScreenXML saves the generated screen.xml to file.
