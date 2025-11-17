@@ -1017,8 +1017,8 @@ func (m *Manager) createBrowserWidgetOnCanvas(url string, width, height, posX, p
 		},
 	}
 
-	// POST to /canvases/:id/widgets to create browser widget
-	endpoint := fmt.Sprintf("/api/v1/canvases/%s/widgets", canvasID)
+	// POST to /canvases/:id/browsers to create browser widget (widgets endpoint is read-only)
+	endpoint := fmt.Sprintf("/api/v1/canvases/%s/browsers", canvasID)
 	fmt.Printf("[createBrowserWidgetOnCanvas] Creating browser widget at (%d, %d) with size %dx%d, URL: %s\n", posX, posY, width, height, url)
 
 	response, err := apiClient.Post(endpoint, payload)

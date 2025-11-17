@@ -120,7 +120,7 @@ func (e *Editor) CreateUI(window fyne.Window) fyne.CanvasObject {
 
 	// Create scroll container and store reference for auto-scrolling
 	e.scrollContainer = container.NewScroll(e.accordion)
-	
+
 	mainPanel := container.NewBorder(
 		e.searchEntry,
 		nil, nil, nil,
@@ -542,6 +542,90 @@ func (e *Editor) matchesWholeWord(target, search string) bool {
 	}
 
 	return matched
+}
+
+// minSizeWrapper is a widget wrapper that enforces minimum size constraints.
+type minSizeWrapper struct {
+	widget.BaseWidget
+	content   fyne.CanvasObject
+	minWidth  float32
+	minHeight float32
+}
+
+// NewMinSizeWrapper creates a new minimum size wrapper widget.
+func NewMinSizeWrapper(content fyne.CanvasObject, minWidth, minHeight float32) *minSizeWrapper {
+	w := &minSizeWrapper{
+		content:   content,
+		minWidth:  minWidth,
+		minHeight: minHeight,
+	}
+	w.ExtendBaseWidget(w)
+	return w
+}
+
+// CreateRenderer creates the renderer for the minimum size wrapper.
+func (m *minSizeWrapper) CreateRenderer() fyne.WidgetRenderer {
+	return &minSizeRenderer{
+		wrapper: m,
+		content: m.content,
+	}
+}
+
+// minSizeRenderer renders the minimum size wrapper.
+type minSizeRenderer struct {
+	wrapper *minSizeWrapper
+	content fyne.CanvasObject
+}
+
+// Layout lays out the content with minimum size constraints.
+func (r *minSizeRenderer) Layout(size fyne.Size) {
+	// Ensure minimum width
+	contentWidth := size.Width
+	if contentWidth < r.wrapper.minWidth {
+		contentWidth = r.wrapper.minWidth
+	}
+
+	// Ensure minimum height
+	contentHeight := size.Height
+	if contentHeight < r.wrapper.minHeight {
+		contentHeight = r.wrapper.minHeight
+	}
+
+	contentSize := fyne.NewSize(contentWidth, contentHeight)
+	r.content.Resize(contentSize)
+	r.content.Move(fyne.NewPos(0, 0))
+}
+
+// MinSize returns the minimum size of the wrapper.
+func (r *minSizeRenderer) MinSize() fyne.Size {
+	contentMinSize := r.content.MinSize()
+
+	// Enforce minimum width
+	if contentMinSize.Width < r.wrapper.minWidth {
+		contentMinSize.Width = r.wrapper.minWidth
+	}
+
+	// Enforce minimum height
+	if contentMinSize.Height < r.wrapper.minHeight {
+		contentMinSize.Height = r.wrapper.minHeight
+	}
+
+	return contentMinSize
+}
+
+// Objects returns the objects to render.
+func (r *minSizeRenderer) Objects() []fyne.CanvasObject {
+	return []fyne.CanvasObject{r.content}
+}
+
+// Refresh refreshes the renderer.
+func (r *minSizeRenderer) Refresh() {
+	r.content.Refresh()
+}
+
+// Destroy destroys the renderer.
+func (r *minSizeRenderer) Destroy() {
+	// No cleanup needed
 }
 
 // setupAccordionItemScroll sets up auto-scroll when an accordion item is opened.
