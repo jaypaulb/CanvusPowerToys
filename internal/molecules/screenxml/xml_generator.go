@@ -10,7 +10,7 @@ import (
 // ScreenXML represents the screen.xml structure.
 type ScreenXML struct {
 	XMLName           xml.Name       `xml:"multihead"`
-	Comment           string         `xml:",comment,omitempty"`
+	Comment           string         `xml:",comment"`
 	Type              string         `xml:"type,attr,omitempty"`
 	DPI               *XMLAttr       `xml:"dpi,omitempty"`
 	DPMS              *XMLAttr       `xml:"dpms,omitempty"`
@@ -29,7 +29,7 @@ type XMLAttr struct {
 
 // WindowConfig represents a window element in screen.xml.
 type WindowConfig struct {
-	Comment         string       `xml:",comment,omitempty"`
+	Comment         string       `xml:",comment"`
 	Type            string       `xml:"type,attr"`
 	DirectRendering *XMLAttr     `xml:"direct-rendering,omitempty"`
 	Frameless       *XMLAttr     `xml:"frameless,omitempty"`
@@ -44,7 +44,7 @@ type WindowConfig struct {
 
 // AreaConfig represents an area element within a window.
 type AreaConfig struct {
-	Comment          string           `xml:",comment,omitempty"`
+	Comment          string           `xml:",comment"`
 	Type             string           `xml:"type,attr"`
 	ColorCorrection  *ColorCorrection `xml:"colorcorrection,omitempty"`
 	GraphicsLocation *XMLAttr         `xml:"graphicslocation,omitempty"`
