@@ -50,3 +50,6 @@ resource.syso
 # Dross - redundant files, notes, and non-public content
 dross/
 
+# Documentation - local reference only
+docs/
+
