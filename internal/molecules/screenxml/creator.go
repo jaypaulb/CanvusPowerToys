@@ -2,10 +2,12 @@ package screenxml
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/jaypaulb/CanvusPowerToys/internal/organisms/services"
@@ -167,20 +169,39 @@ func (c *Creator) saveScreenXML(window fyne.Window) {
 		return
 	}
 
-	dialog.ShowFileSave(func(writer fyne.URIWriteCloser, err error) {
-		if err != nil {
-			return
-		}
-		if writer == nil {
+	// Determine default save location (user config first, then system)
+	defaultPath := c.fileService.DetectScreenXml()
+	if defaultPath == "" {
+		// Fallback to user config directory
+		defaultPath = filepath.Join(c.fileService.GetUserConfigPath(), "screen.xml")
+	}
+
+	saveDialog := dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
+		if err != nil || writer == nil {
 			return
 		}
 		defer writer.Close()
 
 		if _, err := writer.Write(xmlData); err != nil {
-			dialog.ShowError(err, window)
+			dialog.ShowError(fmt.Errorf("failed to write file: %w", err), window)
 			return
 		}
 
 		dialog.ShowInformation("Success", "screen.xml saved successfully", window)
 	}, window)
+
+	// Set default directory and filename
+	if defaultPath != "" {
+		dir := filepath.Dir(defaultPath)
+		fileName := filepath.Base(defaultPath)
+
+		if dir != "" {
+			if dirURI, err := storage.ListerForURI(storage.NewFileURI(dir)); err == nil {
+				saveDialog.SetLocation(dirURI)
+			}
+		}
+		saveDialog.SetFileName(fileName)
+	}
+
+	saveDialog.Show()
 }
