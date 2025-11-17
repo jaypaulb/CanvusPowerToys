@@ -141,7 +141,18 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 	})
 
 	// Enabled Pages
+	// NOTE: Page selection functionality is not yet implemented. All pages are currently
+	// enabled by default and cannot be adjusted by the user. The checkboxes appear enabled
+	// (not visually greyed out) but callbacks immediately reset state to prevent user changes.
+	// This provides visual feedback that all pages are available while clearly indicating
+	// the feature is coming soon via the warning notice.
 	pagesLabel := widget.NewLabel("Enabled Pages:")
+	pagesLabel.Importance = widget.LowImportance // Grey out the label to indicate it's not functional
+
+	// Coming soon note - orange warning style like custom menu
+	comingSoonNote := widget.NewLabel("! Page selection is coming soon")
+	comingSoonNote.Importance = widget.DangerImportance
+	comingSoonNote.Wrapping = fyne.TextWrapWord
 
 	// WebUI pages (not PowerToys tabs)
 	pageOptions := []string{
@@ -153,34 +164,32 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 	}
 
 	// Select All checkbox
+	// NOTE: Checkbox appears enabled but callback immediately resets state to prevent user changes.
+	// This maintains visual consistency (all checkboxes look enabled) while preventing state changes.
 	m.selectAllPage = widget.NewCheck("Select All", func(checked bool) {
-		if m.suppressSelectAll {
-			return
-		}
-		// Toggle all page checkboxes
-		for _, check := range m.enabledPages {
-			check.SetChecked(checked)
-		}
+		// Immediately reset to checked: Page selection not yet implemented, prevent user from changing state
+		// This ensures the checkbox always appears checked regardless of user clicks
+		m.selectAllPage.SetChecked(true)
 	})
+	m.selectAllPage.SetChecked(true) // Set to checked - all pages are enabled by default
 
 	pageChecks := []fyne.CanvasObject{m.selectAllPage, widget.NewSeparator()}
-	savedEnabledPages := map[string]bool{}
-	if savedConfig != nil && savedConfig.EnabledPages != nil {
-		savedEnabledPages = savedConfig.EnabledPages
-	}
 
+	// NOTE: All page checkboxes are set to checked (true) by default since page selection
+	// is not yet implemented. Checkboxes appear enabled but callbacks immediately reset state
+	// to prevent user interaction while maintaining visual consistency.
 	for _, page := range pageOptions {
-		check := widget.NewCheck(page, func(bool) {
-			m.syncSelectAllFromChecks()
+		check := widget.NewCheck(page, func(checked bool) {
+			// Immediately reset to checked: Page selection not yet implemented, prevent user from changing state
+			// This ensures the checkbox always appears checked regardless of user clicks
+			// Note: Each iteration creates a new 'check' variable, so the closure correctly captures it
+			check.SetChecked(true)
 		})
 		m.enabledPages[page] = check
-		if val, ok := savedEnabledPages[page]; ok {
-			check.SetChecked(val)
-		} else {
-			check.SetChecked(true)
-		}
+		check.SetChecked(true) // All pages enabled by default until selection is implemented
 		pageChecks = append(pageChecks, check)
 	}
+	// Sync select all state (will be true since all are checked)
 	m.syncSelectAllFromChecks()
 
 	// Save configuration button
@@ -221,7 +230,9 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 	)
 
 	// Right column: Enabled Pages with buttons
+	// Notice at the top, then label, then checkboxes
 	rightColumn := container.NewVBox(
+		comingSoonNote,
 		pagesLabel,
 		container.NewVBox(pageChecks...),
 		widget.NewSeparator(),
