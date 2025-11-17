@@ -107,6 +107,12 @@ func (c *Creator) updateMtCanvusIni(window fyne.Window) {
 
 // generateAndPreview generates screen.xml and shows preview.
 func (c *Creator) generateAndPreview(window fyne.Window) {
+	// Check if there are any cells with data
+	if !c.grid.HasCellsWithData() {
+		dialog.ShowError(fmt.Errorf("Please add some displays to your array!"), window)
+		return
+	}
+
 	xmlData, err := c.xmlGenerator.Generate()
 	if err != nil {
 		dialog.ShowError(err, window)
@@ -157,6 +163,12 @@ func (c *Creator) generateAndPreview(window fyne.Window) {
 
 // saveScreenXML saves the generated screen.xml to file.
 func (c *Creator) saveScreenXML(window fyne.Window) {
+	// Check if there are any cells with data
+	if !c.grid.HasCellsWithData() {
+		dialog.ShowError(fmt.Errorf("Please add some displays to your array!"), window)
+		return
+	}
+
 	xmlData, err := c.xmlGenerator.Generate()
 	if err != nil {
 		dialog.ShowError(err, window)

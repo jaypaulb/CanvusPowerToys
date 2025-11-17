@@ -108,6 +108,18 @@ func (g *GridWidget) SetCellIndex(row, col int, index string) {
 	g.Refresh()
 }
 
+// HasCellsWithData checks if there are any cells with GPU output assigned.
+func (g *GridWidget) HasCellsWithData() bool {
+	for row := 0; row < GridRows; row++ {
+		for col := 0; col < GridCols; col++ {
+			if g.cells[row][col].GPUOutput != "" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Tapped handles tap/click events on the grid.
 func (g *GridWidget) Tapped(e *fyne.PointEvent) {
 	row, col := g.getCellFromPosition(e.Position)
