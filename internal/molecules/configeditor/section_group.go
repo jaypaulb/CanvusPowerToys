@@ -142,6 +142,7 @@ func (sg *SectionGroup) buildTooltip(option *ConfigOption) string {
 }
 
 // getCurrentValue gets the current value for an option from the INI file.
+// Returns the default value if the key is missing, null, or empty (after trimming whitespace).
 func (sg *SectionGroup) getCurrentValue(option *ConfigOption) string {
 	if sg.iniFile == nil {
 		return option.Default
@@ -153,11 +154,17 @@ func (sg *SectionGroup) getCurrentValue(option *ConfigOption) string {
 	}
 
 	key := section.Key(option.Key)
-	if key == nil || key.String() == "" {
+	if key == nil {
 		return option.Default
 	}
 
-	return key.String()
+	// Trim whitespace and check if empty
+	value := strings.TrimSpace(key.String())
+	if value == "" {
+		return option.Default
+	}
+
+	return value
 }
 
 // setupChangeHandler sets up the change handler for a form control.

@@ -48,12 +48,15 @@ func (tah *TouchAreaHandler) CreateUI() fyne.CanvasObject {
 		tah.clearAllTouchAreas()
 	})
 
-	tah.statusLabel = widget.NewLabel("Ready - Click and drag over cells to assign touch area")
+	tah.statusLabel = widget.NewLabel("Touch Area Assignment - Drag selection has been removed")
 
+	// DEPRECATED: Drag selection has been removed. Touch area assignment via drag is no longer functional.
 	// Set up drag handler
+	/*
 	tah.grid.SetOnCellDrag(func(startRow, startCol, endRow, endCol int) {
 		tah.assignTouchArea(startRow, startCol, endRow, endCol)
 	})
+	*/
 
 	form := container.NewVBox(
 		instructions,
@@ -79,8 +82,10 @@ func (tah *TouchAreaHandler) assignTouchArea(startRow, startCol, endRow, endCol 
 	}
 
 	assignedCount := 0
-	for row := startRow; row <= endRow && row < GridRows; row++ {
-		for col := startCol; col <= endCol && col < GridCols; col++ {
+	gridRows := tah.grid.GetRows()
+	gridCols := tah.grid.GetCols()
+	for row := startRow; row <= endRow && row < gridRows; row++ {
+		for col := startCol; col <= endCol && col < gridCols; col++ {
 			cell := tah.grid.GetCell(row, col)
 			if cell != nil {
 				cell.TouchArea = tah.currentAreaIndex
@@ -96,8 +101,10 @@ func (tah *TouchAreaHandler) assignTouchArea(startRow, startCol, endRow, endCol 
 
 // clearAllTouchAreas clears all touch area assignments.
 func (tah *TouchAreaHandler) clearAllTouchAreas() {
-	for row := 0; row < GridRows; row++ {
-		for col := 0; col < GridCols; col++ {
+	rows := tah.grid.GetRows()
+	cols := tah.grid.GetCols()
+	for row := 0; row < rows; row++ {
+		for col := 0; col < cols; col++ {
 			cell := tah.grid.GetCell(row, col)
 			if cell != nil {
 				cell.TouchArea = -1
@@ -127,8 +134,10 @@ func (tah *TouchAreaHandler) parseAreaIndex(text string) int {
 // GetTouchAreas returns a map of touch area indices to their cell coordinates.
 func (tah *TouchAreaHandler) GetTouchAreas() map[int][]string {
 	areas := make(map[int][]string)
-	for row := 0; row < GridRows; row++ {
-		for col := 0; col < GridCols; col++ {
+	rows := tah.grid.GetRows()
+	cols := tah.grid.GetCols()
+	for row := 0; row < rows; row++ {
+		for col := 0; col < cols; col++ {
 			cell := tah.grid.GetCell(row, col)
 			if cell != nil && cell.TouchArea > 0 {
 				key := fmt.Sprintf("%d,%d", row, col)

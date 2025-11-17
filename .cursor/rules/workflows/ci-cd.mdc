@@ -21,7 +21,7 @@ alwaysApply: false
 
 ## Quality Gate Enforcement
 
-CI/CD-specific quality gate implementation (see `quality-gates.mdc` for universal requirements):
+CI/CD-specific quality gate implementation (see `../core/quality-gates.mdc` for universal requirements):
 
 ### Quality Gate Order
 
@@ -29,7 +29,7 @@ CI/CD-specific quality gate implementation (see `quality-gates.mdc` for universa
 2. Unit tests (fast)
 3. Integration tests (slower)
 4. Coverage check (>80%, 100% for critical paths)
-5. Security scan (see `security.mdc` for security requirements)
+5. Security scan (see `../core/security.mdc` for security requirements)
 6. Build and deploy (if all pass)
 
 ## GitHub Actions Patterns
@@ -246,7 +246,7 @@ deploy:
 
 ## TDD in CI/CD
 
-CI/CD-specific TDD validation (see `tdd-methodology.mdc` for core TDD principles):
+CI/CD-specific TDD validation (see `../core/tdd-methodology.mdc` for core TDD principles):
 
 ### TDD Validation in CI/CD
 

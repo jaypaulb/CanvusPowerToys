@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	GridCols = 6
-	GridRows = 4
+	InitialGridCols = 4
+	InitialGridRows = 3
 )
 
 // CellState represents the state of a grid cell.
@@ -22,25 +22,24 @@ type CellState struct {
 	Index        string     // Index string (empty by default)
 }
 
-// GridWidget is a custom widget for displaying a 10x5 grid.
+// GridWidget is a custom widget for displaying a dynamic grid.
 type GridWidget struct {
 	widget.BaseWidget
-	cells       [GridRows][GridCols]*CellState
+	cells       [][]*CellState // Dynamic 2D slice
 	onCellClick func(row, col int)
-	onCellDrag  func(startRow, startCol, endRow, endCol int)
-	dragStart   *fyne.Position
-	isDragging  bool
+	onSizeChanged func() // Callback when grid size changes
 }
 
-// NewGridWidget creates a new grid widget.
+// NewGridWidget creates a new grid widget with initial 4x3 size.
 func NewGridWidget() *GridWidget {
 	grid := &GridWidget{
-		cells: [GridRows][GridCols]*CellState{},
+		cells: make([][]*CellState, InitialGridRows),
 	}
 
 	// Initialize all cells
-	for row := 0; row < GridRows; row++ {
-		for col := 0; col < GridCols; col++ {
+	for row := 0; row < InitialGridRows; row++ {
+		grid.cells[row] = make([]*CellState, InitialGridCols)
+		for col := 0; col < InitialGridCols; col++ {
 			grid.cells[row][col] = &CellState{
 				TouchArea:    -1,
 				IsLayoutArea: false,
@@ -54,19 +53,70 @@ func NewGridWidget() *GridWidget {
 	return grid
 }
 
+// GetCols returns the current number of columns.
+func (g *GridWidget) GetCols() int {
+	if len(g.cells) == 0 {
+		return 0
+	}
+	return len(g.cells[0])
+}
+
+// GetRows returns the current number of rows.
+func (g *GridWidget) GetRows() int {
+	return len(g.cells)
+}
+
+// SetOnSizeChanged sets a callback that's called when the grid size changes.
+func (g *GridWidget) SetOnSizeChanged(fn func()) {
+	g.onSizeChanged = fn
+}
+
+// AddColumn adds a new column to the grid.
+func (g *GridWidget) AddColumn() {
+	rows := g.GetRows()
+	for row := 0; row < rows; row++ {
+		g.cells[row] = append(g.cells[row], &CellState{
+			TouchArea:    -1,
+			IsLayoutArea: false,
+			Resolution:   Resolution{Width: 1920, Height: 1080, Name: "1920x1080 (Full HD)"},
+			Index:        "",
+		})
+	}
+	g.Refresh()
+	if g.onSizeChanged != nil {
+		g.onSizeChanged()
+	}
+}
+
+// AddRow adds a new row to the grid.
+func (g *GridWidget) AddRow() {
+	cols := g.GetCols()
+	newRow := make([]*CellState, cols)
+	for col := 0; col < cols; col++ {
+		newRow[col] = &CellState{
+			TouchArea:    -1,
+			IsLayoutArea: false,
+			Resolution:   Resolution{Width: 1920, Height: 1080, Name: "1920x1080 (Full HD)"},
+			Index:        "",
+		}
+	}
+	g.cells = append(g.cells, newRow)
+	g.Refresh()
+	if g.onSizeChanged != nil {
+		g.onSizeChanged()
+	}
+}
+
 // SetOnCellClick sets the callback for cell click events.
 func (g *GridWidget) SetOnCellClick(fn func(row, col int)) {
 	g.onCellClick = fn
 }
 
-// SetOnCellDrag sets the callback for cell drag events.
-func (g *GridWidget) SetOnCellDrag(fn func(startRow, startCol, endRow, endCol int)) {
-	g.onCellDrag = fn
-}
-
 // GetCell returns the state of a cell.
 func (g *GridWidget) GetCell(row, col int) *CellState {
-	if row < 0 || row >= GridRows || col < 0 || col >= GridCols {
+	rows := g.GetRows()
+	cols := g.GetCols()
+	if row < 0 || row >= rows || col < 0 || col >= cols {
 		return nil
 	}
 	return g.cells[row][col]
@@ -74,7 +124,9 @@ func (g *GridWidget) GetCell(row, col int) *CellState {
 
 // SetCellGPUOutput sets the GPU output for a cell.
 func (g *GridWidget) SetCellGPUOutput(row, col int, gpuOutput string) {
-	if row < 0 || row >= GridRows || col < 0 || col >= GridCols {
+	rows := g.GetRows()
+	cols := g.GetCols()
+	if row < 0 || row >= rows || col < 0 || col >= cols {
 		return
 	}
 	g.cells[row][col].GPUOutput = gpuOutput
@@ -83,7 +135,9 @@ func (g *GridWidget) SetCellGPUOutput(row, col int, gpuOutput string) {
 
 // ClearCellGPUOutput clears the GPU output for a cell.
 func (g *GridWidget) ClearCellGPUOutput(row, col int) {
-	if row < 0 || row >= GridRows || col < 0 || col >= GridCols {
+	rows := g.GetRows()
+	cols := g.GetCols()
+	if row < 0 || row >= rows || col < 0 || col >= cols {
 		return
 	}
 	g.cells[row][col].GPUOutput = ""
@@ -92,7 +146,9 @@ func (g *GridWidget) ClearCellGPUOutput(row, col int) {
 
 // SetCellResolution sets the resolution for a cell.
 func (g *GridWidget) SetCellResolution(row, col int, res Resolution) {
-	if row < 0 || row >= GridRows || col < 0 || col >= GridCols {
+	rows := g.GetRows()
+	cols := g.GetCols()
+	if row < 0 || row >= rows || col < 0 || col >= cols {
 		return
 	}
 	g.cells[row][col].Resolution = res
@@ -101,7 +157,9 @@ func (g *GridWidget) SetCellResolution(row, col int, res Resolution) {
 
 // SetCellIndex sets the index for a cell.
 func (g *GridWidget) SetCellIndex(row, col int, index string) {
-	if row < 0 || row >= GridRows || col < 0 || col >= GridCols {
+	rows := g.GetRows()
+	cols := g.GetCols()
+	if row < 0 || row >= rows || col < 0 || col >= cols {
 		return
 	}
 	g.cells[row][col].Index = index
@@ -110,8 +168,10 @@ func (g *GridWidget) SetCellIndex(row, col int, index string) {
 
 // HasCellsWithData checks if there are any cells with GPU output assigned.
 func (g *GridWidget) HasCellsWithData() bool {
-	for row := 0; row < GridRows; row++ {
-		for col := 0; col < GridCols; col++ {
+	rows := g.GetRows()
+	cols := g.GetCols()
+	for row := 0; row < rows; row++ {
+		for col := 0; col < cols; col++ {
 			if g.cells[row][col].GPUOutput != "" {
 				return true
 			}
@@ -128,46 +188,23 @@ func (g *GridWidget) Tapped(e *fyne.PointEvent) {
 	}
 }
 
-// MouseDown handles mouse down events for drag start.
-func (g *GridWidget) MouseDown(e *fyne.PointEvent) {
-	row, col := g.getCellFromPosition(e.Position)
-	if row >= 0 && col >= 0 {
-		g.dragStart = &e.Position
-		g.isDragging = false
-	}
-}
-
-// MouseUp handles mouse up events for drag end.
-func (g *GridWidget) MouseUp(e *fyne.PointEvent) {
-	if g.dragStart != nil && g.isDragging && g.onCellDrag != nil {
-		startRow, startCol := g.getCellFromPosition(*g.dragStart)
-		endRow, endCol := g.getCellFromPosition(e.Position)
-		if startRow >= 0 && startCol >= 0 && endRow >= 0 && endCol >= 0 {
-			g.onCellDrag(startRow, startCol, endRow, endCol)
-		}
-	}
-	g.dragStart = nil
-	g.isDragging = false
-}
-
-// MouseDragged handles mouse drag events.
-func (g *GridWidget) MouseDragged(e *fyne.DragEvent) {
-	if g.dragStart != nil {
-		g.isDragging = true
-		g.Refresh()
-	}
-}
-
 // getCellFromPosition converts a screen position to grid cell coordinates.
 func (g *GridWidget) getCellFromPosition(pos fyne.Position) (row, col int) {
 	size := g.Size()
-	cellWidth := size.Width / GridCols
-	cellHeight := size.Height / GridRows
+	cols := float32(g.GetCols())
+	rows := float32(g.GetRows())
+	if cols == 0 || rows == 0 {
+		return -1, -1
+	}
+	cellWidth := size.Width / cols
+	cellHeight := size.Height / rows
 
 	col = int(pos.X / cellWidth)
 	row = int(pos.Y / cellHeight)
 
-	if row < 0 || row >= GridRows || col < 0 || col >= GridCols {
+	actualRows := g.GetRows()
+	actualCols := g.GetCols()
+	if row < 0 || row >= actualRows || col < 0 || col >= actualCols {
 		return -1, -1
 	}
 	return row, col
@@ -175,9 +212,10 @@ func (g *GridWidget) getCellFromPosition(pos fyne.Position) (row, col int) {
 
 // CreateRenderer creates the renderer for the grid widget.
 func (g *GridWidget) CreateRenderer() fyne.WidgetRenderer {
+	rows := g.GetRows()
 	return &gridRenderer{
 		grid:   g,
-		cells:  make([][]fyne.CanvasObject, GridRows),
+		cells:  make([][]fyne.CanvasObject, rows),
 		border: canvas.NewRectangle(color.RGBA{R: 200, G: 200, B: 200, A: 255}),
 	}
 }
@@ -192,14 +230,33 @@ type gridRenderer struct {
 func (r *gridRenderer) Layout(size fyne.Size) {
 	// Add spacing between cells (2px gap)
 	spacing := float32(2)
-	cellWidth := (size.Width - float32(GridCols-1)*spacing) / GridCols
-	cellHeight := (size.Height - float32(GridRows-1)*spacing) / GridRows
+	cols := float32(r.grid.GetCols())
+	rows := float32(r.grid.GetRows())
+	if cols == 0 || rows == 0 {
+		return
+	}
+	cellWidth := (size.Width - float32(cols-1)*spacing) / cols
+	cellHeight := (size.Height - float32(rows-1)*spacing) / rows
 
-	for row := 0; row < GridRows; row++ {
+	actualRows := r.grid.GetRows()
+	actualCols := r.grid.GetCols()
+
+	// Ensure r.cells has enough rows
+	if len(r.cells) < actualRows {
+		oldLen := len(r.cells)
+		r.cells = append(r.cells, make([][]fyne.CanvasObject, actualRows-oldLen)...)
+	}
+
+	for row := 0; row < actualRows; row++ {
 		if r.cells[row] == nil {
-			r.cells[row] = make([]fyne.CanvasObject, GridCols)
+			r.cells[row] = make([]fyne.CanvasObject, actualCols)
 		}
-		for col := 0; col < GridCols; col++ {
+		// Ensure row slice has enough capacity
+		if len(r.cells[row]) < actualCols {
+			oldLen := len(r.cells[row])
+			r.cells[row] = append(r.cells[row], make([]fyne.CanvasObject, actualCols-oldLen)...)
+		}
+		for col := 0; col < actualCols; col++ {
 			if r.cells[row][col] == nil {
 				rect := canvas.NewRectangle(color.RGBA{R: 255, G: 255, B: 255, A: 255})
 				rect.StrokeColor = color.RGBA{R: 150, G: 150, B: 150, A: 255}
@@ -224,12 +281,21 @@ func (r *gridRenderer) MinSize() fyne.Size {
 
 func (r *gridRenderer) Objects() []fyne.CanvasObject {
 	objects := []fyne.CanvasObject{r.border}
-	for row := 0; row < GridRows; row++ {
-		if r.cells[row] == nil {
+	rows := r.grid.GetRows()
+	cols := r.grid.GetCols()
+
+	// Ensure r.cells has enough rows
+	if len(r.cells) < rows {
+		oldLen := len(r.cells)
+		r.cells = append(r.cells, make([][]fyne.CanvasObject, rows-oldLen)...)
+	}
+
+	for row := 0; row < rows; row++ {
+		if row >= len(r.cells) || r.cells[row] == nil {
 			continue
 		}
-		for col := 0; col < GridCols; col++ {
-			if r.cells[row][col] != nil {
+		for col := 0; col < cols; col++ {
+			if col < len(r.cells[row]) && r.cells[row][col] != nil {
 				objects = append(objects, r.cells[row][col])
 			}
 		}
@@ -239,12 +305,26 @@ func (r *gridRenderer) Objects() []fyne.CanvasObject {
 
 func (r *gridRenderer) Refresh() {
 	cellState := r.grid.cells
-	for row := 0; row < GridRows; row++ {
+	rows := r.grid.GetRows()
+	cols := r.grid.GetCols()
+
+	// Ensure r.cells has enough rows
+	if len(r.cells) < rows {
+		oldLen := len(r.cells)
+		r.cells = append(r.cells, make([][]fyne.CanvasObject, rows-oldLen)...)
+	}
+
+	for row := 0; row < rows; row++ {
 		// Ensure row slice is initialized
 		if r.cells[row] == nil {
-			r.cells[row] = make([]fyne.CanvasObject, GridCols)
+			r.cells[row] = make([]fyne.CanvasObject, cols)
 		}
-		for col := 0; col < GridCols; col++ {
+		// Ensure row slice has enough capacity
+		if len(r.cells[row]) < cols {
+			oldLen := len(r.cells[row])
+			r.cells[row] = append(r.cells[row], make([]fyne.CanvasObject, cols-oldLen)...)
+		}
+		for col := 0; col < cols; col++ {
 			// Ensure cell is initialized
 			if r.cells[row][col] == nil {
 				rect := canvas.NewRectangle(color.RGBA{R: 255, G: 255, B: 255, A: 255})
@@ -254,7 +334,19 @@ func (r *gridRenderer) Refresh() {
 			}
 			if r.cells[row][col] != nil {
 				rect := r.cells[row][col].(*canvas.Rectangle)
-				state := cellState[row][col]
+				// Ensure cellState has valid data for this cell
+				var state *CellState
+				if row < len(cellState) && col < len(cellState[row]) {
+					state = cellState[row][col]
+				} else {
+					// Create default state if out of bounds
+					state = &CellState{
+						TouchArea:    -1,
+						IsLayoutArea: false,
+						Resolution:   Resolution{Width: 1920, Height: 1080, Name: "1920x1080 (Full HD)"},
+						Index:        "",
+					}
+				}
 
 				// Set cell color based on state
 				if state.GPUOutput != "" {

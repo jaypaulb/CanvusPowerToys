@@ -108,6 +108,17 @@ func (fs *FileService) GetSystemConfigPath() string {
 	return fs.systemConfigPath
 }
 
+// GetDefaultScreenXmlPath returns the default screen.xml path.
+// On Windows: %APPDATA%\MultiTouch\screen.xml
+// On Linux: ~/.MultiTouch/screen.xml
+func (fs *FileService) GetDefaultScreenXmlPath() (string, error) {
+	appData, err := paths.GetAppDataPath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(appData, "MultiTouch", "screen.xml"), nil
+}
+
 // DetectExampleIni attempts to find the example mt-canvus.ini file.
 // On Windows: "C:\Program Files\MT Canvus\Examples\mt-canvus.ini"
 // On Linux: "/usr/share/MT Canvus/Examples/mt-canvus.ini" or similar

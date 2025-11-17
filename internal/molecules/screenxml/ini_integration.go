@@ -31,8 +31,10 @@ type OutputCell struct {
 func (ii *INIIntegration) DetectVideoOutputs(grid *GridWidget) []OutputCell {
 	var outputCells []OutputCell
 
-	for row := 0; row < GridRows; row++ {
-		for col := 0; col < GridCols; col++ {
+	rows := grid.GetRows()
+	cols := grid.GetCols()
+	for row := 0; row < rows; row++ {
+		for col := 0; col < cols; col++ {
 			cell := grid.GetCell(row, col)
 			// Cell needs output section if it has GPU output but no layout (Index is empty)
 			if cell != nil && cell.GPUOutput != "" && cell.Index == "" {

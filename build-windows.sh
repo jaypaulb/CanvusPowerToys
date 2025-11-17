@@ -15,18 +15,29 @@ echo "Build Date: $BUILD_DATE"
 echo "Git Commit: $GIT_COMMIT"
 
 # Generate version info resource if goversioninfo is available
+# The resource.syso file must be in the same directory as main.go for Go to include it
 if command -v goversioninfo >/dev/null 2>&1; then
-    echo "Generating version info resource..."
-    goversioninfo -64 versioninfo.json
+    echo "Generating version info resource in cmd/powertoys/..."
+    goversioninfo -64 -o cmd/powertoys/resource.syso versioninfo.json
+else
+    echo "WARNING: goversioninfo not found. Install with: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest"
+    echo "WARNING: Building without Windows icon and version info."
 fi
 
 # Use full version number in filename
 OUTPUT_FILE="canvus-powertoys.$VERSION.exe"
 
 # Build with version info
+# Note: -H windowsgui was removed to allow console logging when running from cmd.exe
 GOOS=windows GOARCH=amd64 go build \
     -ldflags="-s -w -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.Version=$VERSION -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.BuildDate=$BUILD_DATE -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.GitCommit=$GIT_COMMIT" \
     -o "$OUTPUT_FILE" ./cmd/powertoys
+
+# Clean up resource.syso file after build
+if [ -f cmd/powertoys/resource.syso ]; then
+    echo "Cleaning up resource.syso..."
+    rm -f cmd/powertoys/resource.syso
+fi
 
 echo "Build complete: $OUTPUT_FILE"
 

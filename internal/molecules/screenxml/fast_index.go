@@ -51,16 +51,20 @@ All cells in the rectangle will be assigned to the next available index.
 func (fih *FastIndexHandler) toggle() {
 	fih.active = !fih.active
 	if fih.active {
-		fih.statusLabel.SetText("Fast Index: Enabled - Drag to assign index to cells")
-		fih.enableFastIndex()
+		fih.statusLabel.SetText("Fast Index: Disabled - Drag selection has been removed")
+		// Drag functionality removed - this feature is deprecated
+		// fih.enableFastIndex()
 	} else {
 		fih.statusLabel.SetText("Fast Index: Disabled")
-		fih.grid.SetOnCellDrag(nil)
+		// fih.grid.SetOnCellDrag(nil)
 	}
 }
 
 // enableFastIndex enables drag-to-assign-index mode.
+// DEPRECATED: Drag selection has been removed. This function is no longer functional.
 func (fih *FastIndexHandler) enableFastIndex() {
+	// Drag functionality removed
+	/*
 	fih.grid.SetOnCellDrag(func(startRow, startCol, endRow, endCol int) {
 		// Ensure start is top-left and end is bottom-right
 		if startRow > endRow {
@@ -75,8 +79,10 @@ func (fih *FastIndexHandler) enableFastIndex() {
 
 		// Assign index to all cells in the rectangle
 		assignedCount := 0
-		for row := startRow; row <= endRow && row < GridRows; row++ {
-			for col := startCol; col <= endCol && col < GridCols; col++ {
+		gridRows := fih.grid.GetRows()
+		gridCols := fih.grid.GetCols()
+		for row := startRow; row <= endRow && row < gridRows; row++ {
+			for col := startCol; col <= endCol && col < gridCols; col++ {
 				fih.grid.SetCellIndex(row, col, nextIndex)
 				assignedCount++
 			}
@@ -85,14 +91,17 @@ func (fih *FastIndexHandler) enableFastIndex() {
 		fih.statusLabel.SetText(fmt.Sprintf("Assigned index '%s' to %d cells", nextIndex, assignedCount))
 		fih.grid.Refresh()
 	})
+	*/
 }
 
 // findNextIndex finds the next available index string.
 func (fih *FastIndexHandler) findNextIndex() string {
 	// Find the highest numeric index used
 	maxIndex := -1
-	for row := 0; row < GridRows; row++ {
-		for col := 0; col < GridCols; col++ {
+	rows := fih.grid.GetRows()
+	cols := fih.grid.GetCols()
+	for row := 0; row < rows; row++ {
+		for col := 0; col < cols; col++ {
 			cell := fih.grid.GetCell(row, col)
 			if cell != nil && cell.Index != "" {
 				var idx int

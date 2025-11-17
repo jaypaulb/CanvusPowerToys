@@ -1,3 +1,9 @@
+---
+description: Background agent workflow for autonomous operation. Defines task selection, conflict resolution, implementation protocol, and blocker handling for unattended agent operation. Apply when agent is operating autonomously.
+globs:
+alwaysApply: false
+---
+
 # 3.2 Background Agent Workflow (Autonomous Operation)
 
 ## Core Principles
@@ -262,7 +268,3 @@ Before completion:
 4. Continue autonomous operation
 
 Remember: The goal is autonomous task completion with zero user intervention while maintaining quality and preventing conflicts.
-description:
-globs:
-alwaysApply: false
----

@@ -123,7 +123,49 @@ func (cs *CanvasService) Stop() {
 	}
 }
 
+// Restart restarts the canvas service by stopping current subscription,
+// re-resolving client ID, and restarting the subscription.
+func (cs *CanvasService) Restart() error {
+	fmt.Printf("[CanvasService] Restart called - stopping current subscription\n")
+
+	// Stop current subscription
+	cs.Stop()
+
+	// Wait a moment for cleanup
+	time.Sleep(500 * time.Millisecond)
+
+	// Reset state
+	cs.hasReceivedEvents = false
+	cs.lastEventTime = time.Time{}
+	cs.subscriptionStartTime = time.Time{}
+
+	// If we have an override client name, use that
+	if cs.overrideClientName != "" {
+		fmt.Printf("[CanvasService] Restart: Using override client name: '%s'\n", cs.overrideClientName)
+		return cs.restartWithClientName(cs.overrideClientName)
+	}
+
+	// Otherwise, restart with installation name
+	if cs.installationName != "" && cs.installationName != "Unknown" {
+		fmt.Printf("[CanvasService] Restart: Using installation name: '%s'\n", cs.installationName)
+		return cs.restartWithClientName(cs.installationName)
+	}
+
+	// If no installation name, try to re-resolve
+	if cs.clientResolver != nil {
+		fmt.Printf("[CanvasService] Restart: Re-resolving client ID from installation name\n")
+		installationName, err := cs.clientResolver.GetInstallationName()
+		if err == nil && installationName != "" {
+			cs.installationName = installationName
+			return cs.restartWithClientName(installationName)
+		}
+	}
+
+	return fmt.Errorf("cannot restart: no client name or installation name available")
+}
+
 // processEvents processes canvas events from the workspace subscription.
+// Only processes updates when canvasName or canvasID actually changes.
 func (cs *CanvasService) processEvents(eventChan <-chan webuiatoms.CanvasEvent, errChan <-chan error) {
 	for {
 		select {
@@ -137,6 +179,9 @@ func (cs *CanvasService) processEvents(eventChan <-chan webuiatoms.CanvasEvent, 
 			cs.hasReceivedEvents = true
 			cs.lastEventTime = time.Now()
 
+			// Get current canvas state to compare
+			currentCanvasID, currentCanvasName := cs.canvasTracker.GetCanvas()
+
 			// If canvas_name is empty, fetch it from the API
 			canvasName := event.CanvasName
 			if canvasName == "" && event.CanvasID != "" {
@@ -146,8 +191,16 @@ func (cs *CanvasService) processEvents(eventChan <-chan webuiatoms.CanvasEvent, 
 					canvasName = fetchedName
 				}
 			}
-			// Update canvas tracker with new canvas_id and canvas_name
-			cs.canvasTracker.UpdateCanvas(event.CanvasID, canvasName)
+
+			// Only update if canvasName or canvasID has actually changed
+			if event.CanvasID != currentCanvasID || canvasName != currentCanvasName {
+				cs.canvasTracker.UpdateCanvas(event.CanvasID, canvasName)
+				fmt.Printf("[CanvasService] Canvas updated - ID: %s -> %s, Name: '%s' -> '%s'\n",
+					currentCanvasID, event.CanvasID, currentCanvasName, canvasName)
+			} else {
+				// Ignore update - no change to canvasName or canvasID
+				fmt.Printf("[CanvasService] Ignoring update - no change to canvasName or canvasID\n")
+			}
 		case err, ok := <-errChan:
 			if !ok {
 				return

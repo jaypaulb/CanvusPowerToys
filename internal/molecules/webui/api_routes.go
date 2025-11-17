@@ -111,6 +111,9 @@ func (ar *APIRoutes) RegisterRoutes(mux *http.ServeMux) {
 
 	// Client list endpoint
 	mux.HandleFunc("/api/clients", ar.handleClientList)
+
+	// Restart canvas service endpoint
+	mux.HandleFunc("/api/canvas/restart", ar.handleCanvasRestart)
 }
 
 // contains checks if a string contains a substring.
@@ -408,5 +411,40 @@ func getServerIP() string {
 	}
 
 	return ""
+}
+
+// handleCanvasRestart handles requests to restart the canvas service.
+func (ar *APIRoutes) handleCanvasRestart(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		sendErrorResponse(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	fmt.Printf("[API] handleCanvasRestart called\n")
+
+	// Restart canvas service
+	if err := ar.canvasService.Restart(); err != nil {
+		fmt.Printf("[API] ERROR: Restart failed: %v\n", err)
+		response := map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	fmt.Printf("[API] Restart succeeded\n")
+
+	response := map[string]interface{}{
+		"success": true,
+		"message": "Canvas service restarted",
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 

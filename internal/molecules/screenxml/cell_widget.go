@@ -191,8 +191,10 @@ func (cw *CellWidget) findNextGPUOutput() string {
 	maxGpu := 0
 	maxOutput := 0
 
-	for row := 0; row < GridRows; row++ {
-		for col := 0; col < GridCols; col++ {
+	rows := cw.grid.GetRows()
+	cols := cw.grid.GetCols()
+	for row := 0; row < rows; row++ {
+		for col := 0; col < cols; col++ {
 			cell := cw.grid.GetCell(row, col)
 			if cell != nil && cell.GPUOutput != "" {
 				parts := strings.Split(cell.GPUOutput, ":")
@@ -224,8 +226,10 @@ func (cw *CellWidget) findNextGPUOutput() string {
 // findLowestAvailableIndex finds the lowest available layout index (0-3).
 func (cw *CellWidget) findLowestAvailableIndex() int {
 	usedIndices := make(map[int]bool)
-	for row := 0; row < GridRows; row++ {
-		for col := 0; col < GridCols; col++ {
+	rows := cw.grid.GetRows()
+	cols := cw.grid.GetCols()
+	for row := 0; row < rows; row++ {
+		for col := 0; col < cols; col++ {
 			cell := cw.grid.GetCell(row, col)
 			if cell != nil && cell.Index != "" {
 				if idx, err := strconv.Atoi(cell.Index); err == nil {

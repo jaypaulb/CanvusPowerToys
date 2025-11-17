@@ -28,7 +28,6 @@ type MainWindow struct {
 // NewMainWindow creates a new main window instance.
 func NewMainWindow(app fyne.App) *MainWindow {
 	window := app.NewWindow("Canvus PowerToys")
-	window.Resize(fyne.NewSize(1024, 768))
 	window.CenterOnScreen()
 
 	// Set window icon from embedded assets
@@ -152,6 +151,10 @@ func NewMainWindow(app fyne.App) *MainWindow {
 	)
 
 	window.SetContent(contentWithNote)
+
+	// Set initial window size
+	// The window will automatically respect the minimum size of its content
+	window.Resize(fyne.NewSize(1024, 768))
 
 	// Setup system tray (this also sets up close intercept)
 	trayManager := tray.NewManager(window, app)

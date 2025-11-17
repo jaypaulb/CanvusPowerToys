@@ -191,8 +191,10 @@ func (xg *XMLGenerator) calculateLayerSize() string {
 	// Find the maximum graphics coordinates from cells with layer > 0
 	maxX, maxY := 0, 0
 
-	for row := 0; row < GridRows; row++ {
-		for col := 0; col < GridCols; col++ {
+	rows := xg.grid.GetRows()
+	cols := xg.grid.GetCols()
+	for row := 0; row < rows; row++ {
+		for col := 0; col < cols; col++ {
 			cell := xg.grid.GetCell(row, col)
 			if cell != nil && cell.GPUOutput != "" {
 				// Check if cell has a layer index > 0
@@ -377,8 +379,10 @@ func (xg *XMLGenerator) calculateWindowBounds(outputs map[string][]CellCoord) (m
 func (xg *XMLGenerator) groupCellsByGPU() map[string][]CellCoord {
 	groups := make(map[string][]CellCoord)
 
-	for row := 0; row < GridRows; row++ {
-		for col := 0; col < GridCols; col++ {
+	rows := xg.grid.GetRows()
+	cols := xg.grid.GetCols()
+	for row := 0; row < rows; row++ {
+		for col := 0; col < cols; col++ {
 			cell := xg.grid.GetCell(row, col)
 			if cell != nil && cell.GPUOutput != "" {
 				groups[cell.GPUOutput] = append(groups[cell.GPUOutput], CellCoord{Row: row, Col: col})

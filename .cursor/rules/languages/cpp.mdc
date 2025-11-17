@@ -22,7 +22,7 @@ alwaysApply: false
 
 ## Project Structure (Atomic Design)
 
-Structure C++ code following atomic design hierarchy (see `code-structure.mdc` for general principles):
+Structure C++ code following atomic design hierarchy (see `../core/code-structure.mdc` for general principles):
 
 ### Atoms (Basic Building Blocks)
 - **Single-purpose classes/utilities**: One class, one function, or one small utility per file
@@ -116,7 +116,7 @@ Structure C++ code following atomic design hierarchy (see `code-structure.mdc` f
 
 ## Testing (TDD)
 
-Follow TDD methodology (see `tdd-methodology.mdc` for core principles):
+Follow TDD methodology (see `../core/tdd-methodology.mdc` for core principles):
 
 ### TDD Workflow (C++)
 1. **Red**: Write failing test first

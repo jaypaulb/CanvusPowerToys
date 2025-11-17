@@ -331,6 +331,49 @@ function initWorkspaceClient() {
   const workspaceClient = new WorkspaceClient();
   const baseURL = window.location.origin;
 
+  // Check if this is a page refresh on the home page
+  const isHomePage = window.location.pathname === '/' || window.location.pathname === '/index.html' || window.location.pathname === '/main.html';
+  const wasRefreshed = performance.navigation.type === performance.navigation.TYPE_RELOAD ||
+                       (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]?.type === 'reload');
+
+  // If home page was refreshed, force disconnect and restart
+  if (isHomePage && wasRefreshed) {
+    console.log('[common.js] Home page refresh detected - forcing disconnect and restart');
+
+    // Disconnect existing connection
+    workspaceClient.disconnect();
+
+    // Call restart API to restart canvas service
+    fetch(`${baseURL}/api/canvas/restart`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          console.log('[common.js] Canvas service restarted successfully');
+          // Wait a moment for service to restart, then connect
+          setTimeout(() => {
+            workspaceClient.connect(baseURL);
+          }, 1000);
+        } else {
+          console.error('[common.js] Failed to restart canvas service:', data.error);
+          // Still try to connect even if restart failed
+          workspaceClient.connect(baseURL);
+        }
+      })
+      .catch(error => {
+        console.error('[common.js] Error calling restart API:', error);
+        // Still try to connect even if restart failed
+        workspaceClient.connect(baseURL);
+      });
+  } else {
+    // Normal page load - just connect
+    workspaceClient.connect(baseURL);
+  }
+
   workspaceClient.on('connected', () => {
     // Update status to connected - no need to fetch installation info again
     // The canvas_update events will provide client_name and canvas_name
@@ -394,7 +437,5 @@ function initWorkspaceClient() {
   if (storedStatus && storedStatusText) {
     updateStatus(storedStatus, storedStatusText);
   }
-
-  workspaceClient.connect(baseURL);
 }
 

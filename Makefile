@@ -26,8 +26,11 @@ build-windows: process-assets
 		exit 1; \
 	fi
 	@if command -v goversioninfo >/dev/null 2>&1; then \
-		echo "Generating version info..."; \
-		goversioninfo -64 versioninfo.json; \
+		echo "Generating version info resource in cmd/powertoys/..."; \
+		goversioninfo -64 -o cmd/powertoys/resource.syso versioninfo.json; \
+	else \
+		echo "WARNING: goversioninfo not found. Install with: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest"; \
+		echo "WARNING: Building without Windows icon and version info."; \
 	fi
 	@VERSION=$$(grep 'Version.*=' internal/atoms/version/version.go | sed -n 's/.*"\([^"]*\)".*/\1/p'); \
 	BUILD_DATE=$$(date -u +"%Y-%m-%dT%H:%M:%SZ"); \
@@ -37,6 +40,10 @@ build-windows: process-assets
 		-ldflags="-s -w -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.Version=$$VERSION -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.BuildDate=$$BUILD_DATE -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.GitCommit=$$GIT_COMMIT" \
 		-o $$OUTPUT_FILE ./cmd/powertoys; then \
 		echo "Built: $$OUTPUT_FILE"; \
+		if [ -f cmd/powertoys/resource.syso ]; then \
+			echo "Cleaning up resource.syso..."; \
+			rm -f cmd/powertoys/resource.syso; \
+		fi \
 	else \
 		echo "ERROR: Build failed! Version was incremented to $$VERSION but build did not complete."; \
 		exit 1; \

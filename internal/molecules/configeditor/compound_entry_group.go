@@ -76,15 +76,8 @@ func (ceg *CompoundEntryGroup) CreateUI() fyne.CanvasObject {
 		}
 	}
 
-	// If no entries, add at least one empty entry
-	if len(ceg.entries) == 0 {
-		// For fixed-workspace, start with index 1
-		initialName := ""
-		if ceg.pattern == "fixed-workspace" {
-			initialName = "1"
-		}
-		ceg.addEntry(initialName, entriesContainer)
-	}
+	// Don't create default entries - only show entries that actually exist in the INI file
+	// Users can add new entries using the "Add New" button if needed
 
 	// Layout: [tab] Section Name [tab] [Add New Button]
 	// Tab spacing (16px default Fyne padding) for sub-section indentation
@@ -344,6 +337,7 @@ func (ceg *CompoundEntryGroup) getCompoundOptions() []*ConfigOption {
 }
 
 // getCurrentValue gets the current value for an option from a compound entry.
+// Returns the default value if the key is missing, null, or empty (after trimming whitespace).
 func (ceg *CompoundEntryGroup) getCurrentValue(option *ConfigOption, entryName string) string {
 	if ceg.iniFile == nil || entryName == "" {
 		return option.Default
@@ -356,11 +350,17 @@ func (ceg *CompoundEntryGroup) getCurrentValue(option *ConfigOption, entryName s
 	}
 
 	key := section.Key(option.Key)
-	if key == nil || key.String() == "" {
+	if key == nil {
 		return option.Default
 	}
 
-	return key.String()
+	// Trim whitespace and check if empty
+	value := strings.TrimSpace(key.String())
+	if value == "" {
+		return option.Default
+	}
+
+	return value
 }
 
 // showAddEntryDialog shows a dialog to add a new compound entry.

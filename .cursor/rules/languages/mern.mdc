@@ -16,7 +16,7 @@ alwaysApply: false
 
 ## Project Structure (Atomic Design)
 
-MERN-specific atomic design patterns (see `code-structure.mdc` for complete hierarchy and rules):
+MERN-specific atomic design patterns (see `../core/code-structure.mdc` for complete hierarchy and rules):
 
 ### React Frontend (Client)
 
@@ -159,13 +159,13 @@ MERN-specific atomic design patterns (see `code-structure.mdc` for complete hier
 
 ## Security
 
-MERN-specific security patterns (see `security.mdc` for universal security requirements):
+MERN-specific security patterns (see `../core/security.mdc` for universal security requirements):
 - Use `process.env` for environment variables
 - Use `dotenv` for `.env` file management (never commit `.env`)
 
 ## Testing (TDD)
 
-MERN-specific TDD patterns (see `tdd-methodology.mdc` for core TDD principles):
+MERN-specific TDD patterns (see `../core/tdd-methodology.mdc` for core TDD principles):
 
 ### MERN Testing Tools
 - **Backend**: Use Jest for unit and integration tests

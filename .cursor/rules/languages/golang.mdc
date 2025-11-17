@@ -10,7 +10,7 @@ alwaysApply: false
 
 ## Quality Gates (Go-Specific)
 
-Go-specific quality checks (see `quality-gates.mdc` for universal requirements):
+Go-specific quality checks (see `../core/quality-gates.mdc` for universal requirements):
 - All code must pass: `go fmt`, `go vet`, `golangci-lint run`, `go test ./...`
 - Documentation for all exported functions/types
 - Use Go conventions for naming and structure
@@ -23,7 +23,7 @@ Go-specific quality checks (see `quality-gates.mdc` for universal requirements):
 
 ## Project Structure (Atomic Design)
 
-Go-specific atomic design patterns (see `code-structure.mdc` for complete hierarchy and rules):
+Go-specific atomic design patterns (see `../core/code-structure.mdc` for complete hierarchy and rules):
 
 ### Atoms (Basic Building Blocks)
 - **Single-purpose packages**: One type, one function, or one small utility per package
@@ -110,7 +110,7 @@ Go-specific atomic design patterns (see `code-structure.mdc` for complete hierar
 
 ## Testing (TDD)
 
-Go-specific TDD patterns (see `tdd-methodology.mdc` for core TDD principles):
+Go-specific TDD patterns (see `../core/tdd-methodology.mdc` for core TDD principles):
 
 ### Go Testing Tools
 - Use standard `testing` package
@@ -141,7 +141,7 @@ func TestValidateEmail(t *testing.T) {
 
 ## Security
 
-Go-specific security patterns (see `security.mdc` for universal security requirements):
+Go-specific security patterns (see `../core/security.mdc` for universal security requirements):
 - Use `os.Getenv()` for environment variables
 - Use `godotenv` for `.env` file management (never commit `.env`)
 - Use HTTPS for all external communications

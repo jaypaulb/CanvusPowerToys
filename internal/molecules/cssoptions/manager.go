@@ -43,9 +43,10 @@ type Manager struct {
 	hideSidebarEnabled   *widget.Check
 	hideMainMenuEnabled  *widget.Check
 	hideFingerMenuEnabled *widget.Check
-	standbyImagePath     string
-	standbyImageLabel    *widget.Label
-	statusLabel          *widget.Label
+	standbyImageEnabled   *widget.Check
+	standbyImagePath       string
+	standbyImageLabel      *widget.Label
+	statusLabel            *widget.Label
 }
 
 // NewManager creates a new CSS Options Manager.
@@ -115,6 +116,9 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 	m.hideFingerMenuEnabled = widget.NewCheck("", nil)
 
 	// Standby Image for Video Outputs
+	standbyImageTooltip := "Enable custom standby image for video outputs (PNG with transparency supported)"
+	m.standbyImageEnabled = widget.NewCheck("", nil)
+	m.standbyImageEnabled.SetChecked(false) // Default: unchecked
 	standbyImageSectionLabel := widget.NewLabel("Video Output Standby Image")
 	standbyImageSectionLabel.TextStyle = fyne.TextStyle{Bold: true}
 	standbyImageDescription := widget.NewLabel("Set a custom standby image for video outputs (PNG with transparency supported)")
@@ -177,6 +181,7 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 	m.statusLabel = widget.NewLabel("Ready")
 
 	// Helper function to create an option row with aligned checkbox
+	// The entire row is clickable to toggle the checkbox
 	createOptionRow := func(labelText, tooltipText string, checkbox *widget.Check) fyne.CanvasObject {
 		labelWithColon := widget.NewLabel(labelText + ":")
 		labelWithColon.Truncation = fyne.TextTruncateOff
@@ -184,19 +189,35 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 		tooltip := widget.NewLabel(tooltipText)
 		tooltip.Wrapping = fyne.TextWrapWord
 
-		// Use Border layout: indentation + label on left, checkbox on right, description in center
+		// Use Border layout: indentation + label on left, checkbox on right (with padding), description in center
 		// This ensures description has enough space to wrap horizontally
+		// Add padding on right so checkbox isn't covered by scrollbar
 		indentLabel := container.NewHBox(
 			widget.NewLabel("    "), // Indentation
 			labelWithColon,
 		)
 
-		return container.NewBorder(
-			nil, nil,
-			indentLabel, // Left: indentation + label
-			checkbox,   // Right: checkbox (aligned)
-			tooltip,    // Center: description (can expand and wrap horizontally)
+		// Wrap checkbox with padding on the right to avoid scrollbar overlap
+		checkboxWithPadding := container.NewHBox(
+			checkbox,
+			widget.NewLabel("					    "), // Right padding to avoid scrollbar
 		)
+
+		rowContent := container.NewBorder(
+			nil, nil,
+			indentLabel,        // Left: indentation + label
+			checkboxWithPadding, // Right: checkbox with padding
+			tooltip,           // Center: description (can expand and wrap horizontally)
+		)
+
+		// Make the entire row clickable by wrapping in a custom widget that handles taps
+		clickableRow := &clickableRowWidget{
+			content:  rowContent,
+			checkbox: checkbox,
+		}
+		clickableRow.ExtendBaseWidget(clickableRow)
+
+		return clickableRow
 	}
 
 	// Buttons - will be in fixed header
@@ -208,6 +229,10 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 		m.validateRequirements(window)
 	})
 
+	previewBtn := widget.NewButton("Preview CSS", func() {
+		m.previewCSS(window)
+	})
+
 	launchBtn := widget.NewButton("Launch Canvus with Current Config", func() {
 		m.launchCanvusWithConfig(window)
 	})
@@ -215,7 +240,7 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 	// Fixed header with buttons
 	header := container.NewBorder(
 		nil, nil, nil,
-		container.NewHBox(validateBtn, generateBtn, launchBtn),
+		container.NewHBox(validateBtn, previewBtn, generateBtn, launchBtn),
 		title,
 	)
 
@@ -245,6 +270,7 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 		createOptionRow("Hide Finger Menu", hideFingerMenuTooltip, m.hideFingerMenuEnabled),
 		widget.NewSeparator(),
 		standbyImageSectionLabel,
+		createOptionRow("Enable Standby Image", standbyImageTooltip, m.standbyImageEnabled),
 		container.NewHBox(
 			widget.NewLabel("    "), // Indentation
 			standbyImageDescription,
@@ -618,22 +644,64 @@ func (m *Manager) generateCSS() string {
 	css.WriteString("/* Note: Third-party touch menus are not affected by these rules */\n\n")
 
 	// Standby Image for Video Outputs
-	if m.standbyImagePath != "" {
+	if m.standbyImageEnabled.Checked && m.standbyImagePath != "" {
 		css.WriteString("/* Standby Image CSS - Sets custom standby image for video outputs */\n")
-		css.WriteString("OutputWidget > .output-info {\n")
-		css.WriteString("  display: none;\n")
-		css.WriteString("  background: transparent;\n")
-		css.WriteString("  input-flags: none;\n")
+		css.WriteString("VideoOutputWidget > .output-info {\n")
 		css.WriteString("  size: 100% !important;\n")
-		css.WriteString("  origin: 0.5 0.5;\n")
-		css.WriteString("  location: 50% 50%;\n")
-		// Use relative path from CSS file location, or absolute path
+		// Use full absolute path with forward slashes
 		imagePath := m.getStandbyImagePathForCSS()
 		css.WriteString(fmt.Sprintf("  source: \"%s\" !important;\n", imagePath))
 		css.WriteString("}\n\n")
 	}
 
 	return css.String()
+}
+
+// previewCSS shows a preview dialog with the generated CSS content.
+func (m *Manager) previewCSS(window fyne.Window) {
+	// Generate CSS content
+	css := m.generateCSS()
+
+	if css == "" {
+		dialog.ShowInformation("Preview CSS", "No CSS will be generated with current options.\n\nPlease enable at least one option.", window)
+		return
+	}
+
+	// Use MultiLineEntry for better performance with large CSS content
+	previewEntry := widget.NewMultiLineEntry()
+	previewEntry.SetText(css)
+	previewEntry.Wrapping = fyne.TextWrapOff // Don't wrap CSS
+
+	// Copy to clipboard button
+	copyBtn := widget.NewButton("Copy to Clipboard", func() {
+		window.Clipboard().SetContent(previewEntry.Text)
+		dialog.ShowInformation("Copied", "CSS content copied to clipboard", window)
+	})
+
+	// Show image path info if standby image is enabled
+	var infoText string
+	if m.standbyImageEnabled.Checked && m.standbyImagePath != "" {
+		imagePath := m.getStandbyImagePathForCSS()
+		infoText = fmt.Sprintf("Standby Image Path: %s\nOriginal Path: %s\nCSS Directory: %s\n\n",
+			imagePath, m.standbyImagePath, m.getCSSDirectory())
+	}
+
+	infoLabel := widget.NewLabel(infoText)
+	infoLabel.Wrapping = fyne.TextWrapWord
+
+	// Create a container with info, entry and button
+	content := container.NewVBox(
+		infoLabel,
+		container.NewBorder(
+			copyBtn, // Top: Copy button
+			nil, nil, nil,
+			container.NewScroll(previewEntry), // Center: Scrollable text
+		),
+	)
+
+	previewDialog := dialog.NewCustom("Generated CSS Preview", "Close", content, window)
+	previewDialog.Resize(fyne.NewSize(800, 600))
+	previewDialog.Show()
 }
 
 // getPluginDirectory returns the plugin directory path.
@@ -685,13 +753,14 @@ func (m *Manager) updatePluginFolders(iniFile *ini.File, iniPath, pluginDir stri
 
 // launchCanvusWithConfig launches Canvus with the current CSS configuration.
 func (m *Manager) launchCanvusWithConfig(window fyne.Window) {
-	// Check if any options are enabled (widget options, video looping, or UI visibility)
+	// Check if any options are enabled (widget options, video looping, UI visibility, or standby image)
 	hasWidgetOptions := m.movingEnabled.Checked || m.scalingEnabled.Checked || m.rotationEnabled.Checked
 	hasVideoOptions := m.videoLoopEnabled.Checked
 	hasUIOptions := m.hideTitleBarsEnabled.Checked || m.hideResizeHandlesEnabled.Checked ||
 		m.hideSidebarEnabled.Checked || m.hideMainMenuEnabled.Checked || m.hideFingerMenuEnabled.Checked
+	hasStandbyImage := m.standbyImageEnabled.Checked && m.standbyImagePath != ""
 
-	if !hasWidgetOptions && !hasVideoOptions && !hasUIOptions {
+	if !hasWidgetOptions && !hasVideoOptions && !hasUIOptions && !hasStandbyImage {
 		dialog.ShowError(fmt.Errorf("please enable at least one CSS option before launching"), window)
 		return
 	}
@@ -831,6 +900,9 @@ func (m *Manager) generateCSSFileName() string {
 	if m.hideFingerMenuEnabled.Checked {
 		parts = append(parts, "nofinger")
 	}
+	if m.standbyImageEnabled.Checked && m.standbyImagePath != "" {
+		parts = append(parts, "standby")
+	}
 
 	if len(parts) == 0 {
 		parts = append(parts, "default")
@@ -876,6 +948,9 @@ func (m *Manager) generateShortcutName() string {
 	}
 	if m.hideFingerMenuEnabled.Checked {
 		parts = append(parts, "NoFinger")
+	}
+	if m.standbyImageEnabled.Checked && m.standbyImagePath != "" {
+		parts = append(parts, "Standby")
 	}
 
 	if len(parts) == 0 {
@@ -944,22 +1019,71 @@ func (m *Manager) getImagesDirectory() string {
 	return filepath.Join(configDir, "css", "images")
 }
 
-// getStandbyImagePathForCSS returns the path to use in CSS (relative to CSS file location).
+// clickableRowWidget is a widget that makes an entire row clickable to toggle a checkbox.
+type clickableRowWidget struct {
+	widget.BaseWidget
+	content  fyne.CanvasObject
+	checkbox *widget.Check
+}
+
+// CreateRenderer creates the renderer for the clickable row widget.
+func (c *clickableRowWidget) CreateRenderer() fyne.WidgetRenderer {
+	return &clickableRowRenderer{
+		widget:  c,
+		content: c.content,
+	}
+}
+
+// Tapped handles tap events on the row, toggling the checkbox.
+func (c *clickableRowWidget) Tapped(*fyne.PointEvent) {
+	c.checkbox.SetChecked(!c.checkbox.Checked)
+}
+
+// clickableRowRenderer renders the clickable row widget.
+type clickableRowRenderer struct {
+	widget  *clickableRowWidget
+	content fyne.CanvasObject
+}
+
+// Layout lays out the content.
+func (r *clickableRowRenderer) Layout(size fyne.Size) {
+	r.content.Resize(size)
+	r.content.Move(fyne.NewPos(0, 0))
+}
+
+// MinSize returns the minimum size of the widget.
+func (r *clickableRowRenderer) MinSize() fyne.Size {
+	return r.content.MinSize()
+}
+
+// Objects returns the objects to render.
+func (r *clickableRowRenderer) Objects() []fyne.CanvasObject {
+	return []fyne.CanvasObject{r.content}
+}
+
+// Refresh refreshes the renderer.
+func (r *clickableRowRenderer) Refresh() {
+	r.content.Refresh()
+}
+
+// Destroy destroys the renderer.
+func (r *clickableRowRenderer) Destroy() {
+	// No cleanup needed
+}
+
+// getStandbyImagePathForCSS returns the full absolute path to use in CSS with forward slashes.
 func (m *Manager) getStandbyImagePathForCSS() string {
 	if m.standbyImagePath == "" {
 		return ""
 	}
 
-	// Get CSS directory
-	cssDir := m.getCSSDirectory()
-
-	// Make path relative to CSS directory
-	relPath, err := filepath.Rel(cssDir, m.standbyImagePath)
+	// Get absolute path (in case it's relative)
+	absPath, err := filepath.Abs(m.standbyImagePath)
 	if err != nil {
-		// If relative path fails, use just the filename
-		return filepath.Base(m.standbyImagePath)
+		// If absolute path fails, use the original path
+		absPath = m.standbyImagePath
 	}
 
-	// Normalize path separators for CSS (use forward slashes)
-	return strings.ReplaceAll(relPath, "\\", "/")
+	// Normalize path separators for CSS (use forward slashes instead of backslashes)
+	return strings.ReplaceAll(absPath, "\\", "/")
 }

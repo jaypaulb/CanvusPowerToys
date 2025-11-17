@@ -2,12 +2,13 @@ package screenxml
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/jaypaulb/CanvusPowerToys/internal/organisms/services"
@@ -21,7 +22,12 @@ type Creator struct {
 	iniIntegration *INIIntegration
 	fileService    *services.FileService
 	window         fyne.Window
-	areaPerScreen  *widget.Check // Checkbox for "area per screen or per gpu"
+	areaPerScreen  *widget.Check   // Checkbox for "area per screen or per gpu"
+	addColBtn      *widget.Button  // Reference to add column button
+	addRowBtn      *widget.Button  // Reference to add row button
+	topBar         *fyne.Container // Reference to top bar for UI updates
+	mainContainer  *fyne.Container // Reference to main container for updates
+	centerArea     *fyne.Container  // Reference to center area container
 }
 
 // NewCreator creates a new Screen.xml Creator.
@@ -59,7 +65,7 @@ func (c *Creator) CreateUI(window fyne.Window) fyne.CanvasObject {
 	c.areaPerScreen.SetChecked(false) // Default: area per Screen (per GPU output)
 
 	// Top: Checkbox + 3 buttons
-	topBar := container.NewHBox(
+	c.topBar = container.NewHBox(
 		c.areaPerScreen,
 		widget.NewSeparator(),
 		widget.NewButton("Generate Screen.xml", func() {
@@ -73,14 +79,114 @@ func (c *Creator) CreateUI(window fyne.Window) fyne.CanvasObject {
 		}),
 	)
 
-	// Main: Grid with cell widgets wrapped in drag selection widget
-	dragSelectionWidget := NewDragSelectionWidget(c.gridContainer)
+	// Main: Grid container with cell widgets
+	gridContainer := c.gridContainer.GetContainer()
 
-	return container.NewBorder(
-		topBar,
-		nil, nil, nil,
-		dragSelectionWidget,
+	// Add Column button (on the right)
+	c.addColBtn = widget.NewButton("+ Column", func() {
+		c.grid.AddColumn()
+		c.updateGridContainer()
+	})
+
+	// Add Row button (on the bottom)
+	c.addRowBtn = widget.NewButton("+ Row", func() {
+		c.grid.AddRow()
+		c.updateGridContainer()
+	})
+
+	// Center area: grid with add column button on the right
+	c.centerArea = container.NewBorder(
+		nil, nil, nil, c.addColBtn, // Right: Add Column button
+		gridContainer,
 	)
+
+	// Full layout: top bar, center area with buttons, bottom button
+	c.mainContainer = container.NewBorder(
+		c.topBar,     // Top
+		c.addRowBtn,  // Bottom: Add Row button
+		nil, nil,     // Left, Right
+		c.centerArea, // Center
+	)
+
+	return c.mainContainer
+}
+
+// updateGridContainer updates the grid container in the UI when grid size changes.
+func (c *Creator) updateGridContainer() {
+	if c.window == nil || c.topBar == nil || c.addColBtn == nil || c.addRowBtn == nil {
+		return
+	}
+
+	// Get the new container (this will trigger rebuildContainer which removes old widgets)
+	newGridContainer := c.gridContainer.GetContainer()
+
+	// Recreate the center area Border container with new grid container
+	c.centerArea = container.NewBorder(
+		nil, nil, nil, c.addColBtn, // Right: Add Column button
+		newGridContainer, // Center: new grid container
+	)
+
+	// Recreate the entire main layout with updated grid
+	c.mainContainer = container.NewBorder(
+		c.topBar,     // Top
+		c.addRowBtn,  // Bottom: Add Row button
+		nil, nil,     // Left, Right
+		c.centerArea, // Center: new center area with updated grid
+	)
+
+	// Update the tab content instead of replacing the entire window content
+	// This preserves the header with tabs and "close to sys tray" message
+	c.updateTabContent()
+}
+
+// updateTabContent updates the Screen.xml Creator tab content without affecting the window structure.
+func (c *Creator) updateTabContent() {
+	if c.window == nil || c.mainContainer == nil {
+		return
+	}
+
+	// Find the AppTabs in the window content and update our tab
+	windowContent := c.window.Content()
+	if windowContent == nil {
+		return
+	}
+
+	// Traverse the content tree to find AppTabs
+	tabs := c.findAppTabs(windowContent)
+	if tabs != nil {
+		// Find the "Screen.xml Creator" tab and update its content
+		for _, tab := range tabs.Items {
+			if tab.Text == "Screen.xml Creator" {
+				// Directly update the tab's content
+				tab.Content = c.mainContainer
+				// Refresh the tabs to reflect the change
+				tabs.Refresh()
+				return
+			}
+		}
+	}
+
+	// Fallback: if we can't find the tabs, just refresh the container
+	c.mainContainer.Refresh()
+}
+
+// findAppTabs recursively searches for AppTabs in the content tree.
+func (c *Creator) findAppTabs(obj fyne.CanvasObject) *container.AppTabs {
+	// Check if this is an AppTabs container
+	if tabs, ok := obj.(*container.AppTabs); ok {
+		return tabs
+	}
+
+	// If it's a container, check its children
+	if cont, ok := obj.(*fyne.Container); ok {
+		for _, child := range cont.Objects {
+			if tabs := c.findAppTabs(child); tabs != nil {
+				return tabs
+			}
+		}
+	}
+
+	return nil
 }
 
 // updateMtCanvusIni updates mt-canvus.ini with video-output configuration.
@@ -161,7 +267,7 @@ func (c *Creator) generateAndPreview(window fyne.Window) {
 	previewDialog.Show()
 }
 
-// saveScreenXML saves the generated screen.xml to file.
+// saveScreenXML saves the generated screen.xml to the default location with backup.
 func (c *Creator) saveScreenXML(window fyne.Window) {
 	// Check if there are any cells with data
 	if !c.grid.HasCellsWithData() {
@@ -181,39 +287,43 @@ func (c *Creator) saveScreenXML(window fyne.Window) {
 		return
 	}
 
-	// Determine default save location (user config first, then system)
-	defaultPath := c.fileService.DetectScreenXml()
-	if defaultPath == "" {
-		// Fallback to user config directory
-		defaultPath = filepath.Join(c.fileService.GetUserConfigPath(), "screen.xml")
+	// Get default screen.xml path
+	defaultPath, err := c.fileService.GetDefaultScreenXmlPath()
+	if err != nil {
+		dialog.ShowError(fmt.Errorf("failed to get default path: %w", err), window)
+		return
 	}
 
-	saveDialog := dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
-		if err != nil || writer == nil {
-			return
-		}
-		defer writer.Close()
-
-		if _, err := writer.Write(xmlData); err != nil {
-			dialog.ShowError(fmt.Errorf("failed to write file: %w", err), window)
-			return
-		}
-
-		dialog.ShowInformation("Success", "screen.xml saved successfully", window)
-	}, window)
-
-	// Set default directory and filename
-	if defaultPath != "" {
+	// Create backup of existing file if it exists
+	if _, err := os.Stat(defaultPath); err == nil {
+		// File exists, create backup with date suffix
 		dir := filepath.Dir(defaultPath)
-		fileName := filepath.Base(defaultPath)
+		baseName := filepath.Base(defaultPath)
+		ext := filepath.Ext(baseName)
+		nameWithoutExt := baseName[:len(baseName)-len(ext)]
 
-		if dir != "" {
-			if dirURI, err := storage.ListerForURI(storage.NewFileURI(dir)); err == nil {
-				saveDialog.SetLocation(dirURI)
-			}
+		// Format date as YYYYMMDD_HHMMSS
+		dateStr := time.Now().Format("20060102_150405")
+		backupPath := filepath.Join(dir, fmt.Sprintf("%s_%s%s", nameWithoutExt, dateStr, ext))
+
+		if err := os.Rename(defaultPath, backupPath); err != nil {
+			dialog.ShowError(fmt.Errorf("failed to create backup: %w", err), window)
+			return
 		}
-		saveDialog.SetFileName(fileName)
 	}
 
-	saveDialog.Show()
+	// Ensure directory exists
+	dir := filepath.Dir(defaultPath)
+	if err := c.fileService.EnsureDirectory(dir); err != nil {
+		dialog.ShowError(fmt.Errorf("failed to create directory: %w", err), window)
+		return
+	}
+
+	// Write the new file
+	if err := os.WriteFile(defaultPath, xmlData, 0644); err != nil {
+		dialog.ShowError(fmt.Errorf("failed to write file: %w", err), window)
+		return
+	}
+
+	dialog.ShowInformation("Success", fmt.Sprintf("screen.xml saved successfully to:\n%s", defaultPath), window)
 }

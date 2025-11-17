@@ -118,8 +118,18 @@ func (e *Editor) CreateUI(window fyne.Window) fyne.CanvasObject {
 		closeAllBtn,
 	)
 
+	// Wrap accordion with right padding to prevent scrollbar from overlapping content
+	// Use a Border layout with a fixed-width right spacer to ensure scrollbar clearance
+	// The scrollbar is typically ~15-20px wide, so we add 20px of clearance
+	rightSpacer := container.NewWithoutLayout(widget.NewLabel(""))
+	rightSpacer.Resize(fyne.NewSize(20, 1)) // Fixed 20px width for scrollbar clearance
+	accordionWithMargin := container.NewBorder(
+		nil, nil, nil, rightSpacer, // Right: fixed-width spacer
+		e.accordion,
+	)
+
 	// Create scroll container and store reference for auto-scrolling
-	e.scrollContainer = container.NewScroll(e.accordion)
+	e.scrollContainer = container.NewScroll(accordionWithMargin)
 
 	mainPanel := container.NewBorder(
 		e.searchEntry,
@@ -653,6 +663,7 @@ func (e *Editor) scrollToAccordionItem(itemIndex int) {
 }
 
 // getCurrentValueForOption gets the current value for an option.
+// Returns the default value if the key is missing, null, or empty (after trimming whitespace).
 func (e *Editor) getCurrentValueForOption(option *ConfigOption) string {
 	if e.iniFile == nil {
 		return option.Default
@@ -664,14 +675,22 @@ func (e *Editor) getCurrentValueForOption(option *ConfigOption) string {
 	}
 
 	key := section.Key(option.Key)
-	if key == nil || key.String() == "" {
+	if key == nil {
 		return option.Default
 	}
 
-	return key.String()
+	// Trim whitespace and check if empty
+	value := strings.TrimSpace(key.String())
+	if value == "" {
+		return option.Default
+	}
+
+	return value
 }
 
 // onValueChange handles value changes from form controls.
+// Only applies updates for items that have a non-empty value.
+// Empty values are treated as "use default" and the key is removed from the INI file.
 func (e *Editor) onValueChange(section, key, value string) {
 	if e.iniFile == nil {
 		// Create empty INI file if needed
@@ -684,7 +703,17 @@ func (e *Editor) onValueChange(section, key, value string) {
 		sec, _ = e.iniFile.NewSection(section)
 	}
 
-	sec.Key(key).SetValue(value)
+	// Trim whitespace to handle edge cases
+	trimmedValue := strings.TrimSpace(value)
+
+	// Only set value if it's non-empty
+	// Empty values mean "use default", so we remove the key from the INI file
+	if trimmedValue == "" {
+		// Remove the key so it will use the default value
+		sec.DeleteKey(key)
+	} else {
+		sec.Key(key).SetValue(trimmedValue)
+	}
 }
 
 // onCompoundEntryAdd handles adding a new compound entry.
@@ -711,12 +740,41 @@ func (e *Editor) onCompoundEntryRemove(pattern, name string) {
 	e.iniFile.DeleteSection(sectionName)
 }
 
+// cleanupEmptyValues removes all empty keys from the INI file before saving.
+// This ensures that empty values (which should use defaults) are not written to disk.
+func (e *Editor) cleanupEmptyValues() {
+	if e.iniFile == nil {
+		return
+	}
+
+	// Iterate through all sections
+	for _, section := range e.iniFile.Sections() {
+		// Get all keys in this section
+		keysToDelete := []string{}
+		for _, key := range section.Keys() {
+			// Check if value is empty (after trimming whitespace)
+			value := strings.TrimSpace(key.String())
+			if value == "" {
+				keysToDelete = append(keysToDelete, key.Name())
+			}
+		}
+
+		// Delete empty keys
+		for _, keyName := range keysToDelete {
+			section.DeleteKey(keyName)
+		}
+	}
+}
+
 // saveConfig saves the configuration to file.
 func (e *Editor) saveConfig(window fyne.Window, userConfig bool) {
 	if e.iniFile == nil {
 		dialog.ShowError(fmt.Errorf("no configuration loaded"), window)
 		return
 	}
+
+	// Clean up empty values before saving
+	e.cleanupEmptyValues()
 
 	var savePath string
 	var configDir string

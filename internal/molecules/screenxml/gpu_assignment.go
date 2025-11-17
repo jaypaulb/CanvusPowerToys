@@ -186,8 +186,10 @@ func (ga *GPUAssignment) findNextGPUOutput() string {
 	maxGpu := 0
 	maxOutput := 0
 
-	for row := 0; row < GridRows; row++ {
-		for col := 0; col < GridCols; col++ {
+	rows := ga.grid.GetRows()
+	cols := ga.grid.GetCols()
+	for row := 0; row < rows; row++ {
+		for col := 0; col < cols; col++ {
 			cell := ga.grid.GetCell(row, col)
 			if cell != nil && cell.GPUOutput != "" {
 				parts := strings.Split(cell.GPUOutput, ":")
@@ -237,8 +239,10 @@ func (ga *GPUAssignment) getNextGPUOutput(current string) string {
 // GetGPUOutputs returns all assigned GPU outputs as a map of cell coordinates to GPU output strings.
 func (ga *GPUAssignment) GetGPUOutputs() map[string]string {
 	outputs := make(map[string]string)
-	for row := 0; row < GridRows; row++ {
-		for col := 0; col < GridCols; col++ {
+	rows := ga.grid.GetRows()
+	cols := ga.grid.GetCols()
+	for row := 0; row < rows; row++ {
+		for col := 0; col < cols; col++ {
 			cell := ga.grid.GetCell(row, col)
 			if cell != nil && cell.GPUOutput != "" {
 				key := fmt.Sprintf("%d,%d", row, col)
