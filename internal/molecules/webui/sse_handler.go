@@ -30,7 +30,8 @@ func (h *SSEHandler) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Headers", "Cache-Control")
 
 	// Get request context - this will be cancelled when server shuts down
-	ctx := r.Context()
+	// Explicitly type the context to ensure the import is recognized
+	var ctx context.Context = r.Context()
 
 	// Send initial canvas state
 	h.sendCanvasUpdate(w, h.canvasService.GetCanvasID(), h.canvasService.GetCanvasName())

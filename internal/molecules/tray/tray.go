@@ -69,11 +69,15 @@ func (m *Manager) onReady() {
 		for {
 			select {
 			case <-showItem.ClickedCh:
-				m.window.Show()
-				m.window.RequestFocus()
+				fyne.Do(func() {
+					m.window.Show()
+					m.window.RequestFocus()
+				})
 			case <-quitItem.ClickedCh:
 				systray.Quit()
-				m.app.Quit()
+				fyne.Do(func() {
+					m.app.Quit()
+				})
 			}
 		}
 	}()

@@ -66,18 +66,27 @@ func (sg *SectionGroup) CreateUI() *widget.AccordionItem {
 		})
 		infoBtn.Importance = widget.LowImportance
 
-		// Create horizontal layout: label + info button on left, form control on right
+		// Create horizontal layout: [tab] setting name | info button | input
+		// Tab spacing (16px default Fyne padding) for sub-section indentation
 		labelContainer := container.NewHBox(
 			labelText,
 			infoBtn,
 		)
 
-		// Use Border layout: label on left, form control on right
-		row := container.NewBorder(
+		// Layout: [tab spacer] | [label + info] | [input]
+		// Use Border layout with left padded spacer for tab indentation (16px)
+		// Then use GridWithColumns for proper alignment: col1=tab+label+info, col2=input
+		tabSpacer := widget.NewLabel("") // Empty label as spacer
+		tabSpacerPadded := container.NewPadded(tabSpacer) // Apply padding for 16px spacing
+		leftSideWithTab := container.NewBorder(
 			nil, nil,
-			labelContainer,
+			tabSpacerPadded, // Left: tab spacer (16px via padding)
 			nil,
-			formControl.Control,
+			labelContainer, // Center: label + info button
+		)
+		row := container.NewGridWithColumns(2,
+			leftSideWithTab,     // Left: tab + label + info button
+			formControl.Control, // Right: input control
 		)
 
 		// Add row to form (no separator between items, only at end if needed)

@@ -708,14 +708,22 @@ func (m *Manager) updateStatusFromTestResults(localSuccess, remoteSuccess bool) 
 }
 
 func (m *Manager) showServerStartedDialog(serverURL string, localResult, remoteResult string, window fyne.Window) {
+	// Open browser to WebUI page with specific size and position
+	m.openBrowserWindow(serverURL, 1024, 768, 4800, 2700)
+
 	resultsLabel := widget.NewLabel(fmt.Sprintf("%s\n\n%s", localResult, remoteResult))
 	resultsLabel.Wrapping = fyne.TextWrapWord
+
+	noteLabel := widget.NewLabel("Note: Check the center of the canvas for the WebUI window")
+	noteLabel.Wrapping = fyne.TextWrapWord
 
 	content := container.NewVBox(
 		widget.NewLabel(fmt.Sprintf("WebUI server is running on %s", serverURL)),
 		widget.NewSeparator(),
 		widget.NewLabel("Connection Test Results:"),
 		resultsLabel,
+		widget.NewSeparator(),
+		noteLabel,
 	)
 
 	dialog.NewCustomConfirm(
@@ -962,4 +970,68 @@ func (m *Manager) openURL(url string) {
 		cmd = exec.Command("xdg-open", url)
 	}
 	cmd.Run() // Ignore errors - if browser doesn't open, user can copy URL
+}
+
+// openBrowserWindow opens a browser window with specific size and position.
+// Size: width x height, Position: x, y coordinates
+func (m *Manager) openBrowserWindow(url string, width, height, posX, posY int) {
+	switch runtime.GOOS {
+	case "windows":
+		// Windows: Use PowerShell to open Chrome/Edge with window size and position
+		// Try Chrome first, then Edge, then fallback to default browser
+		psScript := fmt.Sprintf(
+			`$url = "%s"; $width = %d; $height = %d; $x = %d; $y = %d; `+
+				`$browsers = @("chrome", "msedge", "firefox"); `+
+				`foreach ($browser in $browsers) { `+
+				`  $browserPath = Get-Command $browser -ErrorAction SilentlyContinue; `+
+				`  if ($browserPath) { `+
+				`    Start-Process $browserPath.Source -ArgumentList "--new-window", "--window-position=$x,$y", "--window-size=$width,$height", $url; `+
+				`    break; `+
+				`  } `+
+				`}; `+
+				`if (-not $browserPath) { Start-Process $url }`,
+			url, width, height, posX, posY)
+		cmd := exec.Command("powershell", "-Command", psScript)
+		cmd.Run()
+	case "darwin":
+		// macOS: Use AppleScript to open browser with size/position
+		// Note: Safari doesn't support size/position via command line, so we'll use Chrome if available
+		applescript := fmt.Sprintf(
+			`tell application "Google Chrome" to activate
+			tell application "System Events" to tell process "Google Chrome"
+				set frontmost to true
+				keystroke "n" using {command down}
+				delay 0.5
+				keystroke "%s" using {command down}
+				keystroke return
+				delay 0.5
+				set position of window 1 to {%d, %d}
+				set size of window 1 to {%d, %d}
+			end tell`,
+			url, posX, posY, width, height)
+		cmd := exec.Command("osascript", "-e", applescript)
+		if err := cmd.Run(); err != nil {
+			// Fallback to default browser if Chrome not available or script fails
+			m.openURL(url)
+		}
+	default:
+		// Linux: Try to use Chrome/Chromium with window size/position
+		// Most Linux browsers don't support size/position via command line
+		// Try Chrome/Chromium first, then fallback to default
+		chromeArgs := []string{
+			"--new-window",
+			fmt.Sprintf("--window-position=%d,%d", posX, posY),
+			fmt.Sprintf("--window-size=%d,%d", width, height),
+			url,
+		}
+		cmd := exec.Command("google-chrome", chromeArgs...)
+		if err := cmd.Run(); err != nil {
+			// Try chromium
+			cmd = exec.Command("chromium", chromeArgs...)
+			if err := cmd.Run(); err != nil {
+				// Fallback to default browser
+				m.openURL(url)
+			}
+		}
+	}
 }

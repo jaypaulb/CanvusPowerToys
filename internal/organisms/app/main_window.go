@@ -134,15 +134,21 @@ func NewMainWindow(app fyne.App) *MainWindow {
 	trayNote := widget.NewLabel("⚠ Close to System Tray ↑")
 	trayNote.TextStyle = fyne.TextStyle{Italic: true}
 
-	// Create a horizontal container to place note inline with tab bar
-	// The tabs widget will render its tab bar, and we position the note to the right
-	// Using Border layout with tabs in center and note on right side
+	// Create a top container with the note right-aligned
+	// This positions it at the top-right, inline with the tab bar, without affecting layout
+	// Use Border layout to push content to the right (nil on left, content on right)
+	topNoteContainer := container.NewBorder(
+		nil, nil, nil, trayNote, nil,
+	)
+
+	// Use Border layout with note in top (right-aligned) and tabs below
+	// This ensures the note only takes space at the top and doesn't extend to bottom
 	contentWithNote := container.NewBorder(
-		nil,   // Top: nothing
-		nil,   // Bottom: nothing
-		nil,   // Left: nothing
-		trayNote, // Right: note (will appear to the right of tabs)
-		tabs,     // Center: tabs widget
+		topNoteContainer, // Top: note aligned to right
+		nil,              // Bottom: nothing
+		nil,              // Left: nothing
+		nil,              // Right: nothing
+		tabs,             // Center: tabs widget
 	)
 
 	window.SetContent(contentWithNote)

@@ -86,10 +86,27 @@ func (ceg *CompoundEntryGroup) CreateUI() fyne.CanvasObject {
 		ceg.addEntry(initialName, entriesContainer)
 	}
 
+	// Layout: [tab] Section Name [tab] [Add New Button]
+	// Tab spacing (16px default Fyne padding) for sub-section indentation
+	tabSpacer := widget.NewLabel("") // Spacer for tab
+	tabSpacerPadded := container.NewPadded(tabSpacer) // Apply padding for 16px spacing
+	titleWithTab := container.NewBorder(
+		nil, nil,
+		tabSpacerPadded, // Left: tab spacer (16px via padding)
+		nil,
+		title, // Center: title
+	)
+	titleRow := container.NewBorder(
+		nil, nil,
+		titleWithTab, // Left: tab + title
+		nil,
+		addBtn, // Right: Add New button
+	)
+
 	// No scroll container - let parent accordion handle scrolling
 	// This prevents scrollbars and allows scrolling when hovering over entry fields
 	return container.NewVBox(
-		container.NewHBox(title, addBtn),
+		titleRow,
 		entriesContainer,
 	)
 }
@@ -148,13 +165,31 @@ func (ceg *CompoundEntryGroup) addEntry(name string, parent *fyne.Container) {
 		})
 		infoBtn.Importance = widget.LowImportance
 
-		// Create horizontal layout: label + info button on left, form control on right
-		// Use GridWithColumns to ensure vertical alignment of all entry fields
-		// Column 1: Labels (fixed width), Column 2: Controls (flexible)
+		// Layout: [tab][tab] Setting | Input
+		// Double tab spacing (32px total) for entry-level indentation
 		labelContainer := container.NewHBox(labelText, infoBtn)
+
+		// Use Border layout with double left padded spacer for double tab indentation
+		tabSpacer1 := widget.NewLabel("") // First tab
+		tabSpacer2 := widget.NewLabel("") // Second tab
+		tabSpacer1Padded := container.NewPadded(tabSpacer1) // Apply padding for 16px spacing
+		tabSpacer2Padded := container.NewPadded(tabSpacer2) // Apply padding for 16px spacing
+		// Create nested Border layouts for double tab spacing
+		innerTab := container.NewBorder(
+			nil, nil,
+			tabSpacer1Padded, // Left: first tab (16px via padding)
+			nil,
+			labelContainer, // Center: label + info
+		)
+		outerTab := container.NewBorder(
+			nil, nil,
+			tabSpacer2Padded, // Left: second tab (16px via padding)
+			nil,
+			innerTab, // Center: first tab + label + info
+		)
 		row := container.NewGridWithColumns(2,
-			labelContainer,      // Left: label + info button
-			formControl.Control,  // Right: form control
+			outerTab,            // Left: double tab + label + info button
+			formControl.Control, // Right: input control
 		)
 
 		form.Add(row)
@@ -163,7 +198,8 @@ func (ceg *CompoundEntryGroup) addEntry(name string, parent *fyne.Container) {
 		ceg.setupChangeHandler(option, formControl, name)
 	}
 
-	// Entry title and remove button on same line
+	// Layout: [tab][tab] Entry Name | Remove Button
+	// Double tab spacing (32px total) for entry-level indentation
 	entryTitle := widget.NewLabel(fmt.Sprintf("%s: %s", ceg.pattern, name))
 	entryTitle.TextStyle.Bold = true
 
@@ -176,12 +212,31 @@ func (ceg *CompoundEntryGroup) addEntry(name string, parent *fyne.Container) {
 		delete(ceg.entries, entry.name)
 	})
 
-	// Title bar with entry name and remove button
+	// Use Border layout with double left padded spacer for double tab indentation
+	tabSpacer1 := widget.NewLabel("") // First tab
+	tabSpacer2 := widget.NewLabel("") // Second tab
+	tabSpacer1Padded := container.NewPadded(tabSpacer1) // Apply padding for 16px spacing
+	tabSpacer2Padded := container.NewPadded(tabSpacer2) // Apply padding for 16px spacing
+	// Create nested Border layouts for double tab spacing
+	innerTab := container.NewBorder(
+		nil, nil,
+		tabSpacer1Padded, // Left: first tab (16px via padding)
+		nil,
+		entryTitle, // Center: entry title
+	)
+	outerTab := container.NewBorder(
+		nil, nil,
+		tabSpacer2Padded, // Left: second tab (16px via padding)
+		nil,
+		innerTab, // Center: first tab + entry title
+	)
+
+	// Title bar: [tab][tab] Entry Name | Remove Button
 	titleBar := container.NewBorder(
 		nil, nil,
-		entryTitle,
+		outerTab,  // Left: double tab + entry title
 		nil,
-		removeBtn,
+		removeBtn, // Right: Remove button
 	)
 
 	// Frame for entry with padding: larger left margin, smaller right margin

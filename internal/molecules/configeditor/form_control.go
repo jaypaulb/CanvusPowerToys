@@ -87,6 +87,8 @@ func CreateFormControl(option *ConfigOption, window fyne.Window, currentValue st
 			}, window)
 		})
 
+		// NOTE: Entry widgets in Fyne capture scroll events when hovered.
+		// See ValueTypeCommaList case for details on attempted fixes.
 		box := container.NewBorder(nil, nil, nil, browseBtn, entry)
 		fc.Control = box
 		fc.GetValue = func() string {
@@ -100,6 +102,12 @@ func CreateFormControl(option *ConfigOption, window fyne.Window, currentValue st
 	case ValueTypeCommaList:
 		entry := widget.NewEntry()
 		entry.SetText(currentValue)
+		// NOTE: Entry widgets in Fyne capture scroll events when hovered.
+		// This is a known Fyne limitation. Previous attempts to fix:
+		// 1. Removed scroll containers from compound entries
+		// 2. Let parent accordion handle scrolling
+		// 3. Wrapped entries in containers (didn't work - entries still capture scroll)
+		// Next approach would require custom Entry widget or framework changes.
 		fc.Control = entry
 		fc.GetValue = func() string {
 			return entry.Text
@@ -124,6 +132,8 @@ func CreateFormControl(option *ConfigOption, window fyne.Window, currentValue st
 			}
 			return nil
 		}
+		// NOTE: Entry widgets in Fyne capture scroll events when hovered.
+		// See ValueTypeCommaList case for details on attempted fixes.
 		fc.Control = entry
 		fc.GetValue = func() string {
 			return entry.Text
@@ -135,6 +145,8 @@ func CreateFormControl(option *ConfigOption, window fyne.Window, currentValue st
 	default: // ValueTypeString
 		entry := widget.NewEntry()
 		entry.SetText(currentValue)
+		// NOTE: Entry widgets in Fyne capture scroll events when hovered.
+		// See ValueTypeCommaList case for details on attempted fixes.
 		fc.Control = entry
 		fc.GetValue = func() string {
 			return entry.Text

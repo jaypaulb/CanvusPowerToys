@@ -184,19 +184,18 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 		tooltip := widget.NewLabel(tooltipText)
 		tooltip.Wrapping = fyne.TextWrapWord
 
-		// Use Border to put checkbox on the right, everything else on the left
-		// This ensures all checkboxes align vertically
-		leftContent := container.NewHBox(
+		// Use Border layout: indentation + label on left, checkbox on right, description in center
+		// This ensures description has enough space to wrap horizontally
+		indentLabel := container.NewHBox(
 			widget.NewLabel("    "), // Indentation
 			labelWithColon,
-			tooltip,
 		)
 
 		return container.NewBorder(
 			nil, nil,
-			leftContent, // Left: indentation + label + description
-			checkbox,    // Right: checkbox (aligned)
-			nil,
+			indentLabel, // Left: indentation + label
+			checkbox,   // Right: checkbox (aligned)
+			tooltip,    // Center: description (can expand and wrap horizontally)
 		)
 	}
 
