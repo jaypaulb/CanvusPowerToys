@@ -123,14 +123,29 @@ func (c *Creator) generateAndPreview(window fyne.Window) {
 	// which was causing the freezing issue
 	previewEntry := widget.NewMultiLineEntry()
 	previewEntry.SetText(string(xmlData))
-	previewEntry.Disable() // Make it read-only
+	// Keep enabled to allow text selection, but prevent editing by clearing on focus
+	previewEntry.OnChanged = func(text string) {
+		// Restore original text if user tries to edit
+		if text != string(xmlData) {
+			previewEntry.SetText(string(xmlData))
+		}
+	}
 	previewEntry.Wrapping = fyne.TextWrapOff // Don't wrap XML
 
-	// Create a scrollable container for the preview
-	scrollContainer := container.NewScroll(previewEntry)
-	scrollContainer.SetMinSize(fyne.NewSize(800, 600))
+	// Copy to clipboard button
+	copyBtn := widget.NewButton("Copy to Clipboard", func() {
+		window.Clipboard().SetContent(previewEntry.Text)
+		dialog.ShowInformation("Copied", "XML content copied to clipboard", window)
+	})
 
-	previewDialog := dialog.NewCustom("Generated screen.xml Preview", "Close", scrollContainer, window)
+	// Create a container with the entry and button
+	content := container.NewBorder(
+		copyBtn, // Top: Copy button
+		nil, nil, nil,
+		container.NewScroll(previewEntry), // Center: Scrollable text
+	)
+
+	previewDialog := dialog.NewCustom("Generated screen.xml Preview", "Close", content, window)
 	previewDialog.Resize(fyne.NewSize(800, 600))
 	previewDialog.Show()
 }

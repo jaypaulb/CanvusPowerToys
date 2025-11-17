@@ -160,14 +160,15 @@ func (xg *XMLGenerator) Generate() ([]byte, error) {
 		}
 	}
 
-	// Generate XML
-	xmlData, err := xml.MarshalIndent(screenXML, "", " ")
+	// Generate XML with proper encoding and formatting
+	xmlData, err := xml.MarshalIndent(screenXML, "", "  ") // Use 2 spaces for indentation
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal XML: %w", err)
 	}
 
-	// Add XML header and DOCTYPE
+	// Add XML header with UTF-8 encoding and DOCTYPE
 	var buf []byte
+	buf = append(buf, []byte(`<?xml version="1.0" encoding="UTF-8"?>`+"\n")...)
 	buf = append(buf, []byte(`<!DOCTYPE mtdoc>`+"\n")...)
 	buf = append(buf, xmlData...)
 
