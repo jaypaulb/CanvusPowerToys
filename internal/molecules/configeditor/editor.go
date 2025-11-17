@@ -95,10 +95,14 @@ func (e *Editor) CreateUI(window fyne.Window) fyne.CanvasObject {
 
 	// Open All / Close All buttons
 	openAllBtn := widget.NewButton("Open All", func() {
-		e.accordion.OpenAll()
+		for i := range e.accordion.Items {
+			e.accordion.Items[i].Open = true
+		}
+		e.accordion.Refresh()
 	})
 	closeAllBtn := widget.NewButton("Close All", func() {
 		e.accordion.CloseAll()
+		e.accordion.Refresh()
 	})
 
 	// Layout

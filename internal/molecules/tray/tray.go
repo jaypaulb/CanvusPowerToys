@@ -45,19 +45,18 @@ func (m *Manager) onReady() {
 	systray.SetTooltip("Canvus PowerToys")
 
 	// Load and set tray icon from embedded assets
-	// systray.SetIcon expects PNG image data as []byte
-	// Since embed is "//go:embed icons", path is relative to icons directory
-	if iconData, err := assets.Icons.ReadFile("CanvusPowerToysIcon.png"); err == nil {
-		// Verify it's valid PNG by attempting to decode
-		if _, err := png.Decode(bytes.NewReader(iconData)); err == nil {
-			systray.SetIcon(iconData)
-		}
+	// Windows system tray expects ICO format, so we embed a pre-generated ICO file
+	iconData, err := assets.Icons.ReadFile("CanvusPowerToysIcon.ico")
+	if err != nil || len(iconData) == 0 {
+		iconData, err = assets.Icons.ReadFile("icons/CanvusPowerToysIcon.ico")
+	}
+	if err == nil && len(iconData) > 0 {
+		systray.SetIcon(iconData)
 	} else {
-		// Log error for debugging (only in development)
-		// Try alternative path in case embed structure is different
-		if iconData, err := assets.Icons.ReadFile("icons/CanvusPowerToysIcon.png"); err == nil {
-			if _, err := png.Decode(bytes.NewReader(iconData)); err == nil {
-				systray.SetIcon(iconData)
+		// Fallback to PNG in case ICO not found (some environments accept PNG)
+		if pngData, err := assets.Icons.ReadFile("CanvusPowerToysIcon.png"); err == nil && len(pngData) > 0 {
+			if _, err := png.Decode(bytes.NewReader(pngData)); err == nil {
+				systray.SetIcon(pngData)
 			}
 		}
 	}

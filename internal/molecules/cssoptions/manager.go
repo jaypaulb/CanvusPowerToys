@@ -151,6 +151,13 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 			m.hideSidebarEnabled.SetChecked(true)
 			m.hideMainMenuEnabled.SetChecked(true)
 			m.hideFingerMenuEnabled.SetChecked(true)
+		} else {
+			// Auto-disable all UI visibility options when kiosk mode is disabled
+			m.hideTitleBarsEnabled.SetChecked(false)
+			m.hideResizeHandlesEnabled.SetChecked(false)
+			m.hideSidebarEnabled.SetChecked(false)
+			m.hideMainMenuEnabled.SetChecked(false)
+			m.hideFingerMenuEnabled.SetChecked(false)
 		}
 	})
 
@@ -168,6 +175,13 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 			m.hideSidebarEnabled.SetChecked(true)
 			m.hideMainMenuEnabled.SetChecked(true)
 			m.hideFingerMenuEnabled.SetChecked(false) // Keep finger menu visible
+		} else {
+			// Auto-disable all UI visibility options when kiosk plus is disabled
+			m.hideTitleBarsEnabled.SetChecked(false)
+			m.hideResizeHandlesEnabled.SetChecked(false)
+			m.hideSidebarEnabled.SetChecked(false)
+			m.hideMainMenuEnabled.SetChecked(false)
+			m.hideFingerMenuEnabled.SetChecked(false)
 		}
 	})
 
@@ -201,6 +215,9 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 		videoLoopWarning,
 		widget.NewSeparator(),
 		uiVisibilityLabel,
+		container.NewHBox(kioskModeLabel, kioskModeTooltip, m.kioskModeEnabled),
+		container.NewHBox(kioskPlusLabel, kioskPlusTooltip, m.kioskPlusEnabled),
+		widget.NewSeparator(),
 		container.NewHBox(hideTitleBarsLabel, hideTitleBarsTooltip, m.hideTitleBarsEnabled),
 		container.NewHBox(hideResizeHandlesLabel, hideResizeHandlesTooltip, m.hideResizeHandlesEnabled),
 		container.NewHBox(hideSidebarLabel, hideSidebarTooltip, m.hideSidebarEnabled),
@@ -210,9 +227,6 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 		standbyImageSectionLabel,
 		standbyImageDescription,
 		container.NewHBox(m.standbyImageLabel, uploadImageBtn, clearImageBtn),
-		widget.NewSeparator(),
-		container.NewHBox(kioskModeLabel, kioskModeTooltip, m.kioskModeEnabled),
-		container.NewHBox(kioskPlusLabel, kioskPlusTooltip, m.kioskPlusEnabled),
 		widget.NewSeparator(),
 		m.statusLabel,
 		container.NewHBox(
@@ -242,30 +256,80 @@ func (m *Manager) validateRequirements(window fyne.Window) {
 	var errors []string
 	var warnings []string
 
-	// Check default-canvas
-	defaultCanvas := ""
-	if section, err := iniFile.GetSection(""); err == nil {
-		if key := section.Key("default-canvas"); key != nil {
-			defaultCanvas = key.String()
+	// Helper function to get default-canvas from INI
+	getDefaultCanvas := func() string {
+		defaultCanvas := ""
+		// Try root section first
+		if section, err := iniFile.GetSection(""); err == nil {
+			if key := section.Key("default-canvas"); key != nil {
+				defaultCanvas = strings.TrimSpace(key.String())
+			}
 		}
-	}
-	if defaultCanvas == "" {
-		errors = append(errors, "default-canvas is not set")
+		// Also check [content] section as fallback
+		if defaultCanvas == "" {
+			if section, err := iniFile.GetSection("content"); err == nil {
+				if key := section.Key("default-canvas"); key != nil {
+					defaultCanvas = strings.TrimSpace(key.String())
+				}
+			}
+		}
+		// Also check [canvas] section as fallback
+		if defaultCanvas == "" {
+			if section, err := iniFile.GetSection("canvas"); err == nil {
+				if key := section.Key("default-canvas"); key != nil {
+					defaultCanvas = strings.TrimSpace(key.String())
+				}
+			}
+		}
+		return defaultCanvas
 	}
 
-	// Check auto-pin
-	autoPin := ""
-	if section, err := iniFile.GetSection(""); err == nil {
-		if key := section.Key("auto-pin"); key != nil {
-			autoPin = key.String()
+	// Helper function to get auto-pin from INI
+	getAutoPin := func() string {
+		autoPin := ""
+		if section, err := iniFile.GetSection(""); err == nil {
+			if key := section.Key("auto-pin"); key != nil {
+				autoPin = strings.TrimSpace(key.String())
+			}
+		}
+		// Also check [canvas] section for auto-pin
+		if autoPin == "" {
+			if section, err := iniFile.GetSection("canvas"); err == nil {
+				if key := section.Key("auto-pin"); key != nil {
+					autoPin = strings.TrimSpace(key.String())
+				}
+			}
+		}
+		return autoPin
+	}
+
+	// Check default-canvas when main menu is hidden (critical - no way to open canvas otherwise)
+	if m.hideMainMenuEnabled.Checked {
+		defaultCanvas := getDefaultCanvas()
+		if defaultCanvas == "" {
+			errors = append(errors, "default-canvas must be set when main menu is hidden (no way to open canvas otherwise)")
 		}
 	}
 
-	// Validate kiosk mode requirements
+	// Check default-canvas when kiosk modes are enabled
 	if m.kioskModeEnabled.Checked || m.kioskPlusEnabled.Checked {
+		defaultCanvas := getDefaultCanvas()
 		if defaultCanvas == "" {
 			errors = append(errors, "default-canvas must be set for kiosk modes")
 		}
+	}
+
+	// Check auto-pin when sidebar is hidden (pin/unpin controls are in sidebar)
+	if m.hideSidebarEnabled.Checked {
+		autoPin := getAutoPin()
+		if autoPin != "0" {
+			errors = append(errors, "auto-pin must be 0 when sidebar is hidden (pin/unpin controls are in sidebar, widgets will auto-pin with no way to unpin)")
+		}
+	}
+
+	// Check auto-pin when kiosk modes are enabled
+	if m.kioskModeEnabled.Checked || m.kioskPlusEnabled.Checked {
+		autoPin := getAutoPin()
 		if autoPin != "0" {
 			errors = append(errors, "auto-pin must be 0 for kiosk modes")
 		}
@@ -300,16 +364,86 @@ func (m *Manager) generatePlugin(window fyne.Window) {
 		return
 	}
 
-	// Check requirements
-	if m.kioskModeEnabled.Checked || m.kioskPlusEnabled.Checked {
+	// Helper function to get default-canvas from INI
+	getDefaultCanvas := func() string {
 		defaultCanvas := ""
+		// Try root section first
 		if section, err := iniFile.GetSection(""); err == nil {
 			if key := section.Key("default-canvas"); key != nil {
-				defaultCanvas = key.String()
+				defaultCanvas = strings.TrimSpace(key.String())
 			}
 		}
+		// Also check [content] section as fallback
+		if defaultCanvas == "" {
+			if section, err := iniFile.GetSection("content"); err == nil {
+				if key := section.Key("default-canvas"); key != nil {
+					defaultCanvas = strings.TrimSpace(key.String())
+				}
+			}
+		}
+		// Also check [canvas] section as fallback
+		if defaultCanvas == "" {
+			if section, err := iniFile.GetSection("canvas"); err == nil {
+				if key := section.Key("default-canvas"); key != nil {
+					defaultCanvas = strings.TrimSpace(key.String())
+				}
+			}
+		}
+		return defaultCanvas
+	}
+
+	// Helper function to get auto-pin from INI
+	getAutoPin := func() string {
+		autoPin := ""
+		if section, err := iniFile.GetSection(""); err == nil {
+			if key := section.Key("auto-pin"); key != nil {
+				autoPin = strings.TrimSpace(key.String())
+			}
+		}
+		// Also check [canvas] section for auto-pin
+		if autoPin == "" {
+			if section, err := iniFile.GetSection("canvas"); err == nil {
+				if key := section.Key("auto-pin"); key != nil {
+					autoPin = strings.TrimSpace(key.String())
+				}
+			}
+		}
+		return autoPin
+	}
+
+	// Check requirements
+	// Check default-canvas when main menu is hidden (critical - no way to open canvas otherwise)
+	if m.hideMainMenuEnabled.Checked {
+		defaultCanvas := getDefaultCanvas()
+		if defaultCanvas == "" {
+			dialog.ShowError(fmt.Errorf("default-canvas must be set when main menu is hidden (no way to open canvas otherwise)"), window)
+			return
+		}
+	}
+
+	// Check default-canvas when kiosk modes are enabled
+	if m.kioskModeEnabled.Checked || m.kioskPlusEnabled.Checked {
+		defaultCanvas := getDefaultCanvas()
 		if defaultCanvas == "" {
 			dialog.ShowError(fmt.Errorf("default-canvas must be set for kiosk modes"), window)
+			return
+		}
+	}
+
+	// Check auto-pin when sidebar is hidden (pin/unpin controls are in sidebar)
+	if m.hideSidebarEnabled.Checked {
+		autoPin := getAutoPin()
+		if autoPin != "0" {
+			dialog.ShowError(fmt.Errorf("auto-pin must be 0 when sidebar is hidden (pin/unpin controls are in sidebar, widgets will auto-pin with no way to unpin)"), window)
+			return
+		}
+	}
+
+	// Check auto-pin when kiosk modes are enabled
+	if m.kioskModeEnabled.Checked || m.kioskPlusEnabled.Checked {
+		autoPin := getAutoPin()
+		if autoPin != "0" {
+			dialog.ShowError(fmt.Errorf("auto-pin must be 0 for kiosk modes"), window)
 			return
 		}
 	}

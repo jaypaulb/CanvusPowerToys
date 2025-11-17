@@ -2,6 +2,7 @@ package configeditor
 
 import (
 	"fmt"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -57,7 +58,7 @@ func (ceg *CompoundEntryGroup) CreateUI() fyne.CanvasObject {
 		ceg.showAddEntryDialog()
 	})
 
-	// Container for entries
+	// Container for entries - no scroll, let parent accordion handle scrolling
 	entriesContainer := container.NewVBox()
 	ceg.entriesContainer = entriesContainer // Store reference for dynamic addition
 
@@ -85,12 +86,11 @@ func (ceg *CompoundEntryGroup) CreateUI() fyne.CanvasObject {
 		ceg.addEntry(initialName, entriesContainer)
 	}
 
-	scroll := container.NewScroll(entriesContainer)
-	scroll.SetMinSize(fyne.NewSize(0, 300))
-
+	// No scroll container - let parent accordion handle scrolling
+	// This prevents scrollbars and allows scrolling when hovering over entry fields
 	return container.NewVBox(
 		container.NewHBox(title, addBtn),
-		scroll,
+		entriesContainer,
 	)
 }
 
@@ -124,20 +124,10 @@ func (ceg *CompoundEntryGroup) addEntry(name string, parent *fyne.Container) {
 		formControls: make(map[string]*FormControl),
 	}
 
-	// Create name entry
-	nameEntry := widget.NewEntry()
-	nameEntry.SetText(name)
-	nameEntry.SetPlaceHolder(fmt.Sprintf("Enter %s name", ceg.pattern))
-
-	// Create form for options
+	// Create form for options - using same layout as SectionGroup
 	form := container.NewVBox()
 
-	// Add name field
-	form.Add(widget.NewLabel("Name:"))
-	form.Add(nameEntry)
-	form.Add(widget.NewSeparator())
-
-	// Add all option fields
+	// Add all option fields with horizontal layout (label + info button on left, control on right)
 	for _, option := range entry.options {
 		// Get current value from INI
 		currentValue := ceg.getCurrentValue(option, name)
@@ -145,13 +135,37 @@ func (ceg *CompoundEntryGroup) addEntry(name string, parent *fyne.Container) {
 		formControl := CreateFormControl(option, ceg.window, currentValue)
 		entry.formControls[option.Key] = formControl
 
-		label := widget.NewRichTextFromMarkdown(fmt.Sprintf("**%s**\n%s", option.Key, option.Description))
-		label.Wrapping = fyne.TextWrapWord
+		// Create label with clickable name for tooltip (same as SectionGroup)
+		labelText := widget.NewLabel(option.Key)
+		labelText.TextStyle.Bold = true
 
-		form.Add(label)
-		form.Add(formControl.Control)
-		form.Add(widget.NewSeparator())
+		// Create tooltip with full description and default
+		tooltipText := ceg.buildTooltip(option)
+
+		// Make label clickable to show tooltip in a popup
+		infoBtn := widget.NewButton("ℹ", func() {
+			dialog.ShowInformation(option.Key, tooltipText, ceg.window)
+		})
+		infoBtn.Importance = widget.LowImportance
+
+		// Create horizontal layout: label + info button on left, form control on right
+		// Use GridWithColumns to ensure vertical alignment of all entry fields
+		// Column 1: Labels (fixed width), Column 2: Controls (flexible)
+		labelContainer := container.NewHBox(labelText, infoBtn)
+		row := container.NewGridWithColumns(2,
+			labelContainer,      // Left: label + info button
+			formControl.Control,  // Right: form control
+		)
+
+		form.Add(row)
+
+		// Set up change handler
+		ceg.setupChangeHandler(option, formControl, name)
 	}
+
+	// Entry title and remove button on same line
+	entryTitle := widget.NewLabel(fmt.Sprintf("%s: %s", ceg.pattern, name))
+	entryTitle.TextStyle.Bold = true
 
 	// Remove button
 	removeBtn := widget.NewButton("Remove", func() {
@@ -162,32 +176,105 @@ func (ceg *CompoundEntryGroup) addEntry(name string, parent *fyne.Container) {
 		delete(ceg.entries, entry.name)
 	})
 
-	// Container for this entry
-	entryContainer := container.NewBorder(
-		container.NewHBox(
-			widget.NewLabel(fmt.Sprintf("%s: %s", ceg.pattern, nameEntry.Text)),
-			removeBtn,
-		),
-		nil, nil, nil,
-		container.NewScroll(form),
+	// Title bar with entry name and remove button
+	titleBar := container.NewBorder(
+		nil, nil,
+		entryTitle,
+		nil,
+		removeBtn,
 	)
 
-	entry.container = entryContainer
+	// Frame for entry with padding: larger left margin, smaller right margin
+	// Use Border layout with spacing widgets for asymmetric padding
+	// Left spacer (larger) and right spacer (smaller)
+	// Note: Fyne doesn't support direct size setting on empty containers,
+	// so we use Border with the content and apply padding via the frame
+	entryContent := container.NewBorder(
+		titleBar,
+		nil,
+		nil, // Left padding will be handled by outer container
+		nil, // Right padding will be handled by outer container
+		form,
+	)
+
+	// Wrap in padded container for visual frame with asymmetric padding
+	// The padding will be applied uniformly, but we can use Border for asymmetric spacing
+	// For now, use uniform padding - the visual frame provides the separation
+	entryFrame := container.NewPadded(entryContent)
+
+	entry.container = entryFrame
 	ceg.entries[name] = entry
 
-	// Update name when changed
-	nameEntry.OnChanged = func(text string) {
-		if text != name {
-			// Update entry name
-			oldName := entry.name
-			entry.name = text
-			delete(ceg.entries, oldName)
-			ceg.entries[text] = entry
-		}
+	parent.Add(entryFrame)
+	parent.Add(widget.NewSeparator())
+}
+
+// buildTooltip builds a comprehensive tooltip with full description and default value.
+func (ceg *CompoundEntryGroup) buildTooltip(option *ConfigOption) string {
+	var tooltip strings.Builder
+
+	// Add full description
+	if option.Description != "" {
+		tooltip.WriteString(option.Description)
+		tooltip.WriteString("\n\n")
 	}
 
-	parent.Add(entryContainer)
-	parent.Add(widget.NewSeparator())
+	// Add default value
+	if option.Default != "" {
+		tooltip.WriteString(fmt.Sprintf("Default: %s", option.Default))
+	} else {
+		tooltip.WriteString("Default: (empty)")
+	}
+
+	// Add enum values if applicable
+	if len(option.EnumValues) > 0 {
+		tooltip.WriteString(fmt.Sprintf("\n\nAvailable values: %s", strings.Join(option.EnumValues, ", ")))
+	}
+
+	// Add type information
+	tooltip.WriteString(fmt.Sprintf("\n\nType: %s", option.Type))
+
+	return tooltip.String()
+}
+
+// setupChangeHandler sets up the change handler for a form control.
+func (ceg *CompoundEntryGroup) setupChangeHandler(option *ConfigOption, formControl *FormControl, entryName string) {
+	// Wire up change handlers based on control type
+	switch ctrl := formControl.Control.(type) {
+	case *widget.Entry:
+		ctrl.OnChanged = func(text string) {
+			if ceg.onValueChange != nil {
+				sectionName := fmt.Sprintf("%s:%s", ceg.pattern, entryName)
+				ceg.onValueChange(sectionName, option.Key, formControl.GetValue())
+			}
+		}
+	case *widget.Check:
+		ctrl.OnChanged = func(checked bool) {
+			if ceg.onValueChange != nil {
+				sectionName := fmt.Sprintf("%s:%s", ceg.pattern, entryName)
+				ceg.onValueChange(sectionName, option.Key, formControl.GetValue())
+			}
+		}
+	case *widget.Select:
+		ctrl.OnChanged = func(selected string) {
+			if ceg.onValueChange != nil {
+				sectionName := fmt.Sprintf("%s:%s", ceg.pattern, entryName)
+				ceg.onValueChange(sectionName, option.Key, formControl.GetValue())
+			}
+		}
+	case *fyne.Container:
+		// For file path controls with browse button, find the entry
+		for _, obj := range ctrl.Objects {
+			if entry, ok := obj.(*widget.Entry); ok {
+				entry.OnChanged = func(text string) {
+					if ceg.onValueChange != nil {
+						sectionName := fmt.Sprintf("%s:%s", ceg.pattern, entryName)
+						ceg.onValueChange(sectionName, option.Key, formControl.GetValue())
+					}
+				}
+			}
+		}
+	}
 }
 
 // getCompoundOptions gets the options for this compound entry type.
