@@ -47,3 +47,6 @@ resource.syso
 .env
 .env.local
 
+# Dross - redundant files, notes, and non-public content
+dross/
+

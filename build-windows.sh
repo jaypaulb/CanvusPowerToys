@@ -28,9 +28,10 @@ fi
 OUTPUT_FILE="canvus-powertoys.$VERSION.exe"
 
 # Build with version info
-# Note: -H windowsgui was removed to allow console logging when running from cmd.exe
+# -H windowsgui: Sets Windows subsystem to GUI (hides console window)
+#   To unhide console for debugging: Remove -H windowsgui from -ldflags
 GOOS=windows GOARCH=amd64 go build \
-    -ldflags="-s -w -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.Version=$VERSION -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.BuildDate=$BUILD_DATE -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.GitCommit=$GIT_COMMIT" \
+    -ldflags="-s -w -H windowsgui -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.Version=$VERSION -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.BuildDate=$BUILD_DATE -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.GitCommit=$GIT_COMMIT" \
     -o "$OUTPUT_FILE" ./cmd/powertoys
 
 # Clean up resource.syso file after build

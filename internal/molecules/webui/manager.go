@@ -179,11 +179,15 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 	// is not yet implemented. Checkboxes appear enabled but callbacks immediately reset state
 	// to prevent user interaction while maintaining visual consistency.
 	for _, page := range pageOptions {
+		// Capture page name for closure to avoid loop variable capture issues
+		pageName := page
 		check := widget.NewCheck(page, func(checked bool) {
 			// Immediately reset to checked: Page selection not yet implemented, prevent user from changing state
 			// This ensures the checkbox always appears checked regardless of user clicks
-			// Note: Each iteration creates a new 'check' variable, so the closure correctly captures it
-			check.SetChecked(true)
+			// Look up the checkbox from the map using the captured page name
+			if storedCheck, ok := m.enabledPages[pageName]; ok {
+				storedCheck.SetChecked(true)
+			}
 		})
 		m.enabledPages[page] = check
 		check.SetChecked(true) // All pages enabled by default until selection is implemented

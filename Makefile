@@ -19,8 +19,7 @@ build-linux: process-assets
 # Optional: goversioninfo for .exe version info (go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest)
 build-windows: process-assets
 	@echo "Building for Windows (requires mingw-w64 for CGO)..."
-	@echo "Auto-incrementing version..."
-	@./scripts/increment-version.sh
+	@echo "Note: Version increment is optional. Use scripts/increment-version.sh if needed."
 	@if ! command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then \
 		echo "ERROR: x86_64-w64-mingw32-gcc not found. Install with: sudo apt-get install gcc-mingw-w64-x86-64"; \
 		exit 1; \
@@ -37,7 +36,7 @@ build-windows: process-assets
 	GIT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
 	OUTPUT_FILE="canvus-powertoys.$$VERSION.exe"; \
 	if CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc go build \
-		-ldflags="-s -w -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.Version=$$VERSION -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.BuildDate=$$BUILD_DATE -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.GitCommit=$$GIT_COMMIT" \
+		-ldflags="-s -w -H windowsgui -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.Version=$$VERSION -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.BuildDate=$$BUILD_DATE -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.GitCommit=$$GIT_COMMIT" \
 		-o $$OUTPUT_FILE ./cmd/powertoys; then \
 		echo "Built: $$OUTPUT_FILE"; \
 		if [ -f cmd/powertoys/resource.syso ]; then \
@@ -81,10 +80,10 @@ lint:
 clean:
 	rm -f canvus-powertoys canvus-powertoys.exe canvus-powertoys-linux
 
-# Check WebUI asset sizes
-check-assets:
-	@./webui/build/size-check.sh
+# Check WebUI asset sizes (development tool - moved to dross/)
+# check-assets:
+#	@./webui/build/size-check.sh
 
 # Run all quality checks
-check: fmt vet test check-assets
+check: fmt vet test
 
