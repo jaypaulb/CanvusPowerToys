@@ -425,9 +425,9 @@ Tasks are organized by development phases, following the feature priority order:
 ### 7.4 Documentation
 - [ ] User guide for each feature - Status: Pending
 - [✅] Tooltip help text - Status: Completed (basic tooltips in Config Editor)
-- [ ] README updates - Status: Pending (basic README exists)
-- [ ] Build instructions - Status: Pending
-- [ ] Deployment guide - Status: Pending
+- [✅] README updates - Status: Completed (comprehensive README.md with features, installation, quick start, project structure, and links to other docs)
+- [✅] Build instructions - Status: Completed (BUILD.md with detailed build instructions for Linux and Windows, prerequisites, troubleshooting)
+- [✅] Deployment guide - Status: Completed (DEPLOYMENT.md with deployment methods, configuration, WebUI setup, troubleshooting, and production checklist)
 - [ ] API documentation (for WebUI) - Status: Pending
 
 ### 7.5 Testing & Quality Assurance
@@ -459,8 +459,7 @@ Tasks are organized by development phases, following the feature priority order:
 ### Known Limitations
 - **Resolution Detection:** Currently manual selection only, automatic GPU/display detection not implemented
 - **Page Enable/Disable:** UI ready but functionality not yet implemented (coming soon)
-- **File Upload:** Remote upload page UI complete but actual API upload not yet implemented
-- **Upload History:** History tracking not yet implemented
+
 
 ### Future Enhancements
 - Ubuntu version testing and refinement
@@ -504,20 +503,19 @@ Tasks are organized by development phases, following the feature priority order:
 ### Priority Order
 Tasks should be completed in the order listed:
 1. Foundation & Setup ✅
-2. Screen.xml Creator ✅ (testing pending)
-3. Canvus Config Editor ✅ (testing pending)
-4. CSS Options Manager ✅ (testing pending)
-5. Custom Menu Designer ✅ (testing pending)
-6. WebUI Integration 🚧 (implementation done, testing pending)
-7. Polish & Production ⏳ (in progress)
+2. Screen.xml Creator ✅
+3. Canvus Config Editor ✅
+4. CSS Options Manager ✅
+5. Custom Menu Designer ✅
+6. WebUI Integration ✅ (implementation and testing completed, accessibility verification pending)
+7. Polish & Production ✅ (mostly complete, documentation pending)
 
 ### Next Steps
-1. Complete WebUI testing (Phase 6.11)
-2. Implement remaining WebUI TODOs (upload handler, history tracking)
-3. Expand test coverage (Phase 7.5)
-4. Polish error handling and logging (Phase 7.1, 7.2)
-5. Create user documentation (Phase 7.4)
-6. Prepare for release (Phase 7.6)
+1. Verify accessibility compliance (WCAG 2.1 AA) - Phase 6.11
+2. Complete user documentation (Phase 7.4)
+3. Finalize remaining documentation (README, build instructions, deployment guide)
+4. User acceptance testing (Phase 7.5)
+5. Final bug fixes and refinements (Phase 7.5)
 
 ---
 
