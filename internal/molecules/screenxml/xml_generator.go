@@ -13,12 +13,18 @@ type ScreenXML struct {
 	Comment            string         `xml:",comment"`
 	Type               string         `xml:"type,attr,omitempty"`
 	DPI                *XMLAttr       `xml:"dpi,omitempty"`
+	DPIComment         string         `xml:",comment"`
 	DPMS               *XMLAttr       `xml:"dpms,omitempty"`
+	DPMSComment        string         `xml:",comment"`
 	HwColorCorrection  *XMLAttr       `xml:"hw-color-correction,omitempty"`
 	Vsync              *XMLAttr       `xml:"vsync,omitempty"`
+	VsyncComment       string         `xml:",comment"`
 	LayerSize          *XMLAttr       `xml:"layer-size,omitempty"`
+	LayerSizeComment   string         `xml:",comment"`
 	GlFinish           *XMLAttr       `xml:"gl-finish,omitempty"`
+	GlFinishComment    string         `xml:",comment"`
 	AsyncTextureUpload *XMLAttr       `xml:"async-texture-upload,omitempty"`
+	AsyncTextureUploadComment string  `xml:",comment"`
 	Windows            []WindowConfig `xml:"window"`
 }
 
@@ -28,30 +34,41 @@ type XMLAttr struct {
 	Value string `xml:",chardata"`
 }
 
+
 // WindowConfig represents a window element in screen.xml.
 type WindowConfig struct {
-	Comment         string       `xml:",comment"`
-	Type            string       `xml:"type,attr"`
-	DirectRendering *XMLAttr     `xml:"direct-rendering,omitempty"`
-	Frameless       *XMLAttr     `xml:"frameless,omitempty"`
-	FsaaSamples     *XMLAttr     `xml:"fsaa-samples,omitempty"`
-	Fullscreen      *XMLAttr     `xml:"fullscreen,omitempty"`
-	Location        *XMLAttr     `xml:"location,omitempty"`
-	Resizable       *XMLAttr     `xml:"resizable,omitempty"`
-	ScreenNumber    *XMLAttr     `xml:"screennumber,omitempty"`
-	Size            *XMLAttr     `xml:"size,omitempty"`
-	Areas           []AreaConfig `xml:"area"`
+	Comment                string       `xml:",comment"`
+	Type                   string       `xml:"type,attr"`
+	DirectRendering        *XMLAttr     `xml:"direct-rendering,omitempty"`
+	DirectRenderingComment string       `xml:",comment"`
+	Frameless              *XMLAttr     `xml:"frameless,omitempty"`
+	FramelessComment       string       `xml:",comment"`
+	FsaaSamples            *XMLAttr     `xml:"fsaa-samples,omitempty"`
+	FsaaSamplesComment     string       `xml:",comment"`
+	Fullscreen             *XMLAttr     `xml:"fullscreen,omitempty"`
+	FullscreenComment      string       `xml:",comment"`
+	Location               *XMLAttr     `xml:"location,omitempty"`
+	LocationComment        string       `xml:",comment"`
+	Resizable              *XMLAttr     `xml:"resizable,omitempty"`
+	ResizableComment       string       `xml:",comment"`
+	ScreenNumber           *XMLAttr     `xml:"screennumber,omitempty"`
+	ScreenNumberComment    string       `xml:",comment"`
+	Size                   *XMLAttr     `xml:"size,omitempty"`
+	SizeComment            string       `xml:",comment"`
+	Areas                  []AreaConfig `xml:"area"`
 }
 
 // AreaConfig represents an area element within a window.
 type AreaConfig struct {
-	Comment          string   `xml:",comment"`
-	Type             string   `xml:"type,attr"`
-	GraphicsLocation *XMLAttr `xml:"graphicslocation,omitempty"`
-	GraphicsSize     *XMLAttr `xml:"graphicssize,omitempty"`
-	Location         *XMLAttr `xml:"location,omitempty"`
-	Seams            *XMLAttr `xml:"seams,omitempty"`
-	Size             *XMLAttr `xml:"size,omitempty"`
+	Comment                string   `xml:",comment"`
+	Type                   string   `xml:"type,attr"`
+	GraphicsLocation       *XMLAttr `xml:"graphicslocation,omitempty"`
+	GraphicsLocationComment string  `xml:",comment"`
+	GraphicsSize           *XMLAttr `xml:"graphicssize,omitempty"`
+	GraphicsSizeComment    string   `xml:",comment"`
+	Location               *XMLAttr `xml:"location,omitempty"`
+	Seams                  *XMLAttr `xml:"seams,omitempty"`
+	Size                   *XMLAttr `xml:"size,omitempty"`
 }
 
 
@@ -91,38 +108,32 @@ func (xg *XMLGenerator) Generate() ([]byte, error) {
 
 	screenXML := ScreenXML{
 		Comment: `The multihead element defines global display options used by MT Canvus.
-These settings apply to all windows and areas in the configuration.
-
-DPI: "Dots per inch" setting for converting physical dimensions to pixels in .css files.
+These settings apply to all windows and areas in the configuration.`,
+		Type:              "",
+		DPI:               &XMLAttr{Type: "", Value: "40.053"},
+		DPIComment:        `DPI: "Dots per inch" setting for converting physical dimensions to pixels in .css files.
 For instance, width: 10cm; will match physical dimension of 10 cm if the dpi is correct.
-Default: 40.053, which is the DPI for 55" FullHD displays.
-
-DPMS: Display Power Management Signaling - controls monitor power states (standby, suspend, off).
-Format: "standby suspend off" in seconds. Set to "0 0 0" to disable power management.
-
-vsync: Should vertical sync be enabled. Enable to remove tearing artifacts.
-Default value depends on the platform (1 on Linux, 0 on Windows).
-
-layer-size: If empty ("0 0"), then the layer-size is calculated automatically from the graphics coordinates.
-The layer size defines the size of the overall touch interaction layer.
-
-gl-finish: Enabling this might reduce rendering latency and tearing between GPUs by eliminating
+Default: 40.053, which is the DPI for 55" FullHD displays.`,
+		DPMS:              &XMLAttr{Type: "", Value: "0 0 0"},
+		DPMSComment:       `DPMS: Display Power Management Signaling - controls monitor power states (standby, suspend, off).
+Format: "standby suspend off" in seconds. Set to "0 0 0" to disable power management.`,
+		HwColorCorrection: &XMLAttr{Type: "", Value: "0"},
+		Vsync:             &XMLAttr{Type: "", Value: "0"}, // Default for Windows
+		VsyncComment:      `vsync: Should vertical sync be enabled. Enable to remove tearing artifacts.
+Default value depends on the platform (1 on Linux, 0 on Windows).`,
+		LayerSize:         &XMLAttr{Type: "", Value: layerSize},
+		LayerSizeComment: `layer-size: If empty ("0 0"), then the layer-size is calculated automatically from the graphics coordinates.
+The layer size defines the size of the overall touch interaction layer.`,
+		GlFinish:          &XMLAttr{Type: "", Value: "0"},
+		GlFinishComment:  `gl-finish: Enabling this might reduce rendering latency and tearing between GPUs by eliminating
 frame buffering but at a cost of reduced performance. On a low level this basically specifies
-if glFinish should be called after every rendered frame. Test and see if the new framerate is acceptable.
-
-async-texture-upload: If set to 1, some texture data will be uploaded asynchronously to the GPU
+if glFinish should be called after every rendered frame. Test and see if the new framerate is acceptable.`,
+		AsyncTextureUpload: &XMLAttr{Type: "", Value: "0"},
+		AsyncTextureUploadComment: `async-texture-upload: If set to 1, some texture data will be uploaded asynchronously to the GPU
 using a separate upload threads and OpenGL contexts. This can improve GPU upload throughput and
 reduce "Render collect" time and therefore improve performance. This is mostly useful in applications
 that upload a lot of content to the GPU, like an app with lots of videos. Enable this if you plan
 to have more than 5 videos running per GPU. Otherwise disable.`,
-		Type:              "",
-		DPI:               &XMLAttr{Type: "", Value: "40.053"},
-		DPMS:              &XMLAttr{Type: "", Value: "0 0 0"},
-		HwColorCorrection: &XMLAttr{Type: "", Value: "0"},
-		Vsync:             &XMLAttr{Type: "", Value: "0"}, // Default for Windows
-		LayerSize:         &XMLAttr{Type: "", Value: layerSize},
-		GlFinish:         &XMLAttr{Type: "", Value: "0"},
-		AsyncTextureUpload: &XMLAttr{Type: "", Value: "0"},
 		Windows:           []WindowConfig{},
 	}
 
@@ -264,38 +275,46 @@ It extends across the Cells' screen surface and is similar to a computer desktop
 It is also sometimes called the operating system window. For efficient rendering,
 we recommend that you define one window element per GPU.
 
-location: Specifies the desktop pixel coordinates of the window's top-left corner.
-Origin (0, 0) is in the top-left corner of the primary display. If location is not defined,
-the window is located on the center of the screen by default.
-
-size: Specifies the window width and height in pixels. Like location, this only affects
-the window size, it doesn't affect what is rendered inside the window. If size is not defined,
-it is set automatically to 100%% of the display in frameless mode or 80%% of the display in windowed mode.
-
-direct-rendering: Improves performance when not doing color correction or inter-GPU frame locking.
-If enabled, the viewports / areas on this window are rendered directly to the window. This gives
-the best performance. If disabled, rendering is done using off-screen buffers that adds overhead,
-but is required for frame lock and area color correction to work. Recommended to leave on (1).
-
-screennumber: X screen number starting from 0. The location of the window is relative to the
-selected X screen. Only used in Linux. Default: -1 which selects the current X screen.
-
-frameless: Enable or disable frameless window mode. Frameless window doesn't have borders,
-title bar, system menu or minimize/maximize/close buttons, can't be moved or resized, and
-disables OS touch gestures on top of the window. Frameless mode is the recommended way of
-configuring wall installations.
-
 Window %s for GPU %d. Covers outputs %s in graphics bounds (%d,%d) to (%d,%d) (%d x %d px).`,
 			windowName, gpuNum, outputList, minX, minY, maxX, maxY, windowWidth, windowHeight),
 		Type:            windowName,
 		DirectRendering: &XMLAttr{Type: "", Value: "1"},
+		DirectRenderingComment: `direct-rendering: Improves performance when not doing color correction or inter-GPU frame locking.
+If enabled, the viewports / areas on this window are rendered directly to the window. This gives
+the best performance. If disabled, rendering is done using off-screen buffers that adds overhead,
+but is required for frame lock and area color correction to work. Recommended to leave on (1).`,
 		Frameless:       &XMLAttr{Type: "", Value: "1"},
+		FramelessComment: `frameless: Enable or disable frameless window mode. Frameless window doesn't have borders,
+title bar, system menu or minimize/maximize/close buttons, can't be moved or resized, and
+disables OS touch gestures on top of the window. Frameless mode is the recommended way of
+configuring wall installations.
+
+ 0: Normal application window with window frames, title bar, close buttons etc,
+ 1: Window has no frames. Similar to fullscreen-mode, but isn't restricted to
+   one screen since the window can be arbitrary size.
+
+ Should the window stay on top of other windows. The default value
+ normally is 0 (disabled). If the window is frameless, the default
+ for this is 1 (enabled).`,
 		FsaaSamples:     &XMLAttr{Type: "", Value: "4"},
+		FsaaSamplesComment: ` Full-screen anti-aliasing samples. Typical values are 0, 2 or 4.
+ If not defined, a reasonable default value is chosen based on the
+ hardware capabilities.`,
 		Fullscreen:      &XMLAttr{Type: "", Value: "0"},
+		FullscreenComment: ` Create the application window in full-screen mode.  NB this works well for windows using mosaic but will fail otherwise as it MS Windows only supports fullscreen toggle to a single desktop area.`,
 		Location:        &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", minX, minY)},
+		LocationComment: `location: Specifies the desktop pixel coordinates of the window's top-left corner.
+Origin (0, 0) is in the top-left corner of the primary display. If location is not defined,
+the window is located on the center of the screen by default.`,
 		Resizable:       &XMLAttr{Type: "", Value: "0"},
+		ResizableComment: ` Can the application window be resized.`,
 		ScreenNumber:    &XMLAttr{Type: "", Value: "-1"},
+		ScreenNumberComment: `screennumber: X screen number starting from 0. The location of the window is relative to the
+selected X screen. Only used in Linux. Default: -1 which selects the current X screen.`,
 		Size:            &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", windowWidth, windowHeight)},
+		SizeComment: `size: Specifies the window width and height in pixels. Like location, this only affects
+the window size, it doesn't affect what is rendered inside the window. If size is not defined,
+it is set automatically to 100% of the display in frameless mode or 80% of the display in windowed mode.`,
 		Areas:           []AreaConfig{},
 	}
 
@@ -433,22 +452,20 @@ func (xg *XMLGenerator) createAreaForGPU(gpuOutput string, cells []CellCoord, ar
 		Comment: fmt.Sprintf(`In the application virtual graphics coordinates, graphicslocation and graphicssize
 define the part of the application that is rendered to this area / viewport.
 
-This doesn't affect where on the window the viewport is rendered, but it defines what part of
-application is rendered here.
-
-The graphics size doesn't need to be the same as area size or even have the same aspect ratio.
+Area %s drives GPU output %s covering rows %d-%d, cols %d-%d (%d x %d px at %dx%d resolution).`,
+			areaName, gpuOutput, minRow, maxRow, minCol, maxCol, width, height, cellWidth, cellHeight),
+		Type:             areaName,
+		GraphicsLocation: &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", x, y)},
+		GraphicsLocationComment: `This doesn't affect where on the window the viewport is rendered, but it defines what part of
+application is rendered here.`,
+		GraphicsSize:     &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", width, height)},
+		GraphicsSizeComment: `The graphics size doesn't need to be the same as area size or even have the same aspect ratio.
 The given part of the application is rendered so that it fills the whole area. Different areas
 can render arbitrary parts of the application, even if the parts overlap.
 
 However, in a typical use case the graphics size does match the area size so that we have 1:1
 pixel mapping from the virtual application graphics coordinates to the window coordinates so
-that all the UI elements have correct size.
-
-Area %s drives GPU output %s covering rows %d-%d, cols %d-%d (%d x %d px at %dx%d resolution).`,
-			areaName, gpuOutput, minRow, maxRow, minCol, maxCol, width, height, cellWidth, cellHeight),
-		Type:             areaName,
-		GraphicsLocation: &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", x, y)},
-		GraphicsSize:     &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", width, height)},
+that all the UI elements have correct size.`,
 		Location:         &XMLAttr{Type: "", Value: "0 0"},
 		Seams:            &XMLAttr{Type: "", Value: "0 0 0 0"},
 		Size:             &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", width, height)},
@@ -479,38 +496,46 @@ It extends across the Cells' screen surface and is similar to a computer desktop
 It is also sometimes called the operating system window. For efficient rendering,
 we recommend that you define one window element per GPU.
 
-location: Specifies the desktop pixel coordinates of the window's top-left corner.
-Origin (0, 0) is in the top-left corner of the primary display. If location is not defined,
-the window is located on the center of the screen by default.
-
-size: Specifies the window width and height in pixels. Like location, this only affects
-the window size, it doesn't affect what is rendered inside the window. If size is not defined,
-it is set automatically to 100%% of the display in frameless mode or 80%% of the display in windowed mode.
-
-direct-rendering: Improves performance when not doing color correction or inter-GPU frame locking.
-If enabled, the viewports / areas on this window are rendered directly to the window. This gives
-the best performance. If disabled, rendering is done using off-screen buffers that adds overhead,
-but is required for frame lock and area color correction to work. Recommended to leave on (1).
-
-screennumber: X screen number starting from 0. The location of the window is relative to the
-selected X screen. Only used in Linux. Default: -1 which selects the current X screen.
-
-frameless: Enable or disable frameless window mode. Frameless window doesn't have borders,
-title bar, system menu or minimize/maximize/close buttons, can't be moved or resized, and
-disables OS touch gestures on top of the window. Frameless mode is the recommended way of
-configuring wall installations.
-
 Window %s for GPU %d. Covers outputs %s in graphics bounds (%d,%d) to (%d,%d) (%d x %d px).`,
 			windowName, gpuNum, outputList, minX, minY, maxX, maxY, windowWidth, windowHeight),
 		Type:            windowName,
 		DirectRendering: &XMLAttr{Type: "", Value: "1"},
+		DirectRenderingComment: `direct-rendering: Improves performance when not doing color correction or inter-GPU frame locking.
+If enabled, the viewports / areas on this window are rendered directly to the window. This gives
+the best performance. If disabled, rendering is done using off-screen buffers that adds overhead,
+but is required for frame lock and area color correction to work. Recommended to leave on (1).`,
 		Frameless:       &XMLAttr{Type: "", Value: "1"},
+		FramelessComment: `frameless: Enable or disable frameless window mode. Frameless window doesn't have borders,
+title bar, system menu or minimize/maximize/close buttons, can't be moved or resized, and
+disables OS touch gestures on top of the window. Frameless mode is the recommended way of
+configuring wall installations.
+
+ 0: Normal application window with window frames, title bar, close buttons etc,
+ 1: Window has no frames. Similar to fullscreen-mode, but isn't restricted to
+   one screen since the window can be arbitrary size.
+
+ Should the window stay on top of other windows. The default value
+ normally is 0 (disabled). If the window is frameless, the default
+ for this is 1 (enabled).`,
 		FsaaSamples:     &XMLAttr{Type: "", Value: "4"},
+		FsaaSamplesComment: ` Full-screen anti-aliasing samples. Typical values are 0, 2 or 4.
+ If not defined, a reasonable default value is chosen based on the
+ hardware capabilities.`,
 		Fullscreen:      &XMLAttr{Type: "", Value: "0"},
+		FullscreenComment: ` Create the application window in full-screen mode.  NB this works well for windows using mosaic but will fail otherwise as it MS Windows only supports fullscreen toggle to a single desktop area.`,
 		Location:        &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", minX, minY)},
+		LocationComment: `location: Specifies the desktop pixel coordinates of the window's top-left corner.
+Origin (0, 0) is in the top-left corner of the primary display. If location is not defined,
+the window is located on the center of the screen by default.`,
 		Resizable:       &XMLAttr{Type: "", Value: "0"},
+		ResizableComment: ` Can the application window be resized.`,
 		ScreenNumber:    &XMLAttr{Type: "", Value: "-1"},
+		ScreenNumberComment: `screennumber: X screen number starting from 0. The location of the window is relative to the
+selected X screen. Only used in Linux. Default: -1 which selects the current X screen.`,
 		Size:            &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", windowWidth, windowHeight)},
+		SizeComment: `size: Specifies the window width and height in pixels. Like location, this only affects
+the window size, it doesn't affect what is rendered inside the window. If size is not defined,
+it is set automatically to 100% of the display in frameless mode or 80% of the display in windowed mode.`,
 		Areas:           []AreaConfig{},
 	}
 
@@ -538,17 +563,6 @@ func (xg *XMLGenerator) createAreaForWindow(cells []CellCoord, x, y, width, heig
 		finalComment = fmt.Sprintf(`In the application virtual graphics coordinates, graphicslocation and graphicssize
 define the part of the application that is rendered to this area / viewport.
 
-This doesn't affect where on the window the viewport is rendered, but it defines what part of
-application is rendered here.
-
-The graphics size doesn't need to be the same as area size or even have the same aspect ratio.
-The given part of the application is rendered so that it fills the whole area. Different areas
-can render arbitrary parts of the application, even if the parts overlap.
-
-However, in a typical use case the graphics size does match the area size so that we have 1:1
-pixel mapping from the virtual application graphics coordinates to the window coordinates so
-that all the UI elements have correct size.
-
 Area %s spans window bounds (%d,%d) size %dx%d px for aggregated GPU outputs.`, areaName, x, y, width, height)
 	}
 
@@ -556,7 +570,16 @@ Area %s spans window bounds (%d,%d) size %dx%d px for aggregated GPU outputs.`, 
 		Comment:          finalComment,
 		Type:             areaName,
 		GraphicsLocation: &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", x, y)},
+		GraphicsLocationComment: `This doesn't affect where on the window the viewport is rendered, but it defines what part of
+application is rendered here.`,
 		GraphicsSize:     &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", width, height)},
+		GraphicsSizeComment: `The graphics size doesn't need to be the same as area size or even have the same aspect ratio.
+The given part of the application is rendered so that it fills the whole area. Different areas
+can render arbitrary parts of the application, even if the parts overlap.
+
+However, in a typical use case the graphics size does match the area size so that we have 1:1
+pixel mapping from the virtual application graphics coordinates to the window coordinates so
+that all the UI elements have correct size.`,
 		Location:         &XMLAttr{Type: "", Value: "0 0"},
 		Seams:            &XMLAttr{Type: "", Value: "0 0 0 0"},
 		Size:             &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", width, height)},
