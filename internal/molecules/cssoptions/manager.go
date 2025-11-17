@@ -75,26 +75,21 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 	// Widget Options section
 	widgetOptionsLabel := widget.NewLabel("Widget Options")
 	widgetOptionsLabel.TextStyle = fyne.TextStyle{Bold: true}
-	widgetOptionsTooltip := widget.NewLabel("Control widget interaction capabilities (temporary, reverts on canvas close)")
 
-	movingLabel := widget.NewLabel("Disable Moving")
-	movingTooltip := widget.NewLabel("Disable moving canvas items (default: enabled in Canvus)")
+	movingTooltip := "Disable moving canvas items (default: enabled in Canvus)"
 	m.movingEnabled = widget.NewCheck("", nil)
 	m.movingEnabled.SetChecked(false) // Default: unchecked (moving is enabled by default in Canvus)
 
-	scalingLabel := widget.NewLabel("Disable Scaling")
-	scalingTooltip := widget.NewLabel("Disable resizing canvas items (default: enabled in Canvus)")
+	scalingTooltip := "Disable resizing canvas items (default: enabled in Canvus)"
 	m.scalingEnabled = widget.NewCheck("", nil)
 	m.scalingEnabled.SetChecked(false) // Default: unchecked (scaling is enabled by default in Canvus)
 
-	rotationLabel := widget.NewLabel("Enable Rotation")
-	rotationTooltip := widget.NewLabel("Enable rotating canvas items (default: disabled in Canvus)")
+	rotationTooltip := "Enable rotating canvas items (default: disabled in Canvus)"
 	m.rotationEnabled = widget.NewCheck("", nil)
 	m.rotationEnabled.SetChecked(false) // Default: unchecked (rotation is disabled by default in Canvus)
 
 	// Video Loop option
-	videoLoopLabel := widget.NewLabel("Enable Video Looping")
-	videoLoopTooltip := widget.NewLabel("Enable automatic looping for videos (warning: may consume significant memory)")
+	videoLoopTooltip := "Enable automatic looping for videos (warning: may consume significant memory)"
 	videoLoopWarning := widget.NewLabel("⚠ Memory Warning: Large videos may consume significant resources")
 	videoLoopWarning.Importance = widget.WarningImportance
 	m.videoLoopEnabled = widget.NewCheck("", nil)
@@ -104,24 +99,19 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 	uiVisibilityLabel := widget.NewLabel("UI Visibility Options")
 	uiVisibilityLabel.TextStyle = fyne.TextStyle{Bold: true}
 
-	hideTitleBarsLabel := widget.NewLabel("Hide Title Bars")
-	hideTitleBarsTooltip := widget.NewLabel("Hide title bars on canvas items")
+	hideTitleBarsTooltip := "Hide title bars on canvas items"
 	m.hideTitleBarsEnabled = widget.NewCheck("", nil)
 
-	hideResizeHandlesLabel := widget.NewLabel("Hide Resize Handles")
-	hideResizeHandlesTooltip := widget.NewLabel("Hide resize handles on canvas items")
+	hideResizeHandlesTooltip := "Hide resize handles on canvas items"
 	m.hideResizeHandlesEnabled = widget.NewCheck("", nil)
 
-	hideSidebarLabel := widget.NewLabel("Hide Sidebar")
-	hideSidebarTooltip := widget.NewLabel("Hide sidebar menu that appears by widgets")
+	hideSidebarTooltip := "Hide sidebar menu that appears by widgets"
 	m.hideSidebarEnabled = widget.NewCheck("", nil)
 
-	hideMainMenuLabel := widget.NewLabel("Hide Main Menu")
-	hideMainMenuTooltip := widget.NewLabel("Hide main menu at side/bottom of screen")
+	hideMainMenuTooltip := "Hide main menu at side/bottom of screen"
 	m.hideMainMenuEnabled = widget.NewCheck("", nil)
 
-	hideFingerMenuLabel := widget.NewLabel("Hide Finger Menu")
-	hideFingerMenuTooltip := widget.NewLabel("Hide finger menu (CanvusCanvasMenu)")
+	hideFingerMenuTooltip := "Hide finger menu (CanvusCanvasMenu)"
 	m.hideFingerMenuEnabled = widget.NewCheck("", nil)
 
 	// Standby Image for Video Outputs
@@ -138,8 +128,7 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 	})
 
 	// Kiosk Mode option - mutually exclusive with Kiosk Plus
-	kioskModeLabel := widget.NewLabel("Enable Kiosk Mode")
-	kioskModeTooltip := widget.NewLabel("Requires: default-canvas set, auto-pin=0. Hides all UI elements including finger menu")
+	kioskModeTooltip := "Requires: default-canvas set, auto-pin=0. Hides all UI elements including finger menu"
 	m.kioskModeEnabled = widget.NewCheck("", func(checked bool) {
 		if checked && m.kioskPlusEnabled.Checked {
 			m.kioskPlusEnabled.SetChecked(false)
@@ -162,8 +151,7 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 	})
 
 	// Kiosk Plus Mode option - mutually exclusive with Kiosk Mode
-	kioskPlusLabel := widget.NewLabel("Enable Kiosk Plus Mode")
-	kioskPlusTooltip := widget.NewLabel("Requires: default-canvas set, auto-pin=0. Hides all UI elements except finger menu")
+	kioskPlusTooltip := "Requires: default-canvas set, auto-pin=0. Hides all UI elements except finger menu"
 	m.kioskPlusEnabled = widget.NewCheck("", func(checked bool) {
 		if checked && m.kioskModeEnabled.Checked {
 			m.kioskModeEnabled.SetChecked(false)
@@ -188,7 +176,31 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 	// Status label
 	m.statusLabel = widget.NewLabel("Ready")
 
-	// Buttons
+	// Helper function to create an option row with aligned checkbox
+	createOptionRow := func(labelText, tooltipText string, checkbox *widget.Check) fyne.CanvasObject {
+		labelWithColon := widget.NewLabel(labelText + ":")
+		labelWithColon.Truncation = fyne.TextTruncateOff
+
+		tooltip := widget.NewLabel(tooltipText)
+		tooltip.Wrapping = fyne.TextWrapWord
+
+		// Use Border to put checkbox on the right, everything else on the left
+		// This ensures all checkboxes align vertically
+		leftContent := container.NewHBox(
+			widget.NewLabel("    "), // Indentation
+			labelWithColon,
+			tooltip,
+		)
+
+		return container.NewBorder(
+			nil, nil,
+			leftContent, // Left: indentation + label + description
+			checkbox,    // Right: checkbox (aligned)
+			nil,
+		)
+	}
+
+	// Buttons - will be in fixed header
 	generateBtn := widget.NewButton("Generate Plugin", func() {
 		m.generatePlugin(window)
 	})
@@ -201,42 +213,62 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 		m.launchCanvusWithConfig(window)
 	})
 
-	form := container.NewVBox(
+	// Fixed header with buttons
+	header := container.NewBorder(
+		nil, nil, nil,
+		container.NewHBox(validateBtn, generateBtn, launchBtn),
 		title,
+	)
+
+	// Scrollable content
+	form := container.NewVBox(
 		instructions,
 		widget.NewSeparator(),
 		widgetOptionsLabel,
-		widgetOptionsTooltip,
-		container.NewHBox(movingLabel, movingTooltip, m.movingEnabled),
-		container.NewHBox(scalingLabel, scalingTooltip, m.scalingEnabled),
-		container.NewHBox(rotationLabel, rotationTooltip, m.rotationEnabled),
+		createOptionRow("Disable Moving", movingTooltip, m.movingEnabled),
+		createOptionRow("Disable Scaling", scalingTooltip, m.scalingEnabled),
+		createOptionRow("Enable Rotation", rotationTooltip, m.rotationEnabled),
 		widget.NewSeparator(),
-		container.NewHBox(videoLoopLabel, videoLoopTooltip, m.videoLoopEnabled),
-		videoLoopWarning,
+		createOptionRow("Enable Video Looping", videoLoopTooltip, m.videoLoopEnabled),
+		container.NewHBox(
+			widget.NewLabel("    "), // Indentation
+			videoLoopWarning,
+		),
 		widget.NewSeparator(),
 		uiVisibilityLabel,
-		container.NewHBox(kioskModeLabel, kioskModeTooltip, m.kioskModeEnabled),
-		container.NewHBox(kioskPlusLabel, kioskPlusTooltip, m.kioskPlusEnabled),
+		createOptionRow("Enable Kiosk Mode", kioskModeTooltip, m.kioskModeEnabled),
+		createOptionRow("Enable Kiosk Plus Mode", kioskPlusTooltip, m.kioskPlusEnabled),
 		widget.NewSeparator(),
-		container.NewHBox(hideTitleBarsLabel, hideTitleBarsTooltip, m.hideTitleBarsEnabled),
-		container.NewHBox(hideResizeHandlesLabel, hideResizeHandlesTooltip, m.hideResizeHandlesEnabled),
-		container.NewHBox(hideSidebarLabel, hideSidebarTooltip, m.hideSidebarEnabled),
-		container.NewHBox(hideMainMenuLabel, hideMainMenuTooltip, m.hideMainMenuEnabled),
-		container.NewHBox(hideFingerMenuLabel, hideFingerMenuTooltip, m.hideFingerMenuEnabled),
+		createOptionRow("Hide Title Bars", hideTitleBarsTooltip, m.hideTitleBarsEnabled),
+		createOptionRow("Hide Resize Handles", hideResizeHandlesTooltip, m.hideResizeHandlesEnabled),
+		createOptionRow("Hide Sidebar", hideSidebarTooltip, m.hideSidebarEnabled),
+		createOptionRow("Hide Main Menu", hideMainMenuTooltip, m.hideMainMenuEnabled),
+		createOptionRow("Hide Finger Menu", hideFingerMenuTooltip, m.hideFingerMenuEnabled),
 		widget.NewSeparator(),
 		standbyImageSectionLabel,
-		standbyImageDescription,
-		container.NewHBox(m.standbyImageLabel, uploadImageBtn, clearImageBtn),
-		widget.NewSeparator(),
-		m.statusLabel,
 		container.NewHBox(
-			validateBtn,
-			generateBtn,
-			launchBtn,
+			widget.NewLabel("    "), // Indentation
+			standbyImageDescription,
+		),
+		container.NewHBox(
+			widget.NewLabel("    "), // Indentation
+			container.NewHBox(m.standbyImageLabel, uploadImageBtn, clearImageBtn),
+		),
+		widget.NewSeparator(),
+		container.NewHBox(
+			widget.NewLabel("    "), // Indentation
+			m.statusLabel,
 		),
 	)
 
-	return container.NewScroll(form)
+	// Use Border layout: header at top (fixed), scrollable content in center
+	return container.NewBorder(
+		header, // Top: fixed header with title and buttons
+		nil,    // Bottom: nothing
+		nil,    // Left: nothing
+		nil,    // Right: nothing
+		container.NewScroll(form), // Center: scrollable form content
+	)
 }
 
 // validateRequirements validates that requirements are met for enabled options.

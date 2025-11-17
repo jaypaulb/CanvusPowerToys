@@ -6,6 +6,9 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -21,27 +24,38 @@ import (
 
 // Manager handles WebUI integration and local server.
 type Manager struct {
-	fileService   *services.FileService
-	iniParser     *config.INIParser
-	server        *http.Server
-	serverURL     *widget.Entry
-	serverSelect  *widget.Select
-	authToken     *widget.Entry
-	serverPort    *widget.Entry
-	serverStatus  *widget.Label
-	enabledPages  map[string]*widget.Check
-	selectAllPage *widget.Check
-	startStopBtn  *widget.Button
-	canvasService *CanvasService
-	apiRoutes     *APIRoutes
+	fileService       *services.FileService
+	iniParser         *config.INIParser
+	server            *http.Server
+	serverURL         *widget.Entry
+	serverSelect      *widget.Select
+	authToken         *widget.Entry
+	serverPort        *widget.Entry
+	serverStatus      *widget.Label
+	enabledPages      map[string]*widget.Check
+	selectAllPage     *widget.Check
+	suppressSelectAll bool
+	startStopBtn      *widget.Button
+	canvasService     *CanvasService
+	apiRoutes         *APIRoutes
+	tokenInstructions *fyne.Container
+	tokenLinkButton    *widget.Button
+}
+
+type webUIConfiguration struct {
+	ServerURL    string          `json:"server_url"`
+	AuthToken    string          `json:"auth_token"`
+	ServerPort   string          `json:"server_port"`
+	EnabledPages map[string]bool `json:"enabled_pages"`
 }
 
 // NewManager creates a new WebUI Manager.
 func NewManager(fileService *services.FileService) (*Manager, error) {
 	return &Manager{
-		fileService:  fileService,
-		iniParser:    config.NewINIParser(),
-		enabledPages: make(map[string]*widget.Check),
+		fileService:       fileService,
+		iniParser:         config.NewINIParser(),
+		enabledPages:      make(map[string]*widget.Check),
+		suppressSelectAll: false,
 	}, nil
 }
 
@@ -49,6 +63,8 @@ func NewManager(fileService *services.FileService) (*Manager, error) {
 func (m *Manager) CreateUI(window fyne.Window) fyne.CanvasObject {
 	title := widget.NewLabel("WebUI Integration")
 	title.TextStyle = fyne.TextStyle{Bold: true}
+
+	savedConfig := m.loadSavedConfiguration()
 
 	instructions := widget.NewRichTextFromMarkdown(`
 **WebUI Integration**
@@ -71,6 +87,8 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 		// When a server is selected, set the URL (ensure it has https://)
 		if url, ok := serverURLs[selected]; ok {
 			m.serverURL.SetText(ensureHTTPS(url))
+			// Update token instructions with new URL
+			m.updateTokenInstructions()
 		}
 	})
 	m.serverSelect.PlaceHolder = "Select server or type URL..."
@@ -79,6 +97,13 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 	m.serverURL = widget.NewEntry()
 	m.serverURL.SetPlaceHolder("https://your-canvus-server.com or select from dropdown")
 	m.loadServerURL()
+	if savedConfig != nil && savedConfig.ServerURL != "" {
+		m.serverURL.SetText(savedConfig.ServerURL)
+	}
+	// Update token instructions when URL changes
+	m.serverURL.OnChanged = func(_ string) {
+		m.updateTokenInstructions()
+	}
 
 	// If we have server names, set the first one as default
 	if len(serverNames) > 0 {
@@ -90,21 +115,21 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 	m.authToken = widget.NewEntry()
 	m.authToken.SetPlaceHolder("Paste your access token here")
 	m.authToken.Password = true // Hide token input
+	if savedConfig != nil && savedConfig.AuthToken != "" {
+		m.authToken.SetText(savedConfig.AuthToken)
+	}
 
 	// Server Port
 	serverPortLabel := widget.NewLabel("WebUI Server Port:")
 	m.serverPort = widget.NewEntry()
 	m.serverPort.SetPlaceHolder("8080")
 	m.serverPort.SetText("8080")
+	if savedConfig != nil && savedConfig.ServerPort != "" {
+		m.serverPort.SetText(savedConfig.ServerPort)
+	}
 
-	// Token instructions
-	tokenInstructions := widget.NewRichTextFromMarkdown(`
-**How to get your Auth Token:**
-1. Log in to your Canvus server
-2. Navigate to: https://{canvusserverurl}/profile/access-tokens
-3. Create a new access token
-4. Copy and paste it below
-`)
+	// Token instructions (dynamic, updates when server URL changes)
+	m.tokenInstructions = m.createTokenInstructions()
 
 	// Server Status
 	m.serverStatus = widget.NewLabel("Server: Stopped")
@@ -129,6 +154,9 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 
 	// Select All checkbox
 	m.selectAllPage = widget.NewCheck("Select All", func(checked bool) {
+		if m.suppressSelectAll {
+			return
+		}
 		// Toggle all page checkboxes
 		for _, check := range m.enabledPages {
 			check.SetChecked(checked)
@@ -136,11 +164,24 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 	})
 
 	pageChecks := []fyne.CanvasObject{m.selectAllPage, widget.NewSeparator()}
+	savedEnabledPages := map[string]bool{}
+	if savedConfig != nil && savedConfig.EnabledPages != nil {
+		savedEnabledPages = savedConfig.EnabledPages
+	}
+
 	for _, page := range pageOptions {
-		check := widget.NewCheck(page, nil)
+		check := widget.NewCheck(page, func(bool) {
+			m.syncSelectAllFromChecks()
+		})
 		m.enabledPages[page] = check
+		if val, ok := savedEnabledPages[page]; ok {
+			check.SetChecked(val)
+		} else {
+			check.SetChecked(true)
+		}
 		pageChecks = append(pageChecks, check)
 	}
+	m.syncSelectAllFromChecks()
 
 	// Save configuration button
 	saveConfigBtn := widget.NewButton("Save Configuration", func() {
@@ -155,7 +196,7 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 	// Title bar with Start/Stop button
 	titleBar := container.NewBorder(
 		nil, nil,
-		title, // Left: Title
+		title,          // Left: Title
 		m.startStopBtn, // Right: Start/Stop button
 		nil,
 	)
@@ -174,7 +215,7 @@ Enable Canvus PowerToys to act as a web server for remote access and control.
 		container.NewGridWithColumns(2,
 			serverPortLabel, m.serverPort,
 		),
-		tokenInstructions,
+		m.tokenInstructions,
 		widget.NewSeparator(),
 		m.serverStatus,
 	)
@@ -297,20 +338,11 @@ func (m *Manager) loadServerURL() {
 
 // saveConfiguration saves the WebUI configuration.
 func (m *Manager) saveConfiguration(window fyne.Window) {
-	serverURL := m.serverURL.Text
-	if serverURL == "" {
-		dialog.ShowError(fmt.Errorf("Server URL cannot be empty"), window)
+	if err := m.persistConfiguration(); err != nil {
+		dialog.ShowError(err, window)
 		return
 	}
 
-	authToken := m.authToken.Text
-	if authToken == "" {
-		dialog.ShowError(fmt.Errorf("Auth token cannot be empty"), window)
-		return
-	}
-
-	// TODO: Save configuration to a config file or mt-canvus.ini
-	// For now, just show success message
 	dialog.ShowInformation("Saved", "Configuration saved successfully", window)
 }
 
@@ -340,99 +372,19 @@ func (m *Manager) testConnection(window fyne.Window) {
 		return
 	}
 
-	// Create HTTP client with timeout
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
+	localTestResult, remoteTestResult, localTestSuccess, remoteTestSuccess := m.performConnectionTests(port, serverURL, authToken)
+	m.updateStatusFromTestResults(localTestSuccess, remoteTestSuccess)
 
-	var localTestResult, remoteTestResult string
-	var localTestSuccess, remoteTestSuccess bool
-
-	// Test 1: Local WebUI Server
-	m.serverStatus.SetText("Testing local WebUI server...")
-	m.serverStatus.Importance = widget.MediumImportance
-
-	if m.server == nil {
-		localTestResult = fmt.Sprintf("❌ Local WebUI server is not running\n   Please start the server first.")
-		localTestSuccess = false
-	} else {
-		localTestURL := fmt.Sprintf("http://localhost:%s/health", port)
-		req, err := http.NewRequest("GET", localTestURL, nil)
-		if err != nil {
-			localTestResult = fmt.Sprintf("❌ Failed to create request: %v\n   URL: %s", err, localTestURL)
-			localTestSuccess = false
-		} else {
-			resp, err := client.Do(req)
-			if err != nil {
-				localTestResult = fmt.Sprintf("❌ Cannot connect to local server on port %s\n   Error: %v\n   URL: %s\n   Make sure the server is running and the port is correct.", port, err, localTestURL)
-				localTestSuccess = false
-			} else {
-				resp.Body.Close()
-				if resp.StatusCode == http.StatusOK {
-					localTestResult = fmt.Sprintf("✅ Local WebUI server responding\n   URL: %s\n   Status: OK", localTestURL)
-					localTestSuccess = true
-				} else {
-					localTestResult = fmt.Sprintf("❌ Server returned HTTP %d\n   URL: %s\n   Server may be running but not responding correctly.", resp.StatusCode, localTestURL)
-					localTestSuccess = false
-				}
-			}
-		}
-	}
-
-	// Test 2: Remote Canvus Server
-	m.serverStatus.SetText("Testing connection to Canvus server...")
-	m.serverStatus.Importance = widget.MediumImportance
-
-	// Normalize server URL (remove trailing slash, ensure it doesn't have /api/v1)
-	baseURL := strings.TrimSuffix(serverURL, "/")
-	baseURL = strings.TrimSuffix(baseURL, "/api/v1")
-	baseURL = strings.TrimSuffix(baseURL, "/api")
-
-	remoteTestURL := fmt.Sprintf("%s/api/v1/clients", baseURL)
-	req, err := http.NewRequest("GET", remoteTestURL, nil)
-	if err != nil {
-		remoteTestResult = fmt.Sprintf("❌ Failed to create request: %v\n   URL: %s", err, remoteTestURL)
-		remoteTestSuccess = false
-	} else {
-		// Use Private-Token header for Canvus API
-		req.Header.Set("Private-Token", authToken)
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := client.Do(req)
-		if err != nil {
-			remoteTestResult = fmt.Sprintf("❌ Cannot connect to Canvus server\n   Error: %v\n   URL: %s\n   Check your server URL and network connection.", err, remoteTestURL)
-			remoteTestSuccess = false
-		} else {
-			resp.Body.Close()
-			if resp.StatusCode == http.StatusOK {
-				remoteTestResult = fmt.Sprintf("✅ Canvus server connection successful\n   URL: %s\n   Status: OK", remoteTestURL)
-				remoteTestSuccess = true
-			} else if resp.StatusCode == http.StatusUnauthorized {
-				remoteTestResult = fmt.Sprintf("⚠️  Server reachable but authentication failed\n   URL: %s\n   HTTP Status: %d\n   Please check your auth token.", remoteTestURL, resp.StatusCode)
-				remoteTestSuccess = false
-			} else {
-				remoteTestResult = fmt.Sprintf("❌ Server returned HTTP %d\n   URL: %s\n   Server may be reachable but endpoint not available.", resp.StatusCode, remoteTestURL)
-				remoteTestSuccess = false
-			}
-		}
-	}
-
-	// Update status and show results
+	// Show results
 	if localTestSuccess && remoteTestSuccess {
-		m.serverStatus.SetText("All tests passed")
-		m.serverStatus.Importance = widget.SuccessImportance
 		dialog.ShowInformation("Connection Test Results",
 			fmt.Sprintf("✅ All tests passed!\n\n%s\n\n%s", localTestResult, remoteTestResult),
 			window)
 	} else if localTestSuccess || remoteTestSuccess {
-		m.serverStatus.SetText("Partial success - see details")
-		m.serverStatus.Importance = widget.WarningImportance
 		dialog.ShowInformation("Connection Test Results",
 			fmt.Sprintf("⚠️  Partial success\n\n%s\n\n%s", localTestResult, remoteTestResult),
 			window)
 	} else {
-		m.serverStatus.SetText("All tests failed")
-		m.serverStatus.Importance = widget.DangerImportance
 		dialog.ShowError(fmt.Errorf("❌ All tests failed\n\n%s\n\n%s", localTestResult, remoteTestResult), window)
 	}
 }
@@ -486,6 +438,11 @@ func (m *Manager) startServer(window fyne.Window) {
 
 	if authToken == "" {
 		dialog.ShowError(fmt.Errorf("Auth token cannot be empty"), window)
+		return
+	}
+
+	if err := m.persistConfiguration(); err != nil {
+		dialog.ShowError(fmt.Errorf("failed to save configuration: %w", err), window)
 		return
 	}
 
@@ -610,7 +567,9 @@ func (m *Manager) startServer(window fyne.Window) {
 	m.serverStatus.Importance = widget.SuccessImportance
 	m.startStopBtn.SetText("Stop Server")
 
-	dialog.ShowInformation("Server Started", fmt.Sprintf("WebUI server is running on:\n%s\n\nYou can access it in your browser at:\n%s", serverURLStr, serverURLStr), window)
+	localTestResult, remoteTestResult, localTestSuccess, remoteTestSuccess := m.performConnectionTests(port, serverURL, authToken)
+	m.updateStatusFromTestResults(localTestSuccess, remoteTestSuccess)
+	m.showServerStartedDialog(serverURLStr, localTestResult, remoteTestResult, window)
 }
 
 // stopServer stops the local web server.
@@ -649,6 +608,223 @@ func (m *Manager) stopServer() {
 	m.serverStatus.SetText("Server: Stopped")
 	m.serverStatus.Importance = widget.LowImportance
 	m.startStopBtn.SetText("Start Server")
+}
+
+func (m *Manager) performConnectionTests(port, serverURL, authToken string) (string, string, bool, bool) {
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	var localTestResult, remoteTestResult string
+	var localTestSuccess, remoteTestSuccess bool
+
+	m.serverStatus.SetText("Testing local WebUI server...")
+	m.serverStatus.Importance = widget.MediumImportance
+
+	if m.server == nil {
+		localTestResult = fmt.Sprintf("❌ Local WebUI server is not running\n   Please start the server first.")
+		localTestSuccess = false
+	} else {
+		localTestURL := fmt.Sprintf("http://localhost:%s/health", port)
+		req, err := http.NewRequest("GET", localTestURL, nil)
+		if err != nil {
+			localTestResult = fmt.Sprintf("❌ Failed to create request: %v\n   URL: %s", err, localTestURL)
+			localTestSuccess = false
+		} else {
+			resp, err := client.Do(req)
+			if err != nil {
+				localTestResult = fmt.Sprintf("❌ Cannot connect to local server on port %s\n   Error: %v\n   URL: %s\n   Make sure the server is running and the port is correct.", port, err, localTestURL)
+				localTestSuccess = false
+			} else {
+				resp.Body.Close()
+				if resp.StatusCode == http.StatusOK {
+					localTestResult = fmt.Sprintf("✅ Local WebUI server responding\n   URL: %s\n   Status: OK", localTestURL)
+					localTestSuccess = true
+				} else {
+					localTestResult = fmt.Sprintf("❌ Server returned HTTP %d\n   URL: %s\n   Server may be running but not responding correctly.", resp.StatusCode, localTestURL)
+					localTestSuccess = false
+				}
+			}
+		}
+	}
+
+	m.serverStatus.SetText("Testing connection to Canvus server...")
+	m.serverStatus.Importance = widget.MediumImportance
+
+	baseURL := strings.TrimSuffix(serverURL, "/")
+	baseURL = strings.TrimSuffix(baseURL, "/api/v1")
+	baseURL = strings.TrimSuffix(baseURL, "/api")
+
+	remoteTestURL := fmt.Sprintf("%s/api/v1/clients", baseURL)
+	req, err := http.NewRequest("GET", remoteTestURL, nil)
+	if err != nil {
+		remoteTestResult = fmt.Sprintf("❌ Failed to create request: %v\n   URL: %s", err, remoteTestURL)
+		remoteTestSuccess = false
+	} else {
+		req.Header.Set("Private-Token", authToken)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			remoteTestResult = fmt.Sprintf("❌ Cannot connect to Canvus server\n   Error: %v\n   URL: %s\n   Check your server URL and network connection.", err, remoteTestURL)
+			remoteTestSuccess = false
+		} else {
+			resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				remoteTestResult = fmt.Sprintf("✅ Canvus server connection successful\n   URL: %s\n   Status: OK", remoteTestURL)
+				remoteTestSuccess = true
+			} else if resp.StatusCode == http.StatusUnauthorized {
+				remoteTestResult = fmt.Sprintf("⚠️  Server reachable but authentication failed\n   URL: %s\n   HTTP Status: %d\n   Please check your auth token.", remoteTestURL, resp.StatusCode)
+				remoteTestSuccess = false
+			} else {
+				remoteTestResult = fmt.Sprintf("❌ Server returned HTTP %d\n   URL: %s\n   Server may be reachable but endpoint not available.", resp.StatusCode, remoteTestURL)
+				remoteTestSuccess = false
+			}
+		}
+	}
+
+	return localTestResult, remoteTestResult, localTestSuccess, remoteTestSuccess
+}
+
+func (m *Manager) updateStatusFromTestResults(localSuccess, remoteSuccess bool) {
+	if localSuccess && remoteSuccess {
+		m.serverStatus.SetText("All tests passed")
+		m.serverStatus.Importance = widget.SuccessImportance
+		return
+	}
+
+	if localSuccess || remoteSuccess {
+		m.serverStatus.SetText("Partial success - see details")
+		m.serverStatus.Importance = widget.WarningImportance
+		return
+	}
+
+	m.serverStatus.SetText("All tests failed")
+	m.serverStatus.Importance = widget.DangerImportance
+}
+
+func (m *Manager) showServerStartedDialog(serverURL string, localResult, remoteResult string, window fyne.Window) {
+	resultsLabel := widget.NewLabel(fmt.Sprintf("%s\n\n%s", localResult, remoteResult))
+	resultsLabel.Wrapping = fyne.TextWrapWord
+
+	content := container.NewVBox(
+		widget.NewLabel(fmt.Sprintf("WebUI server is running on %s", serverURL)),
+		widget.NewSeparator(),
+		widget.NewLabel("Connection Test Results:"),
+		resultsLabel,
+	)
+
+	dialog.NewCustomConfirm(
+		"Server Started & Tested",
+		"Close to System Tray",
+		"Dismiss",
+		content,
+		func(closeToTray bool) {
+			if closeToTray {
+				window.Hide()
+			}
+		},
+		window,
+	).Show()
+}
+
+func (m *Manager) getWebUIConfigPath() string {
+	if m.fileService == nil {
+		return ""
+	}
+	return filepath.Join(m.fileService.GetUserConfigPath(), "CanvusPowerToys", "webui_config.json")
+}
+
+func (m *Manager) loadSavedConfiguration() *webUIConfiguration {
+	configPath := m.getWebUIConfigPath()
+	if configPath == "" {
+		return nil
+	}
+
+	var cfg webUIConfiguration
+	if err := m.fileService.ReadJSONFile(configPath, &cfg); err != nil {
+		fmt.Printf("[WebUI] Failed to read saved configuration: %v\n", err)
+		return nil
+	}
+
+	if cfg.ServerPort == "" {
+		cfg.ServerPort = "8080"
+	}
+
+	if cfg.EnabledPages == nil {
+		cfg.EnabledPages = make(map[string]bool)
+	}
+
+	return &cfg
+}
+
+func (m *Manager) persistConfiguration() error {
+	if m.serverURL == nil || m.authToken == nil || m.serverPort == nil {
+		return fmt.Errorf("configuration inputs are not initialized")
+	}
+
+	serverURL := strings.TrimSpace(m.serverURL.Text)
+	if serverURL == "" {
+		return fmt.Errorf("Server URL cannot be empty")
+	}
+
+	authToken := strings.TrimSpace(m.authToken.Text)
+	if authToken == "" {
+		return fmt.Errorf("Auth token cannot be empty")
+	}
+
+	port := strings.TrimSpace(m.serverPort.Text)
+	if port == "" {
+		port = "8080"
+	}
+
+	if m.fileService == nil {
+		return fmt.Errorf("file service not available")
+	}
+
+	configPath := m.getWebUIConfigPath()
+	if configPath == "" {
+		return fmt.Errorf("unable to determine configuration path")
+	}
+
+	cfg := &webUIConfiguration{
+		ServerURL:    ensureHTTPS(serverURL),
+		AuthToken:    authToken,
+		ServerPort:   port,
+		EnabledPages: make(map[string]bool),
+	}
+
+	for page, check := range m.enabledPages {
+		if check != nil {
+			cfg.EnabledPages[page] = check.Checked
+		}
+	}
+
+	return m.fileService.WriteJSONFile(configPath, cfg)
+}
+
+func (m *Manager) syncSelectAllFromChecks() {
+	if m.selectAllPage == nil {
+		return
+	}
+
+	allSelected := true
+	for _, check := range m.enabledPages {
+		if check == nil || !check.Checked {
+			allSelected = false
+			break
+		}
+	}
+	m.setSelectAllState(allSelected)
+}
+
+func (m *Manager) setSelectAllState(checked bool) {
+	if m.selectAllPage == nil {
+		return
+	}
+	m.suppressSelectAll = true
+	m.selectAllPage.SetChecked(checked)
+	m.suppressSelectAll = false
 }
 
 // registerPage registers a page handler.
@@ -697,4 +873,89 @@ func (m *Manager) pageToPath(page string) string {
 	path = strings.ReplaceAll(path, " ", "-")
 	path = strings.ReplaceAll(path, ".", "")
 	return path
+}
+
+// createTokenInstructions creates the token instructions widget with dynamic server URL.
+func (m *Manager) createTokenInstructions() *fyne.Container {
+	title := widget.NewRichTextFromMarkdown("**How to get your Auth Token:**")
+
+	step1 := widget.NewLabel("1. Log in to your Canvus server")
+	step2Label := widget.NewLabel("2. Navigate to:")
+	step3 := widget.NewLabel("3. Create a new access token")
+	step4 := widget.NewLabel("4. Copy and paste it below")
+
+	// Create clickable link button (will be updated with actual URL)
+	linkButton := widget.NewButton("", func() {
+		serverURL := m.getServerURLForTokenLink()
+		if serverURL != "" {
+			m.openURL(serverURL)
+		}
+	})
+	linkButton.Importance = widget.LowImportance
+
+	// Container for step 2 with label and link
+	step2Container := container.NewHBox(step2Label, linkButton)
+
+	// Store link button reference for updates
+	m.tokenLinkButton = linkButton
+
+	// Update link initially
+	m.updateTokenInstructions()
+
+	return container.NewVBox(
+		title,
+		step1,
+		step2Container,
+		step3,
+		step4,
+	)
+}
+
+// updateTokenInstructions updates the token instructions link with the current server URL.
+func (m *Manager) updateTokenInstructions() {
+	if m.tokenLinkButton == nil {
+		return
+	}
+
+	serverURL := m.getServerURLForTokenLink()
+	if serverURL != "" {
+		m.tokenLinkButton.SetText(serverURL)
+		m.tokenLinkButton.OnTapped = func() {
+			m.openURL(serverURL)
+		}
+	} else {
+		m.tokenLinkButton.SetText("(Enter server URL above)")
+		m.tokenLinkButton.OnTapped = nil
+	}
+}
+
+// getServerURLForTokenLink gets the server URL for the token link, ensuring it has the profile path.
+func (m *Manager) getServerURLForTokenLink() string {
+	serverURL := strings.TrimSpace(m.serverURL.Text)
+	if serverURL == "" {
+		return ""
+	}
+
+	// Ensure URL has https:// prefix
+	serverURL = ensureHTTPS(serverURL)
+
+	// Remove trailing slash
+	serverURL = strings.TrimSuffix(serverURL, "/")
+
+	// Add profile/access-tokens path
+	return serverURL + "/profile/access-tokens"
+}
+
+// openURL opens a URL in the default browser (cross-platform).
+func (m *Manager) openURL(url string) {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", url)
+	case "darwin":
+		cmd = exec.Command("open", url)
+	default: // Linux and others
+		cmd = exec.Command("xdg-open", url)
+	}
+	cmd.Run() // Ignore errors - if browser doesn't open, user can copy URL
 }

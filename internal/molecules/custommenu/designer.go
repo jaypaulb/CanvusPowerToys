@@ -10,10 +10,12 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/jaypaulb/CanvusPowerToys/internal/atoms/backup"
 	"github.com/jaypaulb/CanvusPowerToys/internal/atoms/config"
+	"github.com/jaypaulb/CanvusPowerToys/internal/atoms/paths"
 	"github.com/jaypaulb/CanvusPowerToys/internal/organisms/services"
 )
 
@@ -60,6 +62,10 @@ func (d *Designer) CreateUI(window fyne.Window) fyne.CanvasObject {
 	d.window = window
 	title := widget.NewLabel("Custom Menu Designer")
 	title.TextStyle = fyne.TextStyle{Bold: true}
+
+	placeholderWarning := widget.NewLabel("⚠️ Placeholder: Custom Menu Designer features are still under active development. The current version may not function correctly and will be updated in future releases.")
+	placeholderWarning.Importance = widget.DangerImportance
+	placeholderWarning.Wrapping = fyne.TextWrapWord
 
 	instructions := widget.NewRichTextFromMarkdown(`
 **Custom Menu Designer**
@@ -117,6 +123,7 @@ Create and edit custom menus for Canvus. Menus are saved as menu.yml files.
 	leftPanel := container.NewBorder(
 		container.NewVBox(
 			title,
+			placeholderWarning,
 			instructions,
 			widget.NewSeparator(),
 			container.NewHBox(addItemBtn, importBtn),
@@ -309,7 +316,7 @@ func (d *Designer) browseIcon(iconEntry *widget.Entry) {
 
 // importMenu imports an existing menu.yml file.
 func (d *Designer) importMenu(window fyne.Window) {
-	dialog.ShowFileOpen(func(reader fyne.URIReadCloser, err error) {
+	fileDialog := dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
 		if err != nil || reader == nil {
 			return
 		}
@@ -326,11 +333,16 @@ func (d *Designer) importMenu(window fyne.Window) {
 		d.menuTree.Refresh()
 		dialog.ShowInformation("Imported", "menu.yml imported successfully", window)
 	}, window)
+
+	fileDialog.SetFilter(storage.NewExtensionFileFilter([]string{".yml", ".yaml"}))
+	d.setDefaultMenuDialogLocation(fileDialog)
+	fileDialog.Show()
 }
 
 // saveMenu saves the menu to menu.yml and updates mt-canvus.ini.
 func (d *Designer) saveMenu(window fyne.Window) {
-	configDir := d.fileService.GetUserConfigPath()
+	customMenuDir := filepath.Join(d.fileService.GetUserConfigPath(), "CustomMenu")
+	configDir := customMenuDir
 	menuPath := filepath.Join(configDir, "menu.yml")
 
 	// Ensure directory exists
@@ -400,4 +412,48 @@ func (d *Designer) updateCustomMenuIni(iniPath, menuPath string) error {
 	}
 
 	return d.iniParser.Write(iniFile, iniPath)
+}
+
+// setDefaultMenuDialogLocation sets the file dialog location to the default custom menu directory.
+func (d *Designer) setDefaultMenuDialogLocation(fileDialog *dialog.FileDialog) {
+	if fileDialog == nil || d.fileService == nil {
+		return
+	}
+
+	defaultMenuPath := d.defaultMenuFilePath()
+	if paths.FileExists(defaultMenuPath) {
+		if d.setDialogLocation(fileDialog, filepath.Dir(defaultMenuPath)) {
+			return
+		}
+	}
+
+	// Fallback to base Canvus config directory if menu.yml isn't present
+	d.setDialogLocation(fileDialog, d.fileService.GetUserConfigPath())
+}
+
+// setDialogLocation attempts to point the dialog at a specific path.
+func (d *Designer) setDialogLocation(fileDialog *dialog.FileDialog, targetPath string) bool {
+	if targetPath == "" {
+		return false
+	}
+
+	lister, err := storage.ListerForURI(storage.NewFileURI(targetPath))
+	if err != nil {
+		return false
+	}
+
+	fileDialog.SetLocation(lister)
+	return true
+}
+
+// defaultMenuFilePath returns the expected default location for menu.yml.
+func (d *Designer) defaultMenuFilePath() string {
+	if d.fileService == nil {
+		return ""
+	}
+	base := d.fileService.GetUserConfigPath()
+	if base == "" {
+		return ""
+	}
+	return filepath.Join(base, "CustomMenu", "menu.yml")
 }

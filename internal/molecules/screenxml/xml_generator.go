@@ -9,16 +9,17 @@ import (
 
 // ScreenXML represents the screen.xml structure.
 type ScreenXML struct {
-	XMLName           xml.Name       `xml:"multihead"`
-	Comment           string         `xml:",comment"`
-	Type              string         `xml:"type,attr,omitempty"`
-	DPI               *XMLAttr       `xml:"dpi,omitempty"`
-	DPMS              *XMLAttr       `xml:"dpms,omitempty"`
-	HwColorCorrection *XMLAttr       `xml:"hw-color-correction,omitempty"`
-	Iconify           *XMLAttr       `xml:"iconify,omitempty"`
-	Vsync             *XMLAttr       `xml:"vsync,omitempty"`
-	LayerSize         *XMLAttr       `xml:"layer-size,omitempty"`
-	Windows           []WindowConfig `xml:"window"`
+	XMLName            xml.Name       `xml:"multihead"`
+	Comment            string         `xml:",comment"`
+	Type               string         `xml:"type,attr,omitempty"`
+	DPI                *XMLAttr       `xml:"dpi,omitempty"`
+	DPMS               *XMLAttr       `xml:"dpms,omitempty"`
+	HwColorCorrection  *XMLAttr       `xml:"hw-color-correction,omitempty"`
+	Vsync              *XMLAttr       `xml:"vsync,omitempty"`
+	LayerSize          *XMLAttr       `xml:"layer-size,omitempty"`
+	GlFinish           *XMLAttr       `xml:"gl-finish,omitempty"`
+	AsyncTextureUpload *XMLAttr       `xml:"async-texture-upload,omitempty"`
+	Windows            []WindowConfig `xml:"window"`
 }
 
 // XMLAttr represents an XML element with type attribute (e.g., <dpi type="">value</dpi>).
@@ -44,47 +45,15 @@ type WindowConfig struct {
 
 // AreaConfig represents an area element within a window.
 type AreaConfig struct {
-	Comment          string           `xml:",comment"`
-	Type             string           `xml:"type,attr"`
-	ColorCorrection  *ColorCorrection `xml:"colorcorrection,omitempty"`
-	GraphicsLocation *XMLAttr         `xml:"graphicslocation,omitempty"`
-	GraphicsSize     *XMLAttr         `xml:"graphicssize,omitempty"`
-	Keystone         *Keystone        `xml:"keystone,omitempty"`
-	Location         *XMLAttr         `xml:"location,omitempty"`
-	Method           *XMLAttr         `xml:"method,omitempty"`
-	RgbCube          *RgbCube         `xml:"rgbcube,omitempty"`
-	Seams            *XMLAttr         `xml:"seams,omitempty"`
-	Size             *XMLAttr         `xml:"size,omitempty"`
+	Comment          string   `xml:",comment"`
+	Type             string   `xml:"type,attr"`
+	GraphicsLocation *XMLAttr `xml:"graphicslocation,omitempty"`
+	GraphicsSize     *XMLAttr `xml:"graphicssize,omitempty"`
+	Location         *XMLAttr `xml:"location,omitempty"`
+	Seams            *XMLAttr `xml:"seams,omitempty"`
+	Size             *XMLAttr `xml:"size,omitempty"`
 }
 
-// ColorCorrection represents color correction settings.
-type ColorCorrection struct {
-	Type       string   `xml:"type,attr,omitempty"`
-	Brightness *XMLAttr `xml:"brightness,omitempty"`
-	Contrast   *XMLAttr `xml:"contrast,omitempty"`
-	Gamma      *XMLAttr `xml:"gamma,omitempty"`
-	Red        string   `xml:"red,omitempty"`
-	Green      string   `xml:"green,omitempty"`
-	Blue       string   `xml:"blue,omitempty"`
-}
-
-// Keystone represents keystone correction.
-type Keystone struct {
-	Type      string   `xml:"type,attr,omitempty"`
-	Rotations *XMLAttr `xml:"rotations,omitempty"`
-	V1        *XMLAttr `xml:"v1,omitempty"`
-	V2        *XMLAttr `xml:"v2,omitempty"`
-	V3        *XMLAttr `xml:"v3,omitempty"`
-	V4        *XMLAttr `xml:"v4,omitempty"`
-}
-
-// RgbCube represents RGB cube settings.
-type RgbCube struct {
-	Type      string   `xml:"type,attr,omitempty"`
-	Dimension *XMLAttr `xml:"dimension,omitempty"`
-	Division  *XMLAttr `xml:"division,omitempty"`
-	RgbTable  string   `xml:"rgb-table,omitempty"`
-}
 
 // XMLGenerator generates screen.xml from grid configuration.
 type XMLGenerator struct {
@@ -121,14 +90,16 @@ func (xg *XMLGenerator) Generate() ([]byte, error) {
 	layerSize := xg.calculateLayerSize()
 
 	screenXML := ScreenXML{
-		Comment:           "multihead defines global display options (dpi, dpms, vsync, layer-size) used by MT Canvus",
+		Comment: `The multihead element defines global display options (dpi, dpms, vsync, layer-size) 
+used by MT Canvus. These settings apply to all windows and areas in the configuration.`,
 		Type:              "",
 		DPI:               &XMLAttr{Type: "", Value: "40.053"},
 		DPMS:              &XMLAttr{Type: "", Value: "0 0 0"},
 		HwColorCorrection: &XMLAttr{Type: "", Value: "0"},
-		Iconify:           &XMLAttr{Type: "", Value: "0"},
 		Vsync:             &XMLAttr{Type: "", Value: "0"}, // Default for Windows
 		LayerSize:         &XMLAttr{Type: "", Value: layerSize},
+		GlFinish:         &XMLAttr{Type: "", Value: "0"},
+		AsyncTextureUpload: &XMLAttr{Type: "", Value: "0"},
 		Windows:           []WindowConfig{},
 	}
 
@@ -265,7 +236,12 @@ func (xg *XMLGenerator) createWindowForGPU(gpuNum int, outputs map[string][]Cell
 	outputList := formatOutputList(outputs)
 
 	window := &WindowConfig{
-		Comment: fmt.Sprintf("Window %s for GPU %d. Covers outputs %s in graphics bounds (%d,%d) to (%d,%d) (%d x %d px).",
+		Comment: fmt.Sprintf(`The window element defines a drawable region available for displaying applications.
+It extends across the Cells' screen surface and is similar to a computer desktop.
+It is also sometimes called the operating system window. For efficient rendering,
+we recommend that you define one window element per GPU.
+
+Window %s for GPU %d. Covers outputs %s in graphics bounds (%d,%d) to (%d,%d) (%d x %d px).`,
 			windowName, gpuNum, outputList, minX, minY, maxX, maxY, windowWidth, windowHeight),
 		Type:            windowName,
 		DirectRendering: &XMLAttr{Type: "", Value: "1"},
@@ -407,48 +383,29 @@ func (xg *XMLGenerator) createAreaForGPU(gpuOutput string, cells []CellCoord, ar
 	fmt.Sscanf(parts[1], "%d", &outputNum)
 	// Note: area type is not used in the XML structure - it's determined by the GPU output
 
-	// Create default color correction
-	colorCorr := &ColorCorrection{
-		Type:       "",
-		Brightness: &XMLAttr{Type: "", Value: "0 0 0"},
-		Contrast:   &XMLAttr{Type: "", Value: "1 1 1"},
-		Gamma:      &XMLAttr{Type: "", Value: "1 1 1"},
-		Red:        "0 0 1 1 ",
-		Green:      "0 0 1 1 ",
-		Blue:       "0 0 1 1 ",
-	}
-
-	// Create default keystone
-	keystone := &Keystone{
-		Type:      "",
-		Rotations: &XMLAttr{Type: "", Value: "0"},
-		V1:        &XMLAttr{Type: "", Value: "0 0"},
-		V2:        &XMLAttr{Type: "", Value: "1 0"},
-		V3:        &XMLAttr{Type: "", Value: "1 1"},
-		V4:        &XMLAttr{Type: "", Value: "0 1"},
-	}
-
-	// Create default RGB cube
-	rgbCube := &RgbCube{
-		Type:      "",
-		Dimension: &XMLAttr{Type: "", Value: "32"},
-		Division:  &XMLAttr{Type: "", Value: "0"},
-		RgbTable:  "",
-	}
-
 	areaName := fmt.Sprintf("area%d", *areaCounter)
 
 	area := &AreaConfig{
-		Comment: fmt.Sprintf("Area %s drives GPU output %s covering rows %d-%d, cols %d-%d (%d x %d px at %dx%d resolution).",
+		Comment: fmt.Sprintf(`In the application virtual graphics coordinates, graphicslocation and graphicssize 
+define the part of the application that is rendered to this area / viewport.
+
+This doesn't affect where on the window the viewport is rendered, but it defines what part of 
+application is rendered here.
+
+The graphics size doesn't need to be the same as area size or even have the same aspect ratio. 
+The given part of the application is rendered so that it fills the whole area. Different areas 
+can render arbitrary parts of the application, even if the parts overlap.
+
+However, in a typical use case the graphics size does match the area size so that we have 1:1 
+pixel mapping from the virtual application graphics coordinates to the window coordinates so 
+that all the UI elements have correct size.
+
+Area %s drives GPU output %s covering rows %d-%d, cols %d-%d (%d x %d px at %dx%d resolution).`,
 			areaName, gpuOutput, minRow, maxRow, minCol, maxCol, width, height, cellWidth, cellHeight),
 		Type:             areaName,
-		ColorCorrection:  colorCorr,
 		GraphicsLocation: &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", x, y)},
 		GraphicsSize:     &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", width, height)},
-		Keystone:         keystone,
 		Location:         &XMLAttr{Type: "", Value: "0 0"},
-		Method:           &XMLAttr{Type: "", Value: "1"},
-		RgbCube:          rgbCube,
 		Seams:            &XMLAttr{Type: "", Value: "0 0 0 0"},
 		Size:             &XMLAttr{Type: "", Value: fmt.Sprintf("%d %d", width, height)},
 	}

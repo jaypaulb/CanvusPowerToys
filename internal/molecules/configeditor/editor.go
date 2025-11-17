@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -415,14 +416,15 @@ func (e *Editor) filterSections(searchText string) {
 
 // sectionMatches checks if a section matches the search text.
 // It searches through all text in each option: key, description, default, value, enum values.
+// Uses whole word matching to avoid false positives.
 func (e *Editor) sectionMatches(section *ConfigSection, searchLower string) bool {
-	// Check section name
-	if strings.Contains(strings.ToLower(section.Name), searchLower) {
+	// Check section name (whole word match)
+	if e.matchesWholeWord(strings.ToLower(section.Name), searchLower) {
 		return true
 	}
 
-	// Check section description
-	if strings.Contains(strings.ToLower(section.Description), searchLower) {
+	// Check section description (whole word match)
+	if e.matchesWholeWord(strings.ToLower(section.Description), searchLower) {
 		return true
 	}
 
@@ -438,41 +440,66 @@ func (e *Editor) sectionMatches(section *ConfigSection, searchLower string) bool
 
 // optionMatches checks if an option matches the search text.
 // Searches through key, description, default value, current value, and enum values.
+// Uses whole word matching to avoid false positives.
 func (e *Editor) optionMatches(option *ConfigOption, searchLower string) bool {
-	// Check key name
-	if strings.Contains(strings.ToLower(option.Key), searchLower) {
+	// Check key name (whole word match)
+	if e.matchesWholeWord(strings.ToLower(option.Key), searchLower) {
 		return true
 	}
 
-	// Check description
-	if strings.Contains(strings.ToLower(option.Description), searchLower) {
+	// Check description (whole word match)
+	if e.matchesWholeWord(strings.ToLower(option.Description), searchLower) {
 		return true
 	}
 
-	// Check default value
-	if strings.Contains(strings.ToLower(option.Default), searchLower) {
+	// Check default value (whole word match)
+	if e.matchesWholeWord(strings.ToLower(option.Default), searchLower) {
 		return true
 	}
 
-	// Check enum values
+	// Check enum values (whole word match)
 	for _, enumValue := range option.EnumValues {
-		if strings.Contains(strings.ToLower(enumValue), searchLower) {
+		if e.matchesWholeWord(strings.ToLower(enumValue), searchLower) {
 			return true
 		}
 	}
 
-	// Check current value from INI file or form controls
+	// Check current value from INI file or form controls (whole word match)
 	currentValue := e.getCurrentValueForOption(option)
-	if strings.Contains(strings.ToLower(currentValue), searchLower) {
+	if e.matchesWholeWord(strings.ToLower(currentValue), searchLower) {
 		return true
 	}
 
-	// Check section name
-	if strings.Contains(strings.ToLower(option.Section), searchLower) {
+	// Check section name (whole word match)
+	if e.matchesWholeWord(strings.ToLower(option.Section), searchLower) {
 		return true
 	}
 
 	return false
+}
+
+// matchesWholeWord checks if the search text appears as a whole word in the target text.
+// A whole word is defined as being surrounded by word boundaries (non-alphanumeric characters or start/end of string).
+func (e *Editor) matchesWholeWord(target, search string) bool {
+	if search == "" {
+		return false
+	}
+
+	// Escape special regex characters in search text
+	escapedSearch := regexp.QuoteMeta(search)
+
+	// Create regex pattern for whole word match
+	// \b is word boundary, but we want to match at start/end or surrounded by non-word chars
+	// Pattern: (^|[^a-zA-Z0-9_])search([^a-zA-Z0-9_]|$)
+	pattern := fmt.Sprintf(`(^|[^a-zA-Z0-9_])%s([^a-zA-Z0-9_]|$)`, escapedSearch)
+
+	matched, err := regexp.MatchString(pattern, target)
+	if err != nil {
+		// If regex fails, fall back to simple contains
+		return strings.Contains(target, search)
+	}
+
+	return matched
 }
 
 // getCurrentValueForOption gets the current value for an option.

@@ -71,13 +71,25 @@ func (fs *FileService) DetectScreenXml() string {
 // DetectMenuYml attempts to find menu.yml in standard locations.
 // Returns the path if found, empty string if not found.
 func (fs *FileService) DetectMenuYml() string {
+	// Check CustomMenu directory first
+	userCustomMenu := filepath.Join(fs.userConfigPath, "CustomMenu", "menu.yml")
+	if paths.FileExists(userCustomMenu) {
+		return userCustomMenu
+	}
+
 	// Check user config location first
 	userYml := filepath.Join(fs.userConfigPath, "menu.yml")
 	if paths.FileExists(userYml) {
 		return userYml
 	}
 
-	// Check system config location
+	// Check system config CustomMenu directory
+	systemCustomMenu := filepath.Join(fs.systemConfigPath, "CustomMenu", "menu.yml")
+	if paths.FileExists(systemCustomMenu) {
+		return systemCustomMenu
+	}
+
+	// Check legacy system config location
 	systemYml := filepath.Join(fs.systemConfigPath, "menu.yml")
 	if paths.FileExists(systemYml) {
 		return systemYml
@@ -176,4 +188,3 @@ func (fs *FileService) WriteJSONFile(filePath string, v interface{}) error {
 
 	return os.WriteFile(filePath, data, 0644)
 }
-
