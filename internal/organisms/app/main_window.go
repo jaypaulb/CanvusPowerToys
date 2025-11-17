@@ -129,7 +129,27 @@ func NewMainWindow(app fyne.App) *MainWindow {
 		},
 	)
 
-	window.SetContent(tabs)
+	// Create a note label aligned to top-right (near Windows close button)
+	trayNote := widget.NewLabel("Close to System Tray ^")
+	trayNote.TextStyle = fyne.TextStyle{Italic: true}
+
+	// Create a horizontal container with spacer to align note to the right
+	// This positions it near the top-right, aligned with the Windows close button
+	topNoteContainer := container.NewHBox(
+		container.NewSpacer(), // Push note to the right
+		trayNote,
+	)
+
+	// Wrap tabs and note in a border container
+	content := container.NewBorder(
+		topNoteContainer, // Top: note aligned to right
+		nil,              // Bottom: nothing
+		nil,              // Left: nothing
+		nil,              // Right: nothing
+		tabs,             // Center: tabs
+	)
+
+	window.SetContent(content)
 
 	// Setup system tray (this also sets up close intercept)
 	trayManager := tray.NewManager(window, app)
