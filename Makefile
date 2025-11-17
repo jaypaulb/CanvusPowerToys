@@ -36,6 +36,7 @@ build-windows: process-assets
 	GIT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
 	OUTPUT_FILE="canvus-powertoys.$$VERSION.exe"; \
 	if CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc go build \
+		-trimpath \
 		-ldflags="-s -w -H windowsgui -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.Version=$$VERSION -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.BuildDate=$$BUILD_DATE -X github.com/jaypaulb/CanvusPowerToys/internal/atoms/version.GitCommit=$$GIT_COMMIT" \
 		-o $$OUTPUT_FILE ./cmd/powertoys; then \
 		echo "Built: $$OUTPUT_FILE"; \
