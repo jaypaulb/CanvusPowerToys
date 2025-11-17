@@ -120,18 +120,22 @@ func (e *Editor) CreateUI(window fyne.Window) fyne.CanvasObject {
 
 	// Create scroll container and store reference for auto-scrolling
 	e.scrollContainer = container.NewScroll(e.accordion)
-
+	
 	mainPanel := container.NewBorder(
 		e.searchEntry,
 		nil, nil, nil,
 		e.scrollContainer,
 	)
 
-	return container.NewBorder(
+	editorContent := container.NewBorder(
 		topBar,
 		nil, nil, nil,
 		mainPanel,
 	)
+
+	// Wrap in a minimum size wrapper to enforce 500px minimum width
+	// This allows the window to be resized narrower while maintaining usability
+	return NewMinSizeWrapper(editorContent, 500, 0)
 }
 
 // buildUIFromSchema builds the UI from the schema, showing all options.

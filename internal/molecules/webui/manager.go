@@ -708,8 +708,8 @@ func (m *Manager) updateStatusFromTestResults(localSuccess, remoteSuccess bool) 
 }
 
 func (m *Manager) showServerStartedDialog(serverURL string, localResult, remoteResult string, window fyne.Window) {
-	// Open browser to WebUI page with specific size and position
-	m.openBrowserWindow(serverURL, 1024, 768, 4800, 2700)
+	// Create browser widget on canvas with specific size and position
+	m.createBrowserWidgetOnCanvas(serverURL, 1024, 768, 4800, 2700)
 
 	resultsLabel := widget.NewLabel(fmt.Sprintf("%s\n\n%s", localResult, remoteResult))
 	resultsLabel.Wrapping = fyne.TextWrapWord
@@ -972,66 +972,60 @@ func (m *Manager) openURL(url string) {
 	cmd.Run() // Ignore errors - if browser doesn't open, user can copy URL
 }
 
-// openBrowserWindow opens a browser window with specific size and position.
+// createBrowserWidgetOnCanvas creates a browser widget on the Canvus canvas via MTCS API.
 // Size: width x height, Position: x, y coordinates
-func (m *Manager) openBrowserWindow(url string, width, height, posX, posY int) {
-	switch runtime.GOOS {
-	case "windows":
-		// Windows: Use PowerShell to open Chrome/Edge with window size and position
-		// Try Chrome first, then Edge, then fallback to default browser
-		psScript := fmt.Sprintf(
-			`$url = "%s"; $width = %d; $height = %d; $x = %d; $y = %d; `+
-				`$browsers = @("chrome", "msedge", "firefox"); `+
-				`foreach ($browser in $browsers) { `+
-				`  $browserPath = Get-Command $browser -ErrorAction SilentlyContinue; `+
-				`  if ($browserPath) { `+
-				`    Start-Process $browserPath.Source -ArgumentList "--new-window", "--window-position=$x,$y", "--window-size=$width,$height", $url; `+
-				`    break; `+
-				`  } `+
-				`}; `+
-				`if (-not $browserPath) { Start-Process $url }`,
-			url, width, height, posX, posY)
-		cmd := exec.Command("powershell", "-Command", psScript)
-		cmd.Run()
-	case "darwin":
-		// macOS: Use AppleScript to open browser with size/position
-		// Note: Safari doesn't support size/position via command line, so we'll use Chrome if available
-		applescript := fmt.Sprintf(
-			`tell application "Google Chrome" to activate
-			tell application "System Events" to tell process "Google Chrome"
-				set frontmost to true
-				keystroke "n" using {command down}
-				delay 0.5
-				keystroke "%s" using {command down}
-				keystroke return
-				delay 0.5
-				set position of window 1 to {%d, %d}
-				set size of window 1 to {%d, %d}
-			end tell`,
-			url, posX, posY, width, height)
-		cmd := exec.Command("osascript", "-e", applescript)
-		if err := cmd.Run(); err != nil {
-			// Fallback to default browser if Chrome not available or script fails
-			m.openURL(url)
-		}
-	default:
-		// Linux: Try to use Chrome/Chromium with window size/position
-		// Most Linux browsers don't support size/position via command line
-		// Try Chrome/Chromium first, then fallback to default
-		chromeArgs := []string{
-			"--new-window",
-			fmt.Sprintf("--window-position=%d,%d", posX, posY),
-			fmt.Sprintf("--window-size=%d,%d", width, height),
-			url,
-		}
-		cmd := exec.Command("google-chrome", chromeArgs...)
-		if err := cmd.Run(); err != nil {
-			// Try chromium
-			cmd = exec.Command("chromium", chromeArgs...)
-			if err := cmd.Run(); err != nil {
-				// Fallback to default browser
-				m.openURL(url)
-			}
-		}
+func (m *Manager) createBrowserWidgetOnCanvas(url string, width, height, posX, posY int) {
+	if m.canvasService == nil {
+		fmt.Printf("[createBrowserWidgetOnCanvas] Canvas service not available\n")
+		return
 	}
+
+	canvasID := m.canvasService.GetCanvasID()
+	if canvasID == "" {
+		fmt.Printf("[createBrowserWidgetOnCanvas] Canvas ID not available\n")
+		return
+	}
+
+	// Get server URL and auth token from manager
+	serverURL := m.serverURL.Text
+	authToken := m.authToken.Text
+
+	if serverURL == "" || authToken == "" {
+		fmt.Printf("[createBrowserWidgetOnCanvas] Server URL or auth token not available\n")
+		return
+	}
+
+	// Normalize server URL (same as in startServer)
+	apiBaseURL := strings.TrimSuffix(serverURL, "/")
+	apiBaseURL = strings.TrimSuffix(apiBaseURL, "/api/v1")
+	apiBaseURL = strings.TrimSuffix(apiBaseURL, "/api")
+
+	// Create API client
+	apiClient := webuiatoms.NewAPIClient(apiBaseURL, authToken)
+
+	// Create browser widget payload
+	payload := map[string]interface{}{
+		"widget_type": "Browser",
+		"url":         url,
+		"location": map[string]float64{
+			"x": float64(posX),
+			"y": float64(posY),
+		},
+		"size": map[string]float64{
+			"width":  float64(width),
+			"height": float64(height),
+		},
+	}
+
+	// POST to /canvases/:id/widgets to create browser widget
+	endpoint := fmt.Sprintf("/api/v1/canvases/%s/widgets", canvasID)
+	fmt.Printf("[createBrowserWidgetOnCanvas] Creating browser widget at (%d, %d) with size %dx%d, URL: %s\n", posX, posY, width, height, url)
+
+	response, err := apiClient.Post(endpoint, payload)
+	if err != nil {
+		fmt.Printf("[createBrowserWidgetOnCanvas] ERROR: Failed to create browser widget: %v\n", err)
+		return
+	}
+
+	fmt.Printf("[createBrowserWidgetOnCanvas] Successfully created browser widget: %s\n", string(response))
 }

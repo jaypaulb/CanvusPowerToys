@@ -51,8 +51,14 @@ func (m *MTTheme) Icon(name fyne.ThemeIconName) fyne.Resource {
 	return m.Theme.Icon(name)
 }
 
-// Size returns the default size.
+// Size returns custom sizes for specific size names.
 func (m *MTTheme) Size(name fyne.ThemeSizeName) float32 {
-	return m.Theme.Size(name)
+	switch name {
+	case theme.SizeNameScrollBar, theme.SizeNameScrollBarSmall:
+		// Make scrollbar larger (default is typically 12px, increase to 20px for easier grabbing)
+		return 20
+	default:
+		return m.Theme.Size(name)
+	}
 }
 
