@@ -9,6 +9,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/jaypaulb/CanvusPowerToys/assets"
+	"github.com/jaypaulb/CanvusPowerToys/internal/atoms/version"
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/configeditor"
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/custommenu"
 	"github.com/jaypaulb/CanvusPowerToys/internal/molecules/cssoptions"
@@ -128,16 +129,26 @@ func NewMainWindow(app fyne.App) *MainWindow {
 		},
 	)
 
-	// Create a note label with warning triangle, aligned inline with tabs
-	// Using Unicode characters: ⚠ (warning triangle) and ↑ (upward arrow)
-	trayNote := widget.NewLabel("⚠ Close to System Tray ↑")
-	trayNote.TextStyle = fyne.TextStyle{Italic: true}
+	// Create version label
+	versionLabel := widget.NewLabel("v" + version.Version)
+	versionLabel.TextStyle = fyne.TextStyle{Italic: true}
 
-	// Create a top container with the note right-aligned
+	// Create Minimize to Tray button
+	minimizeBtn := widget.NewButton("Minimize to Tray", func() {
+		window.Hide()
+	})
+
+	// Create Quit button to exit the application completely
+	quitBtn := widget.NewButton("Quit", func() {
+		app.Quit()
+	})
+	quitBtn.Importance = widget.DangerImportance
+
+	// Create a top container with version and buttons right-aligned
 	// This positions it at the top-right, inline with the tab bar, without affecting layout
-	// Use Border layout to push content to the right (nil on left, content on right)
+	topRightContent := container.NewHBox(versionLabel, minimizeBtn, quitBtn)
 	topNoteContainer := container.NewBorder(
-		nil, nil, nil, trayNote, nil,
+		nil, nil, nil, topRightContent, nil,
 	)
 
 	// Use Border layout with note in top (right-aligned) and tabs below

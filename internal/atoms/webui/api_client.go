@@ -2,6 +2,7 @@ package webui
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,13 +18,23 @@ type APIClient struct {
 }
 
 // NewAPIClient creates a new API client for Canvus Server.
+// Supports self-signed certificates by skipping TLS verification.
 func NewAPIClient(baseURL, authToken string) *APIClient {
 	fmt.Printf("[APIClient] NewAPIClient created with baseURL: '%s', authToken length: %d\n", baseURL, len(authToken))
+
+	// Create transport that skips TLS certificate verification for self-signed certs
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
+
 	return &APIClient{
 		baseURL:   baseURL,
 		authToken: authToken,
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout:   30 * time.Second,
+			Transport: transport,
 		},
 	}
 }

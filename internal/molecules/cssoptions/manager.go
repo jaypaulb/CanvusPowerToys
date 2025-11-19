@@ -221,9 +221,13 @@ Enable CSS-based features for Canvus. These options create plugins that modify C
 	}
 
 	// Buttons - will be in fixed header
-	generateBtn := widget.NewButton("Generate Plugin", func() {
-		m.generatePlugin(window)
+	// TODO: Generate Plugin is coming soon - implement plugin generation with proper file structure and validation
+	// This feature should: create .canvusplugin manifest, generate styles.css, update mt-canvus.ini plugin-folders
+	// Need to add documentation for plugin format and update UI to show plugin status
+	generateBtn := widget.NewButton("Generate Plugin (Coming Soon)", func() {
+		dialog.ShowInformation("Coming Soon", "Plugin generation feature is coming in a future release.\n\nFor now, you can:\n1. Preview the CSS using 'Preview CSS'\n2. Manually create plugin files following Canvus plugin documentation\n3. Use 'Launch Canvus with Current Config' for temporary testing", window)
 	})
+	generateBtn.Disable() // Disable until feature is ready
 
 	validateBtn := widget.NewButton("Validate Requirements", func() {
 		m.validateRequirements(window)
@@ -671,6 +675,7 @@ func (m *Manager) previewCSS(window fyne.Window) {
 	previewEntry := widget.NewMultiLineEntry()
 	previewEntry.SetText(css)
 	previewEntry.Wrapping = fyne.TextWrapOff // Don't wrap CSS
+	previewEntry.OnChanged = func(s string) {} // Make it read-only by ignoring changes - can still select/copy
 
 	// Copy to clipboard button
 	copyBtn := widget.NewButton("Copy to Clipboard", func() {
@@ -689,18 +694,23 @@ func (m *Manager) previewCSS(window fyne.Window) {
 	infoLabel := widget.NewLabel(infoText)
 	infoLabel.Wrapping = fyne.TextWrapWord
 
+	// Create a scrollable container for the text entry with minimum height
+	// This provides a spacious preview area instead of a cramped 1-line box
+	scrollContainer := container.NewScroll(previewEntry)
+	scrollContainer.SetMinSize(fyne.NewSize(750, 400)) // Large enough for comfortable viewing
+
 	// Create a container with info, entry and button
 	content := container.NewVBox(
 		infoLabel,
 		container.NewBorder(
-			copyBtn, // Top: Copy button
+			copyBtn,           // Top: Copy button
 			nil, nil, nil,
-			container.NewScroll(previewEntry), // Center: Scrollable text
+			scrollContainer,   // Center: Scrollable text with proper sizing
 		),
 	)
 
 	previewDialog := dialog.NewCustom("Generated CSS Preview", "Close", content, window)
-	previewDialog.Resize(fyne.NewSize(800, 600))
+	previewDialog.Resize(fyne.NewSize(900, 700)) // Larger dialog for better visibility
 	previewDialog.Show()
 }
 

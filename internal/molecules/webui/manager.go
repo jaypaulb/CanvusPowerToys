@@ -2,6 +2,8 @@ package webui
 
 import (
 	"context"
+	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"net"
@@ -361,7 +363,7 @@ func (m *Manager) saveConfiguration(window fyne.Window) {
 	dialog.ShowInformation("Saved", "Configuration saved successfully", window)
 }
 
-// testConnection tests both the local WebUI server and the remote Canvus server connection.
+// testConnection tests the full API flow: clients → client → workspaces → canvas.
 func (m *Manager) testConnection(window fyne.Window) {
 	port := m.serverPort.Text
 	if port == "" {
@@ -387,20 +389,19 @@ func (m *Manager) testConnection(window fyne.Window) {
 		return
 	}
 
-	localTestResult, remoteTestResult, localTestSuccess, remoteTestSuccess := m.performConnectionTests(port, serverURL, authToken)
-	m.updateStatusFromTestResults(localTestSuccess, remoteTestSuccess)
+	// Perform the full connection test flow
+	testResult, testSuccess, clientName, canvasName := m.performFullConnectionTest(serverURL, authToken)
 
-	// Show results
-	if localTestSuccess && remoteTestSuccess {
+	if testSuccess {
+		m.serverStatus.SetText(fmt.Sprintf("Status: Ready to start server using %s : %s", clientName, canvasName))
+		m.serverStatus.Importance = widget.SuccessImportance
 		dialog.ShowInformation("Connection Test Results",
-			fmt.Sprintf("✅ All tests passed!\n\n%s\n\n%s", localTestResult, remoteTestResult),
-			window)
-	} else if localTestSuccess || remoteTestSuccess {
-		dialog.ShowInformation("Connection Test Results",
-			fmt.Sprintf("⚠️  Partial success\n\n%s\n\n%s", localTestResult, remoteTestResult),
+			fmt.Sprintf("✅ Connection successful!\n\n%s\n\nStatus: Ready to start server using %s : %s", testResult, clientName, canvasName),
 			window)
 	} else {
-		dialog.ShowError(fmt.Errorf("❌ All tests failed\n\n%s\n\n%s", localTestResult, remoteTestResult), window)
+		m.serverStatus.SetText("Connection test failed")
+		m.serverStatus.Importance = widget.DangerImportance
+		dialog.ShowError(fmt.Errorf("❌ Connection test failed\n\n%s", testResult), window)
 	}
 }
 
@@ -630,8 +631,15 @@ func (m *Manager) stopServer() {
 }
 
 func (m *Manager) performConnectionTests(port, serverURL, authToken string) (string, string, bool, bool) {
+	// Create HTTP client with TLS verification disabled for self-signed certs
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout:   10 * time.Second,
+		Transport: transport,
 	}
 
 	var localTestResult, remoteTestResult string
@@ -703,6 +711,122 @@ func (m *Manager) performConnectionTests(port, serverURL, authToken string) (str
 	}
 
 	return localTestResult, remoteTestResult, localTestSuccess, remoteTestSuccess
+}
+
+// performFullConnectionTest performs the full API flow test:
+// 1. Get clients list
+// 2. Find the relevant client by installation_name
+// 3. Get workspaces/0/ to find canvas ID
+// 4. Get /canvases/canvasID/ to get canvas name
+// Returns: (result message, success, client name, canvas name)
+func (m *Manager) performFullConnectionTest(serverURL, authToken string) (string, bool, string, string) {
+	var resultMessages []string
+
+	// Normalize server URL
+	baseURL := strings.TrimSuffix(serverURL, "/")
+	baseURL = strings.TrimSuffix(baseURL, "/api/v1")
+	baseURL = strings.TrimSuffix(baseURL, "/api")
+
+	// Create API client
+	apiClient := webuiatoms.NewAPIClient(baseURL, authToken)
+
+	// Step 1: Get clients list
+	m.serverStatus.SetText("Step 1/4: Getting clients list...")
+	m.serverStatus.Importance = widget.MediumImportance
+
+	clients, err := apiClient.GetClients()
+	if err != nil {
+		return fmt.Sprintf("❌ Failed to get clients list\n   Error: %v", err), false, "", ""
+	}
+	resultMessages = append(resultMessages, fmt.Sprintf("✅ Step 1: Retrieved %d clients", len(clients)))
+
+	if len(clients) == 0 {
+		return fmt.Sprintf("❌ No clients found on server\n   %s", strings.Join(resultMessages, "\n")), false, "", ""
+	}
+
+	// Step 2: Find the relevant client by installation_name
+	m.serverStatus.SetText("Step 2/4: Finding client by installation name...")
+	m.serverStatus.Importance = widget.MediumImportance
+
+	// Get installation name from mt-canvus.ini or device name
+	clientResolver := webuiatoms.NewClientResolver(m.fileService)
+	installationName, err := clientResolver.GetInstallationName()
+	if err != nil {
+		return fmt.Sprintf("❌ Failed to get installation name\n   Error: %v\n   %s", err, strings.Join(resultMessages, "\n")), false, "", ""
+	}
+
+	// Find matching client
+	var matchedClient *webuiatoms.Client
+	for i := range clients {
+		if clients[i].InstallationName == installationName {
+			matchedClient = &clients[i]
+			break
+		}
+	}
+
+	if matchedClient == nil {
+		// List available clients for debugging
+		var clientList []string
+		for _, c := range clients {
+			clientList = append(clientList, fmt.Sprintf("  - %s", c.InstallationName))
+		}
+		return fmt.Sprintf("❌ Client not found with installation_name: '%s'\n   Available clients:\n%s\n   %s",
+			installationName, strings.Join(clientList, "\n"), strings.Join(resultMessages, "\n")), false, "", ""
+	}
+
+	clientName := matchedClient.InstallationName
+	clientID := matchedClient.ID
+	resultMessages = append(resultMessages, fmt.Sprintf("✅ Step 2: Found client '%s' (ID: %s)", clientName, clientID))
+
+	// Step 3: Get workspaces/0/ to find canvas ID
+	m.serverStatus.SetText("Step 3/4: Getting workspace canvas...")
+	m.serverStatus.Importance = widget.MediumImportance
+
+	workspaceData, err := apiClient.Get(fmt.Sprintf("/api/v1/clients/%s/workspaces/0", clientID))
+	if err != nil {
+		return fmt.Sprintf("❌ Failed to get workspace\n   Error: %v\n   %s", err, strings.Join(resultMessages, "\n")), false, clientName, ""
+	}
+
+	// Parse workspace response to get canvas_id
+	var workspace struct {
+		CanvasID string `json:"canvas_id"`
+	}
+	if err := json.Unmarshal(workspaceData, &workspace); err != nil {
+		return fmt.Sprintf("❌ Failed to parse workspace response\n   Error: %v\n   %s", err, strings.Join(resultMessages, "\n")), false, clientName, ""
+	}
+
+	if workspace.CanvasID == "" {
+		return fmt.Sprintf("❌ No canvas_id found in workspace\n   %s", strings.Join(resultMessages, "\n")), false, clientName, ""
+	}
+
+	canvasID := workspace.CanvasID
+	resultMessages = append(resultMessages, fmt.Sprintf("✅ Step 3: Found canvas ID: %s", canvasID))
+
+	// Step 4: Get /canvases/canvasID/ to get canvas name
+	m.serverStatus.SetText("Step 4/4: Getting canvas details...")
+	m.serverStatus.Importance = widget.MediumImportance
+
+	canvasData, err := apiClient.Get(fmt.Sprintf("/api/v1/canvases/%s", canvasID))
+	if err != nil {
+		return fmt.Sprintf("❌ Failed to get canvas details\n   Error: %v\n   %s", err, strings.Join(resultMessages, "\n")), false, clientName, ""
+	}
+
+	// Parse canvas response to get name
+	var canvas struct {
+		Name string `json:"name"`
+	}
+	if err := json.Unmarshal(canvasData, &canvas); err != nil {
+		return fmt.Sprintf("❌ Failed to parse canvas response\n   Error: %v\n   %s", err, strings.Join(resultMessages, "\n")), false, clientName, ""
+	}
+
+	canvasName := canvas.Name
+	if canvasName == "" {
+		canvasName = canvasID // Fallback to ID if name is empty
+	}
+	resultMessages = append(resultMessages, fmt.Sprintf("✅ Step 4: Canvas name: '%s'", canvasName))
+
+	// All steps successful
+	return strings.Join(resultMessages, "\n"), true, clientName, canvasName
 }
 
 func (m *Manager) updateStatusFromTestResults(localSuccess, remoteSuccess bool) {

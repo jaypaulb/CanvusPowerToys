@@ -1,6 +1,7 @@
 package webui
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -56,9 +57,15 @@ func (r *ClientResolver) GetInstallationName() (string, error) {
 
 // ResolveClientID queries the Canvus API to find client_id matching installation_name.
 func (r *ClientResolver) ResolveClientID(apiBaseURL, authToken, installationName string) (string, error) {
-	// Create HTTP client
+	// Create HTTP client with TLS verification disabled for self-signed certs
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout:   30 * time.Second,
+		Transport: transport,
 	}
 
 	// Query Canvus API for clients

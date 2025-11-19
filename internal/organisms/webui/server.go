@@ -21,16 +21,28 @@ type Server struct {
 	apiBaseURL    string
 	authToken     string
 	uploadDir     string
+	logger        *webuiatoms.WebUILogger
 }
 
 // NewServer creates a new WebUI server instance.
 func NewServer(fileService *services.FileService, apiBaseURL, authToken, port, uploadDir string) (*Server, error) {
+	// Create WebUI logger
+	logger, _ := webuiatoms.NewWebUILogger()
+	if logger != nil {
+		logger.Logf("[Server] Creating WebUI server with apiBaseURL: '%s', port: %s", apiBaseURL, port)
+		// Cleanup old logs in background
+		go webuiatoms.CleanupOldLogs()
+	}
+
 	// Create API client
 	apiClient := webuiatoms.NewAPIClient(apiBaseURL, authToken)
 
 	// Create canvas service
 	canvasService, err := webuimolecules.NewCanvasService(fileService, apiBaseURL, authToken)
 	if err != nil {
+		if logger != nil {
+			logger.Logf("[Server] ERROR: Failed to create canvas service: %v", err)
+		}
 		return nil, fmt.Errorf("failed to create canvas service: %w", err)
 	}
 
@@ -45,14 +57,26 @@ func NewServer(fileService *services.FileService, apiBaseURL, authToken, port, u
 		apiBaseURL:    apiBaseURL,
 		authToken:     authToken,
 		uploadDir:     uploadDir,
+		logger:        logger,
 	}, nil
 }
 
 // Start starts the HTTP server and canvas tracking.
 func (s *Server) Start() error {
+	if s.logger != nil {
+		s.logger.Log("[Server.Start] Starting WebUI server...")
+	}
+
 	// Start canvas service (resolves client_id and starts subscription)
 	if err := s.canvasService.Start(); err != nil {
+		if s.logger != nil {
+			s.logger.Logf("[Server.Start] ERROR: Canvas service failed to start: %v", err)
+		}
 		return fmt.Errorf("failed to start canvas service: %w", err)
+	}
+
+	if s.logger != nil {
+		s.logger.Log("[Server.Start] Canvas service started successfully")
 	}
 
 	// Create HTTP mux
@@ -76,8 +100,13 @@ func (s *Server) Start() error {
 
 	// Start server in goroutine
 	go func() {
+		if s.logger != nil {
+			s.logger.Logf("[Server.Start] HTTP server listening on %s", s.httpServer.Addr)
+		}
 		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			fmt.Printf("WebUI server error: %v\n", err)
+			if s.logger != nil {
+				s.logger.Logf("[Server.Start] ERROR: HTTP server error: %v", err)
+			}
 		}
 	}()
 
@@ -86,6 +115,10 @@ func (s *Server) Start() error {
 
 // Stop stops the HTTP server and canvas tracking.
 func (s *Server) Stop() error {
+	if s.logger != nil {
+		s.logger.Log("[Server.Stop] Stopping WebUI server...")
+	}
+
 	// Stop canvas service
 	s.canvasService.Stop()
 
@@ -99,18 +132,37 @@ func (s *Server) Stop() error {
 		if err := s.httpServer.Shutdown(ctx); err != nil {
 			// Log error but continue - server will still stop
 			if err == context.DeadlineExceeded {
-				fmt.Printf("Server shutdown: Some connections did not close within timeout, forcing close\n")
+				if s.logger != nil {
+					s.logger.Log("[Server.Stop] Server shutdown: Some connections did not close within timeout, forcing close")
+				}
 			} else {
-				fmt.Printf("Server shutdown error: %v\n", err)
+				if s.logger != nil {
+					s.logger.Logf("[Server.Stop] ERROR: Server shutdown error: %v", err)
+				}
 			}
 			// Force close if graceful shutdown failed
 			s.httpServer.Close()
 			return fmt.Errorf("failed to shutdown server gracefully: %w", err)
 		}
-		fmt.Printf("Server shutdown: All connections closed gracefully\n")
+		if s.logger != nil {
+			s.logger.Log("[Server.Stop] Server shutdown: All connections closed gracefully")
+		}
+	}
+
+	// Close logger file
+	if s.logger != nil {
+		_ = s.logger.Close()
 	}
 
 	return nil
+}
+
+// GetLogPath returns the path to the WebUI log file.
+func (s *Server) GetLogPath() string {
+	if s.logger != nil {
+		return s.logger.GetLogPath()
+	}
+	return ""
 }
 
 // GetPort returns the server port.
